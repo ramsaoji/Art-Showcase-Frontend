@@ -92,23 +92,34 @@ export default function ArtworkDetail() {
                 </p>
               </div>
             ) : (
-              <img
-                src={
-                  artwork.public_id
-                    ? getOptimizedImageUrl(artwork.public_id)
-                    : artwork.url
-                }
-                alt={artwork.title}
-                className="w-full h-[300px] md:h-[600px] object-contain bg-gray-50"
-                onError={(e) => {
-                  console.error("Image failed to load:", e);
-                  if (artwork.public_id && e.target.src !== artwork.url) {
-                    e.target.src = artwork.url; // Try fallback to direct URL
-                  } else {
-                    setImageError(true); // If direct URL also fails, show error UI
+              <div className="relative">
+                <img
+                  src={
+                    artwork.public_id
+                      ? getOptimizedImageUrl(artwork.public_id)
+                      : artwork.url
                   }
-                }}
-              />
+                  alt={artwork.title}
+                  className={`w-full h-[300px] md:h-[600px] object-contain bg-gray-50 ${
+                    artwork.sold ? "opacity-90" : ""
+                  }`}
+                  onError={(e) => {
+                    console.error("Image failed to load:", e);
+                    if (artwork.public_id && e.target.src !== artwork.url) {
+                      e.target.src = artwork.url; // Try fallback to direct URL
+                    } else {
+                      setImageError(true); // If direct URL also fails, show error UI
+                    }
+                  }}
+                />
+                {artwork.sold && (
+                  <div className="absolute top-4 right-4">
+                    <div className="bg-white/90 text-red-600 border border-red-200 px-4 py-1.5 rounded-full text-sm font-medium shadow-sm">
+                      Sold
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div className="p-6 md:p-8 md:flex-1">
@@ -149,13 +160,22 @@ export default function ArtworkDetail() {
                   <p className="mt-1 text-gray-900">{artwork.material}</p>
                 </div>
               </div>
-              {artwork.price && (
-                <div className="mt-6">
-                  <p className="text-2xl font-bold text-indigo-600">
-                    {formatPrice(artwork.price)}
-                  </p>
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                {artwork.price && (
+                  <div className="mt-6">
+                    <p className="text-2xl font-bold text-indigo-600">
+                      {formatPrice(artwork.price)}
+                    </p>
+                  </div>
+                )}
+                {artwork.sold && (
+                  <div className="mt-6">
+                    <span className="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-red-100 text-red-800">
+                      Sold
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="mt-8">
               <Link

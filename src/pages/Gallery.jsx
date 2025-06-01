@@ -173,7 +173,9 @@ export default function Gallery() {
                         : image.url
                     }
                     alt={image.title}
-                    className="w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500"
+                    className={`w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ${
+                      image.sold ? "opacity-90" : ""
+                    }`}
                     onError={(e) => {
                       console.error("Image failed to load:", e);
                       if (image.public_id && e.target.src !== image.url) {
@@ -184,10 +186,21 @@ export default function Gallery() {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 sm:block hidden" />
+                  {image.sold && (
+                    <div className="absolute top-2 right-2 z-20">
+                      <div className="inline-flex bg-white/90 text-red-600 border border-red-200 px-3 py-1 rounded-full text-xs font-medium shadow-sm ml-2">
+                        Sold
+                      </div>
+                    </div>
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <button
-                      onClick={() => handleImageClick(image)}
-                      className="bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-black/60 transition-colors duration-200 sm:opacity-0 sm:group-hover:opacity-100 z-20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleImageClick(image);
+                      }}
+                      className="bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-black/60 transition-colors duration-200 sm:opacity-0 sm:group-hover:opacity-100 z-30"
                     >
                       Quick View
                     </button>
@@ -245,6 +258,11 @@ export default function Gallery() {
                   {image.featured && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                       Featured
+                    </span>
+                  )}
+                  {image.sold && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Sold
                     </span>
                   )}
                 </div>

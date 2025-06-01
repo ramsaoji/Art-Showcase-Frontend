@@ -95,15 +95,24 @@ export default function ImageModal({
                         <p className="mt-2 text-sm">Image not available</p>
                       </div>
                     ) : (
-                      <img
-                        src={getImageUrl()}
-                        alt={image?.title}
-                        className={`w-full h-full object-contain transition-opacity duration-300 ${
-                          isLoading ? "opacity-0" : "opacity-100"
-                        }`}
-                        onLoad={handleImageLoad}
-                        onError={handleImageError}
-                      />
+                      <div className="relative h-full">
+                        <img
+                          src={getImageUrl()}
+                          alt={image?.title}
+                          className={`w-full h-full object-contain transition-opacity duration-300 ${
+                            isLoading ? "opacity-0" : "opacity-100"
+                          } ${image?.sold ? "opacity-90" : ""}`}
+                          onLoad={handleImageLoad}
+                          onError={handleImageError}
+                        />
+                        {image?.sold && (
+                          <div className="absolute top-2 right-2 z-30">
+                            <div className="inline-flex bg-white/90 text-red-600 border border-red-200 px-3 py-1 rounded-full text-xs font-medium shadow-sm ml-2">
+                              Sold
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {hasPrevious && (
@@ -139,9 +148,16 @@ export default function ImageModal({
                       <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 pr-8">
                         {image?.title}
                       </h2>
-                      <p className="text-lg text-indigo-600 font-semibold mb-4">
-                        {image?.price ? formatPrice(image.price) : ""}
-                      </p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-lg text-indigo-600 font-semibold">
+                          {image?.price ? formatPrice(image.price) : ""}
+                        </p>
+                        {image?.sold && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                            Sold
+                          </span>
+                        )}
+                      </div>
 
                       <div className="space-y-4">
                         <div>

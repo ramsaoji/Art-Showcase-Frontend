@@ -50,7 +50,8 @@ export default function AddArtwork() {
         material: formData.get("material"),
         style: formData.get("style"),
         year: parseInt(formData.get("year")),
-        featured: formData.get("featured") === "true", // Check the actual value
+        featured: formData.get("featured") === "true",
+        sold: formData.get("sold") === "true",
         url: imageUrl,
         cloudinary_public_id: publicId,
         createdAt: serverTimestamp(),
