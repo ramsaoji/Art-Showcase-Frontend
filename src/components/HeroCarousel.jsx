@@ -34,7 +34,7 @@ export default function HeroCarousel() {
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/40 z-10" />
       <div className="flex animate-scroll z-[5]">
         {/* First set */}
         {images.map((image) => (
