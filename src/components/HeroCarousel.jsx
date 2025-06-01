@@ -38,7 +38,10 @@ export default function HeroCarousel() {
       <div className="flex animate-scroll z-[5]">
         {/* First set */}
         {images.map((image) => (
-          <div key={image.id} className="flex-none w-1/3 h-full relative">
+          <div
+            key={image.id}
+            className="flex-none w-full sm:w-1/2 md:w-1/3 h-full relative"
+          >
             <img
               src={
                 image.public_id
@@ -54,7 +57,7 @@ export default function HeroCarousel() {
         {images.map((image) => (
           <div
             key={`${image.id}-duplicate`}
-            className="flex-none w-1/3 h-full relative"
+            className="flex-none w-full sm:w-1/2 md:w-1/3 h-full relative"
           >
             <img
               src={
