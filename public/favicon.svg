@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main palette shape -->
+  <path d="M16 2C8.268 2 2 8.268 2 16C2 23.732 8.268 30 16 30C17.105 30 18 29.105 18 28C18 27.468 17.812 26.988 17.5 26.6C17.202 26.226 17 25.725 17 25.2C17 24.095 17.895 23.2 19 23.2H22C26.4 23.2 30 19.6 30 15.2C30 7.934 23.732 2 16 2Z" fill="#4F46E5"/>
+  
+  <!-- Color dots -->
+  <circle cx="9" cy="13" r="2.5" fill="#EF4444"/>
+  <circle cx="15" cy="9" r="2.5" fill="#F59E0B"/>
+  <circle cx="22" cy="11" r="2.5" fill="#10B981"/>
+  <circle cx="23" cy="17" r="2.5" fill="#6366F1"/>
+  <circle cx="16" cy="19" r="2.5" fill="#EC4899"/>
+</svg> 
