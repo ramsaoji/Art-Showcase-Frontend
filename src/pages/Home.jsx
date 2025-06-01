@@ -269,8 +269,8 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex flex-col space-y-3 pt-4 border-t border-gray-100">
+                    <div className="flex items-center flex-wrap gap-2">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                         {artwork.style}
                       </span>
@@ -283,10 +283,12 @@ export default function Home() {
                         </span>
                       )}
                     </div>
-                    <ArtworkActions
-                      artworkId={artwork.id}
-                      onDelete={handleDelete}
-                    />
+                    <div className="flex justify-end">
+                      <ArtworkActions
+                        artworkId={artwork.id}
+                        onDelete={handleDelete}
+                      />
+                    </div>
                   </div>
                 </Link>
               </div>
