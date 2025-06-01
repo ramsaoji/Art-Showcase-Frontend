@@ -10,6 +10,7 @@ import Footer from "./components/Footer";
 import AddArtwork from "./pages/AddArtwork";
 import EditArtwork from "./pages/EditArtwork";
 import Login from "./pages/Login";
+import ArtworkDetail from "./pages/ArtworkDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./contexts/AuthContext";
 
@@ -23,6 +24,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/gallery" element={<Gallery />} />
+              <Route path="/artwork/:id" element={<ArtworkDetail />} />
               <Route path="/featured" element={<Featured />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />

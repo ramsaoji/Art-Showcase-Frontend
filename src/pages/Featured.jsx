@@ -6,6 +6,7 @@ import { db } from "../firebase/config";
 import ImageModal from "../components/ImageModal";
 import ArtworkActions from "../components/ArtworkActions";
 import { formatPrice } from "../utils/formatters";
+import { getOptimizedImageUrl } from "../config/cloudinary";
 
 export default function Featured() {
   const [featuredArtworks, setFeaturedArtworks] = useState([]);
@@ -115,10 +116,7 @@ export default function Featured() {
             key={artwork.id}
             className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
           >
-            <div
-              className="relative aspect-w-4 aspect-h-3 bg-gray-100 cursor-pointer overflow-hidden"
-              onClick={() => handleImageClick(artwork)}
-            >
+            <div className="relative aspect-w-4 aspect-h-3 bg-gray-100 overflow-hidden">
               {imageErrors[artwork.id] ? (
                 <div className="flex items-center justify-center h-full">
                   <PhotoIcon className="h-12 w-12 text-gray-400" />
@@ -126,13 +124,40 @@ export default function Featured() {
               ) : (
                 <>
                   <img
-                    src={artwork.url}
+                    src={
+                      artwork.public_id
+                        ? getOptimizedImageUrl(artwork.public_id)
+                        : artwork.url
+                    }
                     alt={artwork.title}
                     className="w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500"
-                    onError={() => handleImageError(artwork.id)}
+                    onError={(e) => {
+                      console.error("Image failed to load:", e);
+                      if (artwork.public_id && e.target.src !== artwork.url) {
+                        e.target.src = artwork.url; // Try fallback to direct URL
+                      } else {
+                        handleImageError(artwork.id);
+                      }
+                    }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 sm:block hidden" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <button
+                      onClick={() => handleImageClick(artwork)}
+                      className="bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-black/60 transition-colors duration-200 sm:opacity-0 sm:group-hover:opacity-100 z-20"
+                    >
+                      Quick View
+                    </button>
+                  </div>
+                  <Link
+                    to={`/artwork/${artwork.id}`}
+                    className="absolute inset-0 z-10"
+                  >
+                    <span className="sr-only">
+                      View details for {artwork.title}
+                    </span>
+                  </Link>
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform sm:translate-y-full sm:group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/70 to-transparent sm:bg-none">
                     <p className="text-sm font-medium">{artwork.material}</p>
                     <p className="text-sm opacity-90">{artwork.dimensions}</p>
                   </div>
@@ -140,7 +165,7 @@ export default function Featured() {
               )}
             </div>
 
-            <div className="p-5">
+            <Link to={`/artwork/${artwork.id}`} className="block p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <h3 className="text-xl font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors duration-300">
@@ -165,18 +190,9 @@ export default function Featured() {
 
               {artwork.description && (
                 <div className="mt-3 mb-4">
-                  <p className="text-sm text-gray-600 line-clamp-3 group-hover:line-clamp-none transition-all duration-300">
+                  <p className="text-sm text-gray-600 line-clamp-3">
                     {artwork.description}
                   </p>
-                  <button
-                    className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none hidden group-hover:inline-block"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleImageClick(artwork);
-                    }}
-                  >
-                    Read more
-                  </button>
                 </div>
               )}
 
@@ -194,31 +210,29 @@ export default function Featured() {
                   onDelete={handleDelete}
                 />
               </div>
-            </div>
+            </Link>
           </div>
         ))}
       </div>
 
-      {selectedArtwork && (
-        <ImageModal
-          isOpen={!!selectedArtwork}
-          onClose={() => setSelectedArtwork(null)}
-          image={selectedArtwork}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          hasPrevious={
-            featuredArtworks.findIndex(
-              (artwork) => artwork.id === selectedArtwork?.id
-            ) > 0
-          }
-          hasNext={
-            featuredArtworks.findIndex(
-              (artwork) => artwork.id === selectedArtwork?.id
-            ) <
-            featuredArtworks.length - 1
-          }
-        />
-      )}
+      <ImageModal
+        isOpen={!!selectedArtwork}
+        onClose={() => setSelectedArtwork(null)}
+        image={selectedArtwork}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        hasPrevious={
+          featuredArtworks.findIndex(
+            (artwork) => artwork.id === selectedArtwork?.id
+          ) > 0
+        }
+        hasNext={
+          featuredArtworks.findIndex(
+            (artwork) => artwork.id === selectedArtwork?.id
+          ) <
+          featuredArtworks.length - 1
+        }
+      />
     </div>
   );
 }

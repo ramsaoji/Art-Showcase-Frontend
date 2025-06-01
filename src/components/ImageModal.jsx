@@ -7,6 +7,7 @@ import {
   PhotoIcon,
 } from "@heroicons/react/24/outline";
 import { formatPrice } from "../utils/formatters";
+import { getOptimizedImageUrl } from "../config/cloudinary";
 
 export default function ImageModal({
   isOpen,
@@ -24,7 +25,7 @@ export default function ImageModal({
   useEffect(() => {
     setIsLoading(true);
     setHasError(false);
-  }, [image?.url, image?.image]);
+  }, [image?.url, image?.public_id, image?.cloudinary_public_id]);
 
   const handleImageLoad = () => {
     setIsLoading(false);
@@ -34,6 +35,15 @@ export default function ImageModal({
   const handleImageError = () => {
     setIsLoading(false);
     setHasError(true);
+  };
+
+  const getImageUrl = () => {
+    if (!image) return "";
+    const publicId = image.public_id || image.cloudinary_public_id;
+    if (publicId) {
+      return getOptimizedImageUrl(publicId);
+    }
+    return image.url;
   };
 
   return (
@@ -72,7 +82,7 @@ export default function ImageModal({
             <div className="inline-block w-full max-w-6xl my-8 text-left align-middle transition-all transform">
               <div className="bg-white rounded-xl overflow-hidden shadow-xl">
                 <div className="flex flex-col md:flex-row md:max-h-[90vh]">
-                  <div className="relative flex-none h-[35vh] md:h-auto md:flex-1 bg-gray-100">
+                  <div className="relative flex-none h-[40vh] md:h-auto md:flex-1 bg-gray-100">
                     {isLoading && !hasError && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
@@ -86,7 +96,7 @@ export default function ImageModal({
                       </div>
                     ) : (
                       <img
-                        src={image?.url || image?.image}
+                        src={getImageUrl()}
                         alt={image?.title}
                         className={`w-full h-full object-contain transition-opacity duration-300 ${
                           isLoading ? "opacity-0" : "opacity-100"
@@ -187,11 +197,11 @@ export default function ImageModal({
                           </div>
                         </div>
 
-                        <div className="pt-4 pb-2">
+                        {/* <div className="pt-4 pb-2">
                           <button className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
                             Contact About This Piece
                           </button>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   </div>
