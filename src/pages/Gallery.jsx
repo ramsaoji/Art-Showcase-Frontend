@@ -216,7 +216,7 @@ export default function Gallery() {
                   </h3>
                   <div className="mt-1 flex items-center">
                     <span className="text-sm font-medium text-gray-600">
-                      {image.artist}
+                      By {image.artist}
                     </span>
                     <span className="mx-2 text-gray-300">•</span>
                     <span className="text-sm text-gray-500">{image.year}</span>

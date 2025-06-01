@@ -173,7 +173,7 @@ export default function Featured() {
                   </h3>
                   <div className="mt-1 flex items-center">
                     <span className="text-sm font-medium text-gray-600">
-                      {artwork.artist}
+                      By {artwork.artist}
                     </span>
                     <span className="mx-2 text-gray-300">•</span>
                     <span className="text-sm text-gray-500">
