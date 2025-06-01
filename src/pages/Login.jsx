@@ -38,10 +38,10 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8 h-[calc(100vh-5rem)]">
-      <div className="max-w-md w-full space-y-6">
+    <div className="flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)]">
+      <div className="max-w-md w-full space-y-4 sm:space-y-6 py-4 sm:py-0">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
             Admin Login
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -50,12 +50,12 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 sm:px-4 sm:py-3 rounded-md text-sm">
             {error}
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-3 sm:space-y-4" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email-address" className="sr-only">
