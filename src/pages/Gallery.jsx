@@ -159,7 +159,7 @@ export default function Gallery() {
             key={image.id}
             className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
           >
-            <div className="relative aspect-w-4 aspect-h-3 bg-gray-100 overflow-hidden">
+            <div className="relative h-[300px] bg-gray-100 overflow-hidden">
               {imageErrors[image.id] ? (
                 <div className="flex items-center justify-center h-full">
                   <PhotoIcon className="h-12 w-12 text-gray-400" />
@@ -173,13 +173,13 @@ export default function Gallery() {
                         : image.url
                     }
                     alt={image.title}
-                    className={`w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ${
+                    className={`w-full h-full object-cover object-center ${
                       image.sold ? "opacity-90" : ""
                     }`}
                     onError={(e) => {
                       console.error("Image failed to load:", e);
                       if (image.public_id && e.target.src !== image.url) {
-                        e.target.src = image.url; // Try fallback to direct URL
+                        e.target.src = image.url;
                       } else {
                         handleImageError(image.id);
                       }

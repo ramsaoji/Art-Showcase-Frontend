@@ -116,7 +116,7 @@ export default function Featured() {
             key={artwork.id}
             className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
           >
-            <div className="relative aspect-w-4 aspect-h-3 bg-gray-100 overflow-hidden">
+            <div className="relative h-[300px] bg-gray-100 overflow-hidden">
               {imageErrors[artwork.id] ? (
                 <div className="flex items-center justify-center h-full">
                   <PhotoIcon className="h-12 w-12 text-gray-400" />
@@ -130,13 +130,13 @@ export default function Featured() {
                         : artwork.url
                     }
                     alt={artwork.title}
-                    className={`w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ${
+                    className={`w-full h-full object-cover object-center ${
                       artwork.sold ? "opacity-90" : ""
                     }`}
                     onError={(e) => {
                       console.error("Image failed to load:", e);
                       if (artwork.public_id && e.target.src !== artwork.url) {
-                        e.target.src = artwork.url; // Try fallback to direct URL
+                        e.target.src = artwork.url;
                       } else {
                         handleImageError(artwork.id);
                       }

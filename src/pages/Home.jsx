@@ -8,6 +8,7 @@ import ImageModal from "../components/ImageModal";
 import ArtworkActions from "../components/ArtworkActions";
 import { formatPrice } from "../utils/formatters";
 import { getOptimizedImageUrl } from "../config/cloudinary";
+import HeroCarousel from "../components/HeroCarousel";
 
 export default function Home() {
   const [featuredArtworks, setFeaturedArtworks] = useState([]);
@@ -95,19 +96,12 @@ export default function Home() {
     <div className="bg-white">
       {/* Hero Section */}
       <div className="relative">
-        <div className="absolute inset-0">
-          <img
-            className="h-full w-full object-cover"
-            src="https://images.unsplash.com/photo-1577720643272-265f09367456?ixlib=rb-4.0.3"
-            alt="Modern art gallery"
-          />
-          <div className="absolute inset-0 bg-gray-500 mix-blend-multiply" />
-        </div>
-        <div className="relative mx-auto max-w-7xl py-24 px-6 sm:py-32 lg:px-8">
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+        <HeroCarousel />
+        <div className="relative mx-auto max-w-7xl py-24 px-6 sm:py-32 lg:px-8 z-20">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl drop-shadow-2xl text-shadow-lg">
             Discover Unique Artworks
           </h1>
-          <p className="mt-6 max-w-2xl text-xl text-gray-100">
+          <p className="mt-6 max-w-2xl text-xl text-white drop-shadow-2xl text-shadow">
             Explore our curated collection of exceptional pieces from talented
             artists around the world.
           </p>
@@ -163,13 +157,13 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-y-12 gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
             {featuredArtworks.map((artwork) => (
               <div
                 key={artwork.id}
                 className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
               >
-                <div className="relative aspect-w-4 aspect-h-3 bg-gray-100 overflow-hidden">
+                <div className="relative h-[300px] bg-gray-100 overflow-hidden">
                   {imageErrors[artwork.id] ? (
                     <div className="flex items-center justify-center h-full">
                       <PhotoIcon className="h-12 w-12 text-gray-400" />
@@ -183,7 +177,7 @@ export default function Home() {
                             : artwork.url
                         }
                         alt={artwork.title}
-                        className={`w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ${
+                        className={`w-full h-full object-cover object-center ${
                           artwork.sold ? "opacity-90" : ""
                         }`}
                         onError={(e) => {
@@ -192,7 +186,7 @@ export default function Home() {
                             artwork.public_id &&
                             e.target.src !== artwork.url
                           ) {
-                            e.target.src = artwork.url; // Try fallback to direct URL
+                            e.target.src = artwork.url;
                           } else {
                             handleImageError(artwork.id);
                           }
