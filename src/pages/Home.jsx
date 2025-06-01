@@ -1,54 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon } from "@heroicons/react/20/solid";
 import { PhotoIcon } from "@heroicons/react/24/outline";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { db } from "../firebase/config";
 import ImageModal from "../components/ImageModal";
-
-const featuredArtworks = [
-  {
-    id: 1,
-    title: "Abstract Harmony in Blue",
-    artist: "Elena Rodriguez",
-    url: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?ixlib=rb-4.0.3",
-    price: 2400,
-    description:
-      "A stunning exploration of color and form, this piece captures the essence of modern expression through bold strokes and dynamic composition.",
-    dimensions: "80x100 cm",
-    material: "Oil on Canvas",
-    year: 2024,
-    style: "Abstract",
-  },
-  {
-    id: 2,
-    title: "Urban Dreams",
-    artist: "Michael Chen",
-    url: "https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?ixlib=rb-4.0.3",
-    price: 1800,
-    description:
-      "An elegant composition that explores the relationship between light and shadow in contemporary urban spaces.",
-    dimensions: "60x80 cm",
-    material: "Acrylic",
-    year: 2024,
-    style: "Contemporary",
-  },
-  {
-    id: 3,
-    title: "Ethereal Light",
-    artist: "Sarah Johnson",
-    url: "https://images.unsplash.com/photo-1549490349-8643362247b5?ixlib=rb-4.0.3",
-    price: 3200,
-    description:
-      "A mesmerizing piece that blends traditional methods with contemporary vision, creating an atmosphere of ethereal beauty.",
-    dimensions: "90x120 cm",
-    material: "Mixed Media",
-    year: 2024,
-    style: "Modern",
-  },
-];
+import { formatPrice } from "../utils/formatters";
 
 export default function Home() {
+  const [featuredArtworks, setFeaturedArtworks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedArtwork, setSelectedArtwork] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadFeaturedArtworks = async () => {
+      setLoading(true);
+      try {
+        console.log("Fetching featured artworks...");
+
+        // Get all artworks ordered by creation time
+        const artworksQuery = query(
+          collection(db, "artworks"),
+          orderBy("createdAt", "desc")
+        );
+
+        const querySnapshot = await getDocs(artworksQuery);
+
+        // Convert and filter the documents
+        const allArtworks = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate(),
+        }));
+
+        console.log("All artworks:", allArtworks);
+
+        // Filter featured artworks and take only the first 3
+        const featuredArtworks = allArtworks
+          .filter((artwork) => artwork.featured === true)
+          .slice(0, 3);
+
+        console.log("Featured artworks:", featuredArtworks);
+        setFeaturedArtworks(featuredArtworks);
+      } catch (error) {
+        console.error("Error loading featured artworks:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedArtworks();
+  }, []);
 
   const handleArtworkClick = (artwork, e) => {
     e.preventDefault(); // Prevent navigation
@@ -77,16 +82,9 @@ export default function Home() {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
-  };
-
   return (
     <div className="bg-white">
-      {/* Hero section */}
+      {/* Hero Section */}
       <div className="relative">
         <div className="absolute inset-0">
           <img
@@ -98,22 +96,22 @@ export default function Home() {
         </div>
         <div className="relative mx-auto max-w-7xl py-24 px-6 sm:py-32 lg:px-8">
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Discover Exceptional Art
+            Discover Unique Artworks
           </h1>
           <p className="mt-6 max-w-2xl text-xl text-gray-100">
-            Explore our curated collection of contemporary artworks from
-            emerging and established artists around the world.
+            Explore our curated collection of exceptional pieces from talented
+            artists around the world.
           </p>
           <div className="mt-10 flex gap-x-6">
             <Link
               to="/gallery"
               className="rounded-md bg-indigo-600 px-3.5 py-2 sm:px-6 sm:py-3 text-sm sm:text-lg font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
-              Explore Gallery
+              Browse Gallery
             </Link>
             <Link
               to="/about"
-              className="rounded-md bg-white px-3.5 py-2 sm:px-6 sm:py-3 text-sm sm:text-lg font-semibold text-gray-900 shadow-sm hover:bg-gray-100"
+              className="rounded-md bg-white/10 px-3.5 py-2 sm:px-6 sm:py-3 text-sm sm:text-lg font-semibold text-white hover:bg-white/20"
             >
               Learn More
             </Link>
@@ -121,7 +119,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Featured section */}
+      {/* Featured Artworks Section */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex items-center justify-between mb-12">
           <div>
@@ -141,35 +139,111 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
-          {featuredArtworks.map((artwork) => (
-            <div key={artwork.id} className="group relative">
+        {loading ? (
+          <div className="flex justify-center my-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+          </div>
+        ) : featuredArtworks.length === 0 ? (
+          <div className="text-center py-12">
+            <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-semibold text-gray-900">
+              No featured artworks
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Check back later for our featured collection.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-y-12 gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredArtworks.map((artwork) => (
               <div
-                className="aspect-h-3 aspect-w-4 overflow-hidden rounded-lg cursor-pointer"
-                onClick={(e) => handleArtworkClick(artwork, e)}
+                key={artwork.id}
+                className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
               >
-                {imageErrors[artwork.id] ? (
-                  <div className="h-full w-full flex items-center justify-center bg-gray-100">
-                    <PhotoIcon className="h-16 w-16 text-gray-400" />
+                <div
+                  className="relative aspect-w-4 aspect-h-3 bg-gray-100 cursor-pointer overflow-hidden"
+                  onClick={(e) => handleArtworkClick(artwork, e)}
+                >
+                  {imageErrors[artwork.id] ? (
+                    <div className="flex items-center justify-center h-full">
+                      <PhotoIcon className="h-12 w-12 text-gray-400" />
+                    </div>
+                  ) : (
+                    <>
+                      <img
+                        src={artwork.url}
+                        alt={artwork.title}
+                        className="w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500"
+                        onError={() => handleImageError(artwork.id)}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <p className="text-sm font-medium">
+                          {artwork.material}
+                        </p>
+                        <p className="text-sm opacity-90">
+                          {artwork.dimensions}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors duration-300">
+                        {artwork.title}
+                      </h3>
+                      <div className="mt-1 flex items-center">
+                        <span className="text-sm font-medium text-gray-600">
+                          {artwork.artist}
+                        </span>
+                        <span className="mx-2 text-gray-300">•</span>
+                        <span className="text-sm text-gray-500">
+                          {artwork.year}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-lg font-bold text-indigo-600">
+                        {formatPrice(artwork.price)}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  <img
-                    src={artwork.url}
-                    alt={artwork.title}
-                    className="h-full w-full object-cover object-center group-hover:opacity-75 transition-opacity duration-300"
-                    onError={() => handleImageError(artwork.id)}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent" />
+
+                  {artwork.description && (
+                    <div className="mt-3 mb-4">
+                      <p className="text-sm text-gray-600 line-clamp-3 group-hover:line-clamp-none transition-all duration-300">
+                        {artwork.description}
+                      </p>
+                      <button
+                        className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none hidden group-hover:inline-block"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArtworkClick(artwork, e);
+                        }}
+                      >
+                        Read more
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {artwork.style}
+                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        Featured
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <h3 className="text-xl font-semibold">{artwork.title}</h3>
-                <p className="mt-1">{artwork.artist}</p>
-                <p className="mt-1 font-medium">{formatPrice(artwork.price)}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-12 text-center sm:hidden">
           <Link
@@ -179,37 +253,6 @@ export default function Home() {
             View all featured works
             <ArrowRightIcon className="ml-2 h-5 w-5" />
           </Link>
-        </div>
-      </div>
-
-      {/* Artist spotlight */}
-      <div className="bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                Artist Spotlight
-              </h2>
-              <p className="mt-4 text-lg text-gray-500">
-                Meet our featured artists and discover their unique
-                perspectives, techniques, and inspirations.
-              </p>
-            </div>
-            <div className="mt-12 lg:mt-0">
-              <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                <img
-                  className="rounded-lg object-cover h-64"
-                  src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?ixlib=rb-4.0.3"
-                  alt="Artist at work"
-                />
-                <img
-                  className="rounded-lg object-cover h-64"
-                  src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?ixlib=rb-4.0.3"
-                  alt="Artist studio"
-                />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

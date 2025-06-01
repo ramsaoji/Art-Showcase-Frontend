@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { PhotoIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { db } from "../firebase/config";
+// import { useAuth } from "../contexts/AuthContext";
 import ImageModal from "../components/ImageModal";
+import ArtworkActions from "../components/ArtworkActions";
+import { formatPrice } from "../utils/formatters";
 
 // Generate more detailed artwork data
 const generateImages = (start, count) => {
@@ -48,21 +53,30 @@ export default function Gallery() {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
+  // const { isAdmin } = useAuth();
 
   useEffect(() => {
-    const loadImages = () => {
+    const loadImages = async () => {
       setLoading(true);
       try {
-        // Load user-uploaded artworks from localStorage
-        const userArtworks = JSON.parse(
-          localStorage.getItem("artworks") || "[]"
+        // Create a query to get artworks ordered by creation time
+        const artworksQuery = query(
+          collection(db, "artworks"),
+          orderBy("createdAt", "desc")
         );
 
-        // Generate some demo artworks
-        const demoArtworks = generateImages(1, 6);
+        // Get the documents
+        const querySnapshot = await getDocs(artworksQuery);
 
-        // Combine user artworks with demo artworks
-        setImages([...userArtworks, ...demoArtworks]);
+        // Convert the documents to our format
+        const artworks = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          // Convert Firestore Timestamp to JS Date
+          createdAt: doc.data().createdAt?.toDate(),
+        }));
+
+        setImages(artworks);
       } catch (error) {
         console.error("Error loading artworks:", error);
       } finally {
@@ -99,12 +113,20 @@ export default function Gallery() {
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
+  const handleDelete = (deletedId) => {
+    setImages((prevImages) => prevImages.filter((img) => img.id !== deletedId));
+    if (selectedImage?.id === deletedId) {
+      setSelectedImage(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -117,73 +139,105 @@ export default function Gallery() {
             Browse through our collection of exceptional artworks
           </p>
         </div>
-        <div className="mt-4 md:mt-0">
-          <Link
-            to="/add-artwork"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-            Add New Artwork
-          </Link>
-        </div>
+        {/* {isAdmin && (
+          <div className="mt-4 md:mt-0">
+            <Link
+              to="/add-artwork"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+              Add New Artwork
+            </Link>
+          </div>
+        )} */}
       </div>
 
-      {loading ? (
-        <div className="flex justify-center my-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {images.map((image) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
+        {images.map((image) => (
+          <div
+            key={image.id}
+            className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
+          >
             <div
-              key={image.id}
-              className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+              className="relative aspect-w-4 aspect-h-3 bg-gray-100 cursor-pointer overflow-hidden"
+              onClick={() => handleImageClick(image)}
             >
-              <div
-                onClick={() => handleImageClick(image)}
-                className="relative cursor-pointer group aspect-w-4 aspect-h-3"
-              >
-                {imageErrors[image.id] ? (
-                  <div className="h-full w-full flex flex-col items-center justify-center bg-gray-100 text-gray-400">
-                    <PhotoIcon className="h-16 w-16" />
-                    <p className="mt-2 text-sm">Image not available</p>
-                  </div>
-                ) : (
+              {imageErrors[image.id] ? (
+                <div className="flex items-center justify-center h-full">
+                  <PhotoIcon className="h-12 w-12 text-gray-400" />
+                </div>
+              ) : (
+                <>
                   <img
                     src={image.url}
                     alt={image.title}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
+                    className="w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500"
                     onError={() => handleImageError(image.id)}
                   />
-                )}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-300 flex items-center justify-center">
-                  <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black bg-opacity-50 px-4 py-2 rounded-full text-sm sm:text-base">
-                    View Details
-                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                    <p className="text-sm font-medium">{image.material}</p>
+                    <p className="text-sm opacity-90">{image.dimensions}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors duration-300">
+                    {image.title}
+                  </h3>
+                  <div className="mt-1 flex items-center">
+                    <span className="text-sm font-medium text-gray-600">
+                      {image.artist}
+                    </span>
+                    <span className="mx-2 text-gray-300">•</span>
+                    <span className="text-sm text-gray-500">{image.year}</span>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-lg font-bold text-indigo-600">
+                    {formatPrice(image.price)}
+                  </p>
                 </div>
               </div>
-              <div className="p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 line-clamp-1">
-                  {image.title}
-                </h3>
-                <p className="text-gray-600 text-sm sm:text-base mb-4 line-clamp-2">
-                  {image.description}
-                </p>
-                <div className="flex justify-between items-center">
-                  <div className="text-xs sm:text-sm text-gray-500">
-                    <p>By {image.artist}</p>
-                    <p>{image.dimensions}</p>
-                  </div>
-                  <span className="text-base sm:text-lg font-bold text-indigo-600">
-                    {formatPrice(image.price)}
-                  </span>
+
+              {image.description && (
+                <div className="mt-3 mb-4">
+                  <p className="text-sm text-gray-600 line-clamp-3 group-hover:line-clamp-none transition-all duration-300">
+                    {image.description}
+                  </p>
+                  <button
+                    className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none hidden group-hover:inline-block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageClick(image);
+                    }}
+                  >
+                    Read more
+                  </button>
                 </div>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {image.style}
+                  </span>
+                  {image.featured && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      Featured
+                    </span>
+                  )}
+                </div>
+                <ArtworkActions artworkId={image.id} onDelete={handleDelete} />
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       <ImageModal
         isOpen={!!selectedImage}

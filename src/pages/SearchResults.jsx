@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import ImageModal from "../components/ImageModal";
+import { formatPrice } from "../utils/formatters";
 
 const generateSearchResults = (query) => {
   // This is a mock function - in a real app, this would be an API call
@@ -99,13 +100,6 @@ export default function SearchResults() {
     if (currentIndex < results.length - 1) {
       setSelectedArtwork(results[currentIndex + 1]);
     }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
   };
 
   return (

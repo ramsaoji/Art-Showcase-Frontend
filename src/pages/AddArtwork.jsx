@@ -1,5 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDoc,
+} from "firebase/firestore";
+import { db } from "../firebase/config";
+import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 
 export default function AddArtwork() {
@@ -8,17 +16,32 @@ export default function AddArtwork() {
 
   const handleSubmit = async (formData) => {
     try {
-      // Here you would typically make an API call to your backend
-      // For now, we'll just simulate it and store in localStorage
+      // Handle image upload
+      const imageFile = formData.get("image");
+      let imageUrl = null;
+      let publicId = null;
 
-      // Get existing artworks from localStorage
-      const existingArtworks = JSON.parse(
-        localStorage.getItem("artworks") || "[]"
-      );
+      if (imageFile) {
+        try {
+          // Upload to Cloudinary
+          const uploadResult = await uploadImage(imageFile);
+          imageUrl = uploadResult.url;
+          publicId = uploadResult.public_id;
 
-      // Create a new artwork object
-      const newArtwork = {
-        id: Date.now(), // Use timestamp as a simple unique ID
+          console.log("Upload completed:", uploadResult);
+        } catch (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+      }
+
+      // Log all form data
+      for (let [key, value] of formData.entries()) {
+        console.log(`Form data: ${key} = ${value}`);
+      }
+
+      // Create artwork document in Firestore
+      const artworkData = {
         title: formData.get("title"),
         artist: formData.get("artist"),
         price: parseFloat(formData.get("price")),
@@ -27,37 +50,29 @@ export default function AddArtwork() {
         material: formData.get("material"),
         style: formData.get("style"),
         year: parseInt(formData.get("year")),
+        featured: formData.get("featured") === "true", // Check the actual value
+        url: imageUrl,
+        cloudinary_public_id: publicId,
+        createdAt: serverTimestamp(),
       };
 
-      // Handle image file
-      const imageFile = formData.get("image");
-      if (imageFile) {
-        // In a real app, you would upload this to a server
-        // For now, we'll use FileReader to convert it to a data URL
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newArtwork.url = reader.result;
-          // Save to localStorage
-          localStorage.setItem(
-            "artworks",
-            JSON.stringify([...existingArtworks, newArtwork])
-          );
-          // Navigate to the gallery page
-          navigate("/gallery");
-        };
-        reader.readAsDataURL(imageFile);
-      } else {
-        // If no image, save without it
-        localStorage.setItem(
-          "artworks",
-          JSON.stringify([...existingArtworks, newArtwork])
-        );
-        // Navigate to the gallery page
-        navigate("/gallery");
+      console.log("Saving artwork data:", artworkData);
+
+      // Add to Firestore
+      const docRef = await addDoc(collection(db, "artworks"), artworkData);
+      console.log("Document written with ID:", docRef.id);
+
+      // Get the saved document to verify
+      const savedDocSnap = await getDoc(docRef);
+      if (savedDocSnap.exists()) {
+        console.log("Saved document data:", savedDocSnap.data());
       }
+
+      // Navigate to the gallery page
+      navigate("/gallery");
     } catch (err) {
-      setError("Failed to save artwork. Please try again.");
       console.error("Error saving artwork:", err);
+      setError(err.message || "Failed to save artwork. Please try again.");
     }
   };
 

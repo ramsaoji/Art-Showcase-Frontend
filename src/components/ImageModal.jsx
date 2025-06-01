@@ -6,6 +6,7 @@ import {
   ChevronRightIcon,
   PhotoIcon,
 } from "@heroicons/react/24/outline";
+import { formatPrice } from "../utils/formatters";
 
 export default function ImageModal({
   isOpen,
@@ -33,13 +34,6 @@ export default function ImageModal({
   const handleImageError = () => {
     setIsLoading(false);
     setHasError(true);
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
   };
 
   return (

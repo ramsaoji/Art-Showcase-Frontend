@@ -1,56 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import ImageModal from "../components/ImageModal";
 import { PhotoIcon } from "@heroicons/react/24/outline";
-
-const featuredArtworks = [
-  {
-    id: 1,
-    title: "Abstract Harmony in Blue",
-    artist: "Elena Rodriguez",
-    url: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    price: 2400,
-    description:
-      "A stunning exploration of color and form, this piece captures the essence of modern expression through bold strokes and dynamic composition.",
-    dimensions: "80x100 cm",
-    material: "Oil on Canvas",
-    year: 2024,
-    style: "Abstract",
-  },
-  {
-    id: 2,
-    title: "Urban Dreams",
-    artist: "Michael Chen",
-    url: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?ixlib=rb-4.0.3",
-    price: 1800,
-    description:
-      "An elegant composition that explores the relationship between light and shadow in contemporary urban spaces.",
-    dimensions: "60x80 cm",
-    material: "Acrylic",
-    year: 2024,
-    style: "Contemporary",
-  },
-  {
-    id: 3,
-    title: "Ethereal Light",
-    artist: "Sarah Johnson",
-    url: "https://images.unsplash.com/photo-1574182245530-967d9b3831af?ixlib=rb-4.0.3",
-    price: 3200,
-    description:
-      "A mesmerizing piece that blends traditional methods with contemporary vision, creating an atmosphere of ethereal beauty.",
-    dimensions: "90x120 cm",
-    material: "Mixed Media",
-    year: 2024,
-    style: "Modern",
-  },
-  // Add more featured artworks here
-];
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "../firebase/config";
+import ImageModal from "../components/ImageModal";
+import ArtworkActions from "../components/ArtworkActions";
+import { formatPrice } from "../utils/formatters";
 
 export default function Featured() {
+  const [featuredArtworks, setFeaturedArtworks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedArtwork, setSelectedArtwork] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
+  const [error, setError] = useState(null);
 
-  const handleArtworkClick = (artwork) => {
+  const loadFeaturedArtworks = async () => {
+    setLoading(true);
+    try {
+      console.log("Fetching featured artworks...");
+
+      const artworksQuery = query(
+        collection(db, "artworks"),
+        where("featured", "==", true)
+      );
+
+      const querySnapshot = await getDocs(artworksQuery);
+      console.log(`Found ${querySnapshot.size} featured artworks`);
+
+      const artworks = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+      }));
+
+      setFeaturedArtworks(artworks);
+      setError(null);
+    } catch (error) {
+      console.error("Error loading featured artworks:", error);
+      setError("Failed to load featured artworks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFeaturedArtworks();
+  }, []);
+
+  const handleImageClick = (artwork) => {
     setSelectedArtwork(artwork);
   };
 
@@ -60,7 +57,7 @@ export default function Featured() {
 
   const handlePrevious = () => {
     const currentIndex = featuredArtworks.findIndex(
-      (art) => art.id === selectedArtwork?.id
+      (artwork) => artwork.id === selectedArtwork?.id
     );
     if (currentIndex > 0) {
       setSelectedArtwork(featuredArtworks[currentIndex - 1]);
@@ -69,113 +66,159 @@ export default function Featured() {
 
   const handleNext = () => {
     const currentIndex = featuredArtworks.findIndex(
-      (art) => art.id === selectedArtwork?.id
+      (artwork) => artwork.id === selectedArtwork?.id
     );
     if (currentIndex < featuredArtworks.length - 1) {
       setSelectedArtwork(featuredArtworks[currentIndex + 1]);
     }
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
+  const handleDelete = (deletedId) => {
+    setFeaturedArtworks((prev) => prev.filter((art) => art.id !== deletedId));
+    if (selectedArtwork?.id === deletedId) {
+      setSelectedArtwork(null);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-600">{error}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex items-center justify-between mb-12">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Featured Artworks
-            </h2>
-            <p className="mt-4 text-lg text-gray-500">
-              Explore our handpicked selection of exceptional pieces.
-            </p>
-          </div>
-          <Link
-            to="/gallery"
-            className="hidden sm:flex items-center text-indigo-600 hover:text-indigo-500"
-          >
-            View all artworks
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 gap-y-12 gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
-          {featuredArtworks.map((artwork) => (
-            <article
-              key={artwork.id}
-              className="group relative bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-            >
-              <div
-                className="relative aspect-h-3 aspect-w-4 cursor-pointer"
-                onClick={() => handleArtworkClick(artwork)}
-              >
-                {imageErrors[artwork.id] ? (
-                  <div className="h-full w-full flex flex-col items-center justify-center bg-gray-100 text-gray-400">
-                    <PhotoIcon className="h-16 w-16" />
-                    <p className="mt-2 text-sm">Image not available</p>
-                  </div>
-                ) : (
-                  <img
-                    src={artwork.url}
-                    alt={artwork.title}
-                    className="h-full w-full object-cover object-center group-hover:opacity-75 transition-opacity duration-300"
-                    onError={() => handleImageError(artwork.id)}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <span className="text-white text-lg font-medium bg-black/50 px-4 py-2 rounded-full">
-                    View Details
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {artwork.title}
-                  </h2>
-                  <p className="text-lg font-medium text-indigo-600">
-                    {formatPrice(artwork.price)}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-gray-600">{artwork.artist}</p>
-                  <p className="text-sm text-gray-500">
-                    {artwork.material} • {artwork.dimensions}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {artwork.style} • {artwork.year}
-                  </p>
-                </div>
-                <p className="mt-4 text-gray-600 line-clamp-2">
-                  {artwork.description}
-                </p>
-              </div>
-            </article>
-          ))}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="md:flex md:items-center md:justify-between mb-8">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            Featured Artworks
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Discover our specially curated collection of exceptional pieces
+          </p>
         </div>
       </div>
 
-      <ImageModal
-        isOpen={!!selectedArtwork}
-        onClose={() => setSelectedArtwork(null)}
-        image={selectedArtwork || {}}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
-        hasPrevious={
-          selectedArtwork &&
-          featuredArtworks.findIndex((art) => art.id === selectedArtwork.id) > 0
-        }
-        hasNext={
-          selectedArtwork &&
-          featuredArtworks.findIndex((art) => art.id === selectedArtwork.id) <
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
+        {featuredArtworks.map((artwork) => (
+          <div
+            key={artwork.id}
+            className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
+          >
+            <div
+              className="relative aspect-w-4 aspect-h-3 bg-gray-100 cursor-pointer overflow-hidden"
+              onClick={() => handleImageClick(artwork)}
+            >
+              {imageErrors[artwork.id] ? (
+                <div className="flex items-center justify-center h-full">
+                  <PhotoIcon className="h-12 w-12 text-gray-400" />
+                </div>
+              ) : (
+                <>
+                  <img
+                    src={artwork.url}
+                    alt={artwork.title}
+                    className="w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500"
+                    onError={() => handleImageError(artwork.id)}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                    <p className="text-sm font-medium">{artwork.material}</p>
+                    <p className="text-sm opacity-90">{artwork.dimensions}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors duration-300">
+                    {artwork.title}
+                  </h3>
+                  <div className="mt-1 flex items-center">
+                    <span className="text-sm font-medium text-gray-600">
+                      {artwork.artist}
+                    </span>
+                    <span className="mx-2 text-gray-300">•</span>
+                    <span className="text-sm text-gray-500">
+                      {artwork.year}
+                    </span>
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-lg font-bold text-indigo-600">
+                    {formatPrice(artwork.price)}
+                  </p>
+                </div>
+              </div>
+
+              {artwork.description && (
+                <div className="mt-3 mb-4">
+                  <p className="text-sm text-gray-600 line-clamp-3 group-hover:line-clamp-none transition-all duration-300">
+                    {artwork.description}
+                  </p>
+                  <button
+                    className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 focus:outline-none hidden group-hover:inline-block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageClick(artwork);
+                    }}
+                  >
+                    Read more
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {artwork.style}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                    Featured
+                  </span>
+                </div>
+                <ArtworkActions
+                  artworkId={artwork.id}
+                  onDelete={handleDelete}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {selectedArtwork && (
+        <ImageModal
+          isOpen={!!selectedArtwork}
+          onClose={() => setSelectedArtwork(null)}
+          image={selectedArtwork}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          hasPrevious={
+            featuredArtworks.findIndex(
+              (artwork) => artwork.id === selectedArtwork?.id
+            ) > 0
+          }
+          hasNext={
+            featuredArtworks.findIndex(
+              (artwork) => artwork.id === selectedArtwork?.id
+            ) <
             featuredArtworks.length - 1
-        }
-      />
+          }
+        />
+      )}
     </div>
   );
 }

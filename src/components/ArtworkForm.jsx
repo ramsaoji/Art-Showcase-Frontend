@@ -1,5 +1,23 @@
 import { useState } from "react";
-import { PhotoIcon } from "@heroicons/react/24/outline";
+import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+
+// Progress bar component
+function ProgressBar({ progress, label }) {
+  return (
+    <div className="w-full">
+      <div className="flex justify-between mb-1">
+        <span className="text-sm font-medium text-indigo-700">{label}</span>
+        <span className="text-sm font-medium text-indigo-700">{progress}%</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div
+          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+}
 
 export default function ArtworkForm({ onSubmit, initialData = null }) {
   const [formData, setFormData] = useState({
@@ -11,23 +29,40 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     material: initialData?.material || "",
     style: initialData?.style || "",
     year: initialData?.year || new Date().getFullYear(),
+    featured: initialData?.featured || false,
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(initialData?.url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [savingProgress, setSavingProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState(null);
+  const [imageError, setImageError] = useState("");
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
+    console.log(`Input changed: ${name} = ${newValue} (${typeof newValue})`);
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: newValue,
     }));
   };
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+    setImageError("");
+
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        setImageError("Image size must be less than 5MB");
+        e.target.value = null; // Reset file input
+        return;
+      }
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -40,6 +75,9 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setCurrentStep("uploading");
+    setUploadProgress(0);
+    setSavingProgress(0);
 
     try {
       // Create FormData object to handle file upload
@@ -47,12 +85,54 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
       if (imageFile) {
         submitData.append("image", imageFile);
       }
+
+      // Log form data before submission
+      console.log("Form data before submission:", formData);
+
       // Append other form data
       Object.entries(formData).forEach(([key, value]) => {
-        submitData.append(key, value);
+        // Convert boolean to string "true"/"false" for FormData
+        const formValue = typeof value === "boolean" ? String(value) : value;
+        submitData.append(key, formValue);
+        console.log(
+          `Appending to FormData: ${key} = ${formValue} (${typeof formValue})`
+        );
       });
 
+      // Simulate upload progress
+      const uploadInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(uploadInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
       await onSubmit(submitData);
+
+      // Complete upload progress
+      clearInterval(uploadInterval);
+      setUploadProgress(100);
+      setCurrentStep("saving");
+
+      // Simulate saving progress
+      const savingInterval = setInterval(() => {
+        setSavingProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(savingInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
+
+      // Wait for a moment to show completion
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      clearInterval(savingInterval);
+      setSavingProgress(100);
+
       // Reset form after successful submission
       if (!initialData) {
         setFormData({
@@ -64,6 +144,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           material: "",
           style: "",
           year: new Date().getFullYear(),
+          featured: false,
         });
         setImageFile(null);
         setImagePreview(null);
@@ -71,7 +152,12 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     } catch (error) {
       console.error("Error submitting artwork:", error);
     } finally {
-      setIsSubmitting(false);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setCurrentStep(null);
+        setUploadProgress(0);
+        setSavingProgress(0);
+      }, 1000);
     }
   };
 
@@ -82,7 +168,11 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         <label className="block text-sm font-medium text-gray-700">
           Artwork Image
         </label>
-        <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+        <div
+          className={`mt-2 flex justify-center px-6 pt-5 pb-6 border-2 ${
+            imageError ? "border-red-300" : "border-gray-300"
+          } border-dashed rounded-lg`}
+        >
           <div className="space-y-2 text-center">
             {imagePreview ? (
               <div className="relative">
@@ -96,6 +186,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
                   onClick={() => {
                     setImageFile(null);
                     setImagePreview(null);
+                    setImageError("");
                   }}
                   className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600"
                 >
@@ -104,9 +195,23 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
               </div>
             ) : (
               <>
-                <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <PhotoIcon
+                  className={`mx-auto h-12 w-12 ${
+                    imageError ? "text-red-400" : "text-gray-400"
+                  }`}
+                />
                 <div className="flex text-sm text-gray-600 justify-center">
-                  <label className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                  <label
+                    className={`relative cursor-pointer bg-white rounded-md font-medium ${
+                      imageError
+                        ? "text-red-600 hover:text-red-500"
+                        : "text-indigo-600 hover:text-indigo-500"
+                    } focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 ${
+                      imageError
+                        ? "focus-within:ring-red-500"
+                        : "focus-within:ring-indigo-500"
+                    }`}
+                  >
                     <span>Upload a file</span>
                     <input
                       type="file"
@@ -117,9 +222,19 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
                   </label>
                   <p className="pl-1">or drag and drop</p>
                 </div>
-                <p className="text-xs text-gray-500">
-                  PNG, JPG, GIF up to 10MB
+                <p
+                  className={`text-xs ${
+                    imageError ? "text-red-500" : "text-gray-500"
+                  }`}
+                >
+                  PNG, JPG, GIF up to 5MB
                 </p>
+                {imageError && (
+                  <div className="flex items-center justify-center gap-1 text-sm text-red-600 mt-2">
+                    <ExclamationCircleIcon className="h-5 w-5" />
+                    <span>{imageError}</span>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -173,7 +288,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">$</span>
+              <span className="text-gray-500 sm:text-sm">₹</span>
             </div>
             <input
               type="number"
@@ -181,7 +296,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
               id="price"
               required
               min="0"
-              step="0.01"
+              step="1"
               value={formData.price}
               onChange={handleInputChange}
               className="block w-full h-10 pl-7 pr-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -267,6 +382,29 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         </div>
 
         <div className="sm:col-span-2">
+          <div className="relative flex items-center">
+            <div className="flex h-6 items-center">
+              <input
+                id="featured"
+                name="featured"
+                type="checkbox"
+                checked={formData.featured}
+                onChange={handleInputChange}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+              />
+            </div>
+            <div className="ml-3 text-sm leading-6">
+              <label htmlFor="featured" className="font-medium text-gray-900">
+                Featured Artwork
+              </label>
+              <p className="text-gray-500">
+                Display this artwork in the featured section on the home page
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="sm:col-span-2">
           <label
             htmlFor="description"
             className="block text-sm font-medium text-gray-700 mb-2"
@@ -286,14 +424,32 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         </div>
       </div>
 
-      <div className="flex justify-end pt-6">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="inline-flex justify-center py-2.5 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? "Saving..." : "Save Artwork"}
-        </button>
+      <div className="flex flex-col gap-4 pt-6">
+        {isSubmitting && (
+          <div className="space-y-4">
+            {currentStep === "uploading" && (
+              <ProgressBar
+                progress={uploadProgress}
+                label="Uploading image..."
+              />
+            )}
+            {currentStep === "saving" && (
+              <ProgressBar
+                progress={savingProgress}
+                label="Saving artwork details..."
+              />
+            )}
+          </div>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex justify-center py-2.5 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Saving..." : "Save Artwork"}
+          </button>
+        </div>
       </div>
     </form>
   );

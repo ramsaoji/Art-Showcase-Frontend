@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useAuth } from "../contexts/AuthContext";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -20,12 +21,21 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const { isAdmin, logout } = useAuth();
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Failed to log out", error);
     }
   };
 
@@ -62,33 +72,32 @@ export default function Navbar() {
                 </div>
               </div>
               <div className="flex items-center">
-                {/* <div className="flex-shrink-0">
-                  <div className="hidden sm:block">
-                    <form onSubmit={handleSearch} className="flex items-center">
-                      <div className="relative rounded-md shadow-sm">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <MagnifyingGlassIcon
-                            className="h-5 w-5 text-gray-400"
-                            aria-hidden="true"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="block w-full rounded-md border-0 py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                          placeholder="Search artwork..."
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="ml-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                {
+                  isAdmin ? (
+                    <div className="flex items-center space-x-4">
+                      <Link
+                        to="/add-artwork"
+                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
                       >
-                        Search
+                        Add Artwork
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        Logout
                       </button>
-                    </form>
-                  </div>
-                </div> */}
+                    </div>
+                  ) : null
+                  // (
+                  //   <Link
+                  //     to="/login"
+                  //     className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  //   >
+                  //     Admin Login
+                  //   </Link>
+                  // )
+                }
                 {/* <div className="hidden sm:ml-6 sm:flex sm:items-center">
                   <Menu as="div" className="relative ml-3">
                     <div>
@@ -225,8 +234,8 @@ export default function Navbar() {
                   <div className="text-sm font-medium text-gray-500">
                     tom@example.com
                   </div>
-                </div>
-              </div>
+          </div>
+        </div>
               <div className="mt-3 space-y-1">
                 <Disclosure.Button
                   as="a"
