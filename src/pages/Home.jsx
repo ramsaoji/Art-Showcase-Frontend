@@ -5,6 +5,7 @@ import { PhotoIcon } from "@heroicons/react/24/outline";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import ImageModal from "../components/ImageModal";
+import ArtworkActions from "../components/ArtworkActions";
 import { formatPrice } from "../utils/formatters";
 import { getOptimizedImageUrl } from "../config/cloudinary";
 
@@ -80,6 +81,13 @@ export default function Home() {
     );
     if (currentIndex < featuredArtworks.length - 1) {
       setSelectedArtwork(featuredArtworks[currentIndex + 1]);
+    }
+  };
+
+  const handleDelete = (deletedId) => {
+    setFeaturedArtworks((prev) => prev.filter((art) => art.id !== deletedId));
+    if (selectedArtwork?.id === deletedId) {
+      setSelectedArtwork(null);
     }
   };
 
@@ -260,6 +268,10 @@ export default function Home() {
                         Featured
                       </span>
                     </div>
+                    <ArtworkActions
+                      artworkId={artwork.id}
+                      onDelete={handleDelete}
+                    />
                   </div>
                 </Link>
               </div>

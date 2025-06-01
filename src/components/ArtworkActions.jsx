@@ -16,8 +16,16 @@ export default function ArtworkActions({ artworkId, onDelete }) {
 
   if (!isAdmin) return null;
 
-  const handleEdit = () => {
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
     navigate(`/edit-artwork/${artworkId}`);
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowDeleteDialog(true);
   };
 
   const handleDelete = async () => {
@@ -73,7 +81,7 @@ export default function ArtworkActions({ artworkId, onDelete }) {
           Edit
         </button>
         <button
-          onClick={() => setShowDeleteDialog(true)}
+          onClick={handleDeleteClick}
           disabled={isDeleting}
           className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title="Delete artwork"
