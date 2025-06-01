@@ -4,6 +4,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { ShareIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { getOptimizedImageUrl } from "../config/cloudinary";
+import { formatPrice } from "../utils/formatters";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
@@ -151,7 +152,7 @@ export default function ArtworkDetail() {
               {artwork.price && (
                 <div className="mt-6">
                   <p className="text-2xl font-bold text-indigo-600">
-                    ${artwork.price}
+                    {formatPrice(artwork.price)}
                   </p>
                 </div>
               )}
