@@ -177,14 +177,19 @@ export default function ArtworkDetail() {
                   <ShareIcon className="h-6 w-6" />
                 </motion.button>
               </div>
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-2xl font-sans text-gray-600 mb-6"
+                className="mb-6"
               >
-                by {artwork.artist}
-              </motion.p>
+                <div className="relative group inline-block">
+                  <span className="font-artistic text-2xl text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                    {artwork.artist}
+                  </span>
+                  <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
+                </div>
+              </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

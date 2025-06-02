@@ -196,9 +196,12 @@ export default function ImageModal({
                           <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
                             Artist
                           </h3>
-                          <p className="text-lg font-sans text-gray-900 font-medium">
-                            {image?.artist}
-                          </p>
+                          <div className="relative group inline-block">
+                            <p className="font-artistic text-lg text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                              {image?.artist}
+                            </p>
+                            <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
+                          </div>
                         </div>
 
                         <div>
