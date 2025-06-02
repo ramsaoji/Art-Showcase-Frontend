@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 
 export default function Footer() {
   const heartControls = useAnimation();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Start the infinite animation sequence
@@ -17,6 +19,21 @@ export default function Footer() {
       },
     });
   }, [heartControls]);
+
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+
+    // If we're not on the home page, navigate home first
+    if (location.pathname !== "/") {
+      navigate("/");
+    }
+
+    // Smooth scroll to top
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <footer className="relative mt-8">
@@ -81,7 +98,11 @@ export default function Footer() {
               viewport={{ once: true }}
               className="space-y-3"
             >
-              <Link to="/" className="inline-block group">
+              <Link
+                to="/"
+                onClick={handleLogoClick}
+                className="inline-block group"
+              >
                 <span className="font-artistic text-xl font-bold tracking-wide relative">
                   <span className="text-indigo-600">Art</span>
                   <span className="text-gray-900 group-hover:text-indigo-600 transition-colors">
