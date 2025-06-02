@@ -87,11 +87,11 @@ export default function ImageModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="inline-block w-full max-w-6xl my-8 text-left align-middle transition-all transform"
+              className="inline-block w-full max-w-6xl my-4 sm:my-8 text-left align-middle transition-all transform"
             >
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20">
                 <div className="flex flex-col md:flex-row md:max-h-[90vh]">
-                  <div className="relative flex-none h-[40vh] md:h-auto md:flex-1 bg-gray-50/50">
+                  <div className="relative flex-none h-[35vh] sm:h-[40vh] md:h-auto md:flex-1 bg-gray-50/50">
                     {isLoading && !hasError && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Loader size="large" />
@@ -100,7 +100,7 @@ export default function ImageModal({
 
                     {hasError ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/50 text-gray-400">
-                        <PhotoIcon className="h-16 w-16" />
+                        <PhotoIcon className="h-12 w-12 sm:h-16 sm:w-16" />
                         <p className="mt-2 text-sm font-sans">
                           Image not available
                         </p>
@@ -116,11 +116,11 @@ export default function ImageModal({
                           onLoad={handleImageLoad}
                           onError={handleImageError}
                         />
-                        <div className="absolute top-4 right-4 z-30 flex gap-2">
+                        <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30 flex gap-2">
                           {image?.featured && (
                             <Badge type="featured" variant="overlay">
                               <span className="inline-flex items-center">
-                                <StarIcon className="h-4 w-4 mr-1" />
+                                <StarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                                 Featured
                               </span>
                             </Badge>
@@ -139,9 +139,9 @@ export default function ImageModal({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={onPrevious}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 hover:text-gray-600 z-10 bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg transition-all duration-200 hover:bg-white"
+                        className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-800 hover:text-gray-600 z-10 bg-white/80 backdrop-blur-sm rounded-full p-1.5 sm:p-2 shadow-lg transition-all duration-200 hover:bg-white"
                       >
-                        <ChevronLeftIcon className="h-8 w-8" />
+                        <ChevronLeftIcon className="h-6 w-6 sm:h-8 sm:w-8" />
                       </motion.button>
                     )}
 
@@ -150,9 +150,9 @@ export default function ImageModal({
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={onNext}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-800 hover:text-gray-600 z-10 bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg transition-all duration-200 hover:bg-white"
+                        className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-gray-800 hover:text-gray-600 z-10 bg-white/80 backdrop-blur-sm rounded-full p-1.5 sm:p-2 shadow-lg transition-all duration-200 hover:bg-white"
                       >
-                        <ChevronRightIcon className="h-8 w-8" />
+                        <ChevronRightIcon className="h-6 w-6 sm:h-8 sm:w-8" />
                       </motion.button>
                     )}
                   </div>
@@ -162,16 +162,16 @@ export default function ImageModal({
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={onClose}
-                      className="absolute right-4 top-4 z-10 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-all duration-200"
+                      className="absolute right-3 sm:right-4 top-3 sm:top-4 z-10 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 sm:p-2 transition-all duration-200"
                     >
-                      <XMarkIcon className="h-6 w-6" />
+                      <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                     </motion.button>
 
-                    <div className="p-6 overflow-y-auto max-h-[45vh] md:max-h-[90vh]">
+                    <div className="p-4 sm:p-6 overflow-y-auto max-h-[40vh] sm:max-h-[45vh] md:max-h-[90vh]">
                       <motion.h2
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="font-artistic text-3xl font-bold text-gray-900 mb-3 pr-12 tracking-wide"
+                        className="font-artistic text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-10 sm:pr-12 tracking-wide"
                       >
                         {image?.title}
                       </motion.h2>
