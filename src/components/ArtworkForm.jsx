@@ -58,6 +58,14 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     setImageError("");
 
     if (file) {
+      // Check file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+      if (!validTypes.includes(file.type)) {
+        setImageError("Please upload only JPG, JPEG or PNG files");
+        e.target.value = null; // Reset file input
+        return;
+      }
+
       if (file.size > MAX_FILE_SIZE) {
         setImageError("Image size must be less than 5MB");
         e.target.value = null; // Reset file input
@@ -170,77 +178,76 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         <label className="block text-sm font-medium text-gray-700">
           Artwork Image
         </label>
-        <div
-          className={`mt-2 flex justify-center px-6 pt-5 pb-6 border-2 ${
+        <label
+          className={`block mt-2 cursor-pointer ${
             imageError ? "border-red-300" : "border-gray-300"
-          } border-dashed rounded-lg`}
+          } border-2 border-dashed rounded-lg hover:bg-gray-50 transition-colors duration-200`}
         >
-          <div className="space-y-2 text-center">
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="mx-auto h-64 w-auto object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview(null);
-                    setImageError("");
-                  }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <>
-                <PhotoIcon
-                  className={`mx-auto h-12 w-12 ${
-                    imageError ? "text-red-400" : "text-gray-400"
-                  }`}
-                />
-                <div className="flex text-sm text-gray-600 justify-center">
-                  <label
-                    className={`relative cursor-pointer bg-white rounded-md font-medium ${
-                      imageError
-                        ? "text-red-600 hover:text-red-500"
-                        : "text-indigo-600 hover:text-indigo-500"
-                    } focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 ${
-                      imageError
-                        ? "focus-within:ring-red-500"
-                        : "focus-within:ring-indigo-500"
-                    }`}
+          <div className="px-6 pt-5 pb-6">
+            <div className="space-y-2 text-center">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="mx-auto h-64 w-auto object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setImageFile(null);
+                      setImagePreview(null);
+                      setImageError("");
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600"
                   >
-                    <span>Upload a file</span>
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <PhotoIcon
+                    className={`mx-auto h-12 w-12 ${
+                      imageError ? "text-red-400" : "text-gray-400"
+                    }`}
+                  />
+                  <div className="flex text-sm text-gray-600 justify-center">
+                    <span
+                      className={`${
+                        imageError
+                          ? "text-red-600 hover:text-red-500"
+                          : "text-indigo-600 hover:text-indigo-500"
+                      } font-medium`}
+                    >
+                      Upload a file
+                    </span>
                     <input
                       type="file"
                       className="sr-only"
-                      accept="image/*"
+                      accept=".jpg,.jpeg,.png"
                       onChange={handleImageChange}
                     />
-                  </label>
-                  <p className="pl-1">or drag and drop</p>
-                </div>
-                <p
-                  className={`text-xs ${
-                    imageError ? "text-red-500" : "text-gray-500"
-                  }`}
-                >
-                  PNG, JPG, GIF up to 5MB
-                </p>
-                {imageError && (
-                  <div className="flex items-center justify-center gap-1 text-sm text-red-600 mt-2">
-                    <ExclamationCircleIcon className="h-5 w-5" />
-                    <span>{imageError}</span>
+                    <p className="pl-1">or drag and drop</p>
                   </div>
-                )}
-              </>
-            )}
+                  <p
+                    className={`text-xs ${
+                      imageError ? "text-red-500" : "text-gray-500"
+                    }`}
+                  >
+                    JPG, JPEG, PNG up to 5MB
+                  </p>
+                  {imageError && (
+                    <div className="flex items-center justify-center gap-1 text-sm text-red-600 mt-2">
+                      <ExclamationCircleIcon className="h-5 w-5" />
+                      <span>{imageError}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </label>
       </div>
 
       {/* Artwork Details */}
@@ -400,19 +407,24 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
               Featured Artwork
             </label>
           </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="sold"
-              name="sold"
-              checked={formData.sold}
-              onChange={handleInputChange}
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-            />
-            <label htmlFor="sold" className="ml-2 block text-sm text-gray-700">
-              Mark as Sold
-            </label>
-          </div>
+          {initialData && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="sold"
+                name="sold"
+                checked={formData.sold}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor="sold"
+                className="ml-2 block text-sm text-gray-700"
+              >
+                Mark as Sold
+              </label>
+            </div>
+          )}
         </div>
 
         <div className="sm:col-span-2">

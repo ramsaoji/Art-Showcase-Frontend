@@ -6,6 +6,7 @@ const Contact = () => {
     email: "",
     message: "",
   });
+  const [submitted, setSubmitted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -13,15 +14,6 @@ const Contact = () => {
       ...prevState,
       [name]: value,
     }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would typically handle the form submission
-    console.log("Form submitted:", formData);
-    // Reset form
-    setFormData({ name: "", email: "", message: "" });
-    alert("Thank you for your message! We will get back to you soon.");
   };
 
   return (
@@ -33,70 +25,99 @@ const Contact = () => {
 
         <div className="bg-white shadow-lg rounded-lg overflow-hidden">
           <div className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Name
-                </label>
+            {submitted ? (
+              <div className="text-center py-12">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                  Thank You!
+                </h2>
+                <p className="text-gray-600">
+                  Your message has been sent successfully. We'll get back to you
+                  soon.
+                </p>
+              </div>
+            ) : (
+              <form
+                action="https://formsubmit.co/myofficial@techness.in"
+                method="POST"
+                className="space-y-6"
+              >
+                {/* Honeypot */}
+                <input type="text" name="_honey" style={{ display: "none" }} />
+
+                {/* Disable Captcha */}
+                <input type="hidden" name="_captcha" value="false" />
+
+                {/* Success page */}
                 <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="input-field"
-                  placeholder="Your name"
+                  type="hidden"
+                  name="_next"
+                  value={window.location.href}
                 />
-              </div>
 
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="input-field"
-                  placeholder="your.email@example.com"
-                />
-              </div>
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className="input-field"
+                    placeholder="Your name"
+                  />
+                </div>
 
-              <div>
-                <label
-                  htmlFor="message"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Message
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  required
-                  rows="4"
-                  className="input-field"
-                  placeholder="Your message here..."
-                ></textarea>
-              </div>
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    className="input-field"
+                    placeholder="email@example.com"
+                  />
+                </div>
 
-              <div>
-                <button type="submit" className="btn-primary w-full">
-                  Send Message
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label
+                    htmlFor="message"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Message
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    required
+                    rows="4"
+                    className="input-field"
+                    placeholder="Your message here..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <button type="submit" className="btn-primary w-full">
+                    Send Message
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
 
@@ -106,9 +127,9 @@ const Contact = () => {
             Other Ways to Connect
           </h2>
           <div className="space-y-2 text-gray-600">
-            <p>Email: contact@artshowcase.com</p>
-            <p>Phone: (555) 123-4567</p>
-            <div className="flex justify-center space-x-6 mt-4">
+            <p>Email: art-showcase@techness.in</p>
+            {/* <p>Phone: (555) 123-4567</p> */}
+            {/* <div className="flex justify-center space-x-6 mt-4">
               <a
                 href="#"
                 className="text-gray-500 hover:text-indigo-600 transition-colors duration-300"
@@ -139,7 +160,7 @@ const Contact = () => {
                   <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
                 </svg>
               </a>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
