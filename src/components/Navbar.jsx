@@ -65,13 +65,70 @@ export default function Navbar() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
               className={classNames(
-                "backdrop-blur-md transition-all duration-500",
+                "backdrop-blur-xl transition-all duration-500 relative overflow-hidden",
                 isScrolled
                   ? "bg-white/95 shadow-sm shadow-black/[0.03]"
-                  : "bg-white/30"
+                  : "bg-white/90"
               )}
             >
-              <div className="mx-auto max-w-7xl">
+              {/* Background decorative elements */}
+              <div className="absolute inset-0">
+                {/* Multi-layered gradient background */}
+                <div className="absolute inset-0">
+                  <div className="absolute inset-0 bg-gradient-to-r from-rose-100/50 via-transparent to-indigo-100/50 pointer-events-none" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,_transparent_50%,_rgba(236,_252,_255,_0.5)_100%)]" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_100%,_transparent_50%,_rgba(244,_238,_255,_0.5)_100%)]" />
+                </div>
+
+                {/* Ornamental corner details */}
+                <div className="absolute top-0 left-0 w-32 h-32">
+                  <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-indigo-300" />
+                  <div className="absolute top-3 left-3 w-2 h-2 bg-indigo-300 rounded-full" />
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32">
+                  <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-indigo-300" />
+                  <div className="absolute top-3 right-3 w-2 h-2 bg-indigo-300 rounded-full" />
+                </div>
+
+                {/* Subtle animated floating elements */}
+                <div className="hidden lg:block">
+                  {[...Array(5)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: "50%",
+                      }}
+                      initial={{ y: 0 }}
+                      animate={{
+                        y: [-6, 6, -6],
+                      }}
+                      transition={{
+                        duration: 4,
+                        delay: i * 0.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-indigo-400/60" />
+                      <div className="absolute -inset-3 bg-indigo-200/30 blur-md rounded-full" />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Bottom decorative border */}
+                <div className="absolute bottom-0 left-0 right-0">
+                  <div className="h-[2px] bg-gradient-to-r from-transparent via-indigo-300 to-transparent" />
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                    <div className="w-16 h-[2px] bg-gradient-to-r from-transparent to-indigo-300" />
+                    <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                    <div className="w-16 h-[2px] bg-gradient-to-l from-transparent to-indigo-300" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mx-auto max-w-7xl relative">
                 <div className="flex h-16 sm:h-20 justify-between items-center px-4 sm:px-6 lg:px-8">
                   <div className="flex items-center">
                     <motion.div
@@ -91,7 +148,11 @@ export default function Navbar() {
                             Showcase
                           </span>
                         </span>
-                        <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-indigo-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
+                        {/* Logo hover effect */}
+                        <div className="absolute -inset-x-4 -inset-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="absolute inset-0 bg-gradient-to-r from-rose-200/40 via-indigo-200/40 to-violet-200/40 blur-md" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-rose-100/30 via-indigo-100/30 to-violet-100/30" />
+                        </div>
                       </Link>
                     </motion.div>
                     <div className="hidden sm:ml-6 lg:ml-12 sm:flex sm:space-x-2 lg:space-x-3">
@@ -187,7 +248,7 @@ export default function Navbar() {
                   transition={{ duration: 0.3 }}
                 >
                   <Disclosure.Panel className="sm:hidden">
-                    <div className="backdrop-blur-md bg-white/95 shadow-sm border-t border-gray-200/30">
+                    <div className="backdrop-blur-xl bg-white/95 shadow-sm border-t border-indigo-50">
                       <div className="space-y-1 px-4 pb-3 pt-2">
                         {navigation.map((item) => (
                           <Disclosure.Button
