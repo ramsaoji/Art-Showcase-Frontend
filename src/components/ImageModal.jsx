@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { formatPrice } from "../utils/formatters";
 import { getOptimizedImageUrl } from "../config/cloudinary";
 import Badge from "./Badge";
+import Loader from "./ui/Loader";
 
 export default function ImageModal({
   isOpen,
@@ -93,7 +94,7 @@ export default function ImageModal({
                   <div className="relative flex-none h-[40vh] md:h-auto md:flex-1 bg-gray-50/50">
                     {isLoading && !hasError && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                        <Loader size="large" />
                       </div>
                     )}
 

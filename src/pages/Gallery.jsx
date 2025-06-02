@@ -20,6 +20,7 @@ import ArtworkCard from "../components/ArtworkCard";
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { Dialog } from "@headlessui/react";
+import Loader from "../components/ui/Loader";
 
 // Generate more detailed artwork data
 const generateImages = (start, count) => {
@@ -202,7 +203,7 @@ export default function Gallery() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <Loader size="large" />
       </div>
     );
   }

@@ -9,6 +9,7 @@ import ImageModal from "../components/ImageModal";
 import ArtworkCard from "../components/ArtworkCard";
 import HeroCarousel from "../components/HeroCarousel";
 import Alert from "../components/Alert";
+import Loader from "../components/ui/Loader";
 
 const container = {
   hidden: { opacity: 0 },
@@ -184,12 +185,7 @@ export default function Home() {
 
           {loading ? (
             <div className="flex justify-center items-center min-h-[400px]">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full border-4 border-indigo-500/30 border-t-indigo-600 animate-spin" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-10 rounded-full border-4 border-indigo-300/30 border-t-indigo-400 animate-spin" />
-                </div>
-              </div>
+              <Loader size="large" />
             </div>
           ) : error ? (
             <div className="max-w-2xl mx-auto">

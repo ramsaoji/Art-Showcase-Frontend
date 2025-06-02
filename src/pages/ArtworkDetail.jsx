@@ -8,6 +8,7 @@ import { getOptimizedImageUrl } from "../config/cloudinary";
 import { formatPrice } from "../utils/formatters";
 import Alert from "../components/Alert";
 import Badge from "../components/Badge";
+import Loader from "../components/ui/Loader";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
@@ -64,12 +65,7 @@ export default function ArtworkDetail() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-indigo-500/30 border-t-indigo-600 animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full border-4 border-indigo-300/30 border-t-indigo-400 animate-spin" />
-          </div>
-        </div>
+        <Loader size="large" />
       </div>
     );
   }

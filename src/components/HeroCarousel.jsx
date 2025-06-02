@@ -5,6 +5,7 @@ import { db } from "../firebase/config";
 import { getOptimizedImageUrl } from "../config/cloudinary";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import Loader from "./ui/Loader";
 
 export default function HeroCarousel() {
   const [images, setImages] = useState([]);
@@ -113,10 +114,8 @@ export default function HeroCarousel() {
 
   if (isLoading) {
     return (
-      <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-        </div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <Loader size="large" />
       </div>
     );
   }
