@@ -142,17 +142,13 @@ export default function Navbar() {
                         onClick={handleLogoClick}
                         className="relative group"
                       >
-                        <span className="font-artistic text-2xl sm:text-3xl font-bold tracking-wide transition-all duration-300">
+                        <span className="font-artistic text-2xl sm:text-3xl font-bold tracking-wide">
                           <span className="text-indigo-600">Art</span>
-                          <span className="text-gray-900 group-hover:text-indigo-600">
+                          <span className="text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">
                             Showcase
                           </span>
                         </span>
-                        {/* Logo hover effect */}
-                        <div className="absolute -inset-x-4 -inset-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="absolute inset-0 bg-gradient-to-r from-rose-200/40 via-indigo-200/40 to-violet-200/40 blur-md" />
-                          <div className="absolute inset-0 bg-gradient-to-r from-rose-100/30 via-indigo-100/30 to-violet-100/30" />
-                        </div>
+                        <div className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                       </Link>
                     </motion.div>
                     <div className="hidden sm:ml-6 lg:ml-12 sm:flex sm:space-x-2 lg:space-x-3">
