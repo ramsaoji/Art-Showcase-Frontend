@@ -50,7 +50,7 @@ export default function HeroCarousel() {
   // Fallback content when no images are available
   if (!isLoading && images.length === 0) {
     return (
-      <div className="relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden">
+      <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden">
         {/* Background Image */}
         <img
           src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80"
@@ -113,7 +113,7 @@ export default function HeroCarousel() {
 
   if (isLoading) {
     return (
-      <div className="relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+      <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
         </div>
@@ -122,7 +122,7 @@ export default function HeroCarousel() {
   }
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden">
+    <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden">
       {/* Background gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
@@ -156,7 +156,7 @@ export default function HeroCarousel() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="font-artistic text-[3rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-8 leading-tight tracking-wide"
+              className="font-artistic text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-8 leading-tight tracking-wide"
             >
               Welcome to{" "}
               <span className="italic block sm:inline">Art Showcase</span>
@@ -165,7 +165,7 @@ export default function HeroCarousel() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="font-sans text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-10 max-w-2xl leading-relaxed tracking-wide"
+              className="font-sans text-base sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-10 max-w-2xl leading-relaxed tracking-wide"
             >
               Discover unique artworks from talented artists around the world
             </motion.p>
@@ -176,7 +176,7 @@ export default function HeroCarousel() {
             >
               <Link
                 to="/gallery"
-                className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
+                className="inline-flex items-center px-6 sm:px-8 py-2.5 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
               >
                 Explore Gallery
                 <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
@@ -186,7 +186,7 @@ export default function HeroCarousel() {
         </div>
 
         {/* Navigation dots */}
-        <div className="absolute bottom-16 sm:bottom-24 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">
+        <div className="absolute bottom-14 sm:bottom-24 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">
           {images.map((_, index) => (
             <button
               key={index}
@@ -214,10 +214,10 @@ export default function HeroCarousel() {
               className="flex items-center space-x-4"
             >
               <div>
-                <h3 className="text-xl sm:text-2xl font-artistic font-bold text-white tracking-wide">
+                <h3 className="text-lg sm:text-2xl font-artistic font-bold text-white tracking-wide">
                   {images[currentImageIndex].title}
                 </h3>
-                <p className="text-base sm:text-lg font-sans text-white/90 mt-1">
+                <p className="text-sm sm:text-lg font-sans text-white/90 mt-1">
                   By {images[currentImageIndex].artist}
                 </p>
               </div>
