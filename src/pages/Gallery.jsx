@@ -282,6 +282,225 @@ export default function Gallery() {
             </button>
           </div>
 
+          {/* Mobile Filters Dialog */}
+          <Transition.Root show={isMobileFiltersOpen} as={Fragment}>
+            <Dialog
+              as="div"
+              className="relative z-50 lg:hidden"
+              onClose={setIsMobileFiltersOpen}
+            >
+              <Transition.Child
+                as={Fragment}
+                enter="transition-opacity ease-linear duration-300"
+                enterFrom="opacity-0"
+                enterTo="opacity-100"
+                leave="transition-opacity ease-linear duration-300"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+              >
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+              </Transition.Child>
+
+              <div className="fixed inset-0 z-50 flex">
+                <Transition.Child
+                  as={Fragment}
+                  enter="transition ease-in-out duration-300 transform"
+                  enterFrom="translate-y-full"
+                  enterTo="translate-y-0"
+                  leave="transition ease-in-out duration-300 transform"
+                  leaveFrom="translate-y-0"
+                  leaveTo="translate-y-full"
+                >
+                  <Dialog.Panel className="relative flex flex-col w-full h-[90vh] mt-auto bg-white rounded-t-3xl px-4 pb-4">
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200">
+                      <Dialog.Title className="text-lg font-sans font-semibold text-gray-900">
+                        Filters & Sort
+                      </Dialog.Title>
+                      <button
+                        type="button"
+                        className="p-2 -m-2 text-gray-400 hover:text-gray-500"
+                        onClick={() => setIsMobileFiltersOpen(false)}
+                      >
+                        <XMarkIcon className="h-6 w-6" />
+                      </button>
+                    </div>
+
+                    <div className="flex-1 py-6 overflow-y-auto">
+                      {/* Sort Options */}
+                      <div className="mb-8">
+                        <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
+                          Sort by
+                        </h3>
+                        <div className="space-y-3">
+                          {[
+                            { value: "newest", label: "Newest First" },
+                            { value: "oldest", label: "Oldest First" },
+                            {
+                              value: "price-high",
+                              label: "Price: High to Low",
+                            },
+                            { value: "price-low", label: "Price: Low to High" },
+                            {
+                              value: "year-new",
+                              label: "Year: Newest to Oldest",
+                            },
+                            {
+                              value: "year-old",
+                              label: "Year: Oldest to Newest",
+                            },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() => setSortBy(option.value)}
+                              className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                                sortBy === option.value
+                                  ? "bg-indigo-50 text-indigo-600 font-medium"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Featured Filter */}
+                      <div className="mb-8">
+                        <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
+                          Featured Status
+                        </h3>
+                        <div className="space-y-3">
+                          {[
+                            { value: "all", label: "All Artworks" },
+                            { value: "featured", label: "Featured Only" },
+                            { value: "non-featured", label: "Non-Featured" },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() =>
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  featured: option.value,
+                                }))
+                              }
+                              className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                                filters.featured === option.value
+                                  ? "bg-indigo-50 text-indigo-600 font-medium"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Material Filter */}
+                      <div className="mb-8">
+                        <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
+                          Material
+                        </h3>
+                        <div className="space-y-3">
+                          <button
+                            onClick={() =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                material: "all",
+                              }))
+                            }
+                            className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                              filters.material === "all"
+                                ? "bg-indigo-50 text-indigo-600 font-medium"
+                                : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            All Materials
+                          </button>
+                          {materials.map((material) => (
+                            <button
+                              key={material}
+                              onClick={() =>
+                                setFilters((prev) => ({ ...prev, material }))
+                              }
+                              className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                                filters.material === material
+                                  ? "bg-indigo-50 text-indigo-600 font-medium"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              {material}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Availability Filter */}
+                      <div className="mb-8">
+                        <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
+                          Availability
+                        </h3>
+                        <div className="space-y-3">
+                          {[
+                            { value: "all", label: "All" },
+                            { value: "available", label: "Available" },
+                            { value: "sold", label: "Sold" },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              onClick={() =>
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  availability: option.value,
+                                }))
+                              }
+                              className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                                filters.availability === option.value
+                                  ? "bg-indigo-50 text-indigo-600 font-medium"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Reset Filters */}
+                      {(filters.material !== "all" ||
+                        filters.availability !== "all" ||
+                        filters.featured !== "all") && (
+                        <div className="mb-4">
+                          <button
+                            onClick={() =>
+                              setFilters({
+                                material: "all",
+                                availability: "all",
+                                featured: "all",
+                              })
+                            }
+                            className="w-full text-center px-4 py-2.5 rounded-xl text-sm font-sans text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
+                          >
+                            Reset All Filters
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-center px-4 py-3 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-700 transition-colors"
+                        onClick={() => setIsMobileFiltersOpen(false)}
+                      >
+                        Apply Filters
+                      </button>
+                    </div>
+                  </Dialog.Panel>
+                </Transition.Child>
+              </div>
+            </Dialog>
+          </Transition.Root>
+
           {/* Desktop Filters */}
           <div className="hidden lg:flex flex-wrap items-center justify-between gap-4 mb-6">
             {/* Combined Filter Dropdown */}
