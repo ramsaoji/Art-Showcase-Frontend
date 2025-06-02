@@ -15,13 +15,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Validate config
-Object.entries(firebaseConfig).forEach(([key, value]) => {
-  if (!value) {
-    console.error(`Firebase config error: ${key} is not set`);
-  }
-});
-
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
@@ -30,15 +23,19 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// Initialize Analytics conditionally
-export const analytics = isSupported().then((yes) =>
-  yes ? getAnalytics(app) : null
-);
+// Initialize Analytics
+export const analytics = (async () => {
+  try {
+    return (await isSupported()) ? getAnalytics(app) : null;
+  } catch (error) {
+    console.error("[Analytics] Error:", error);
+    return null;
+  }
+})();
 
 // Admin email for authorization
 export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-
 // Validate admin email
 if (!ADMIN_EMAIL) {
-  console.error("Admin email is not set in environment variables");
+  console.error("[Firebase] Admin email is not set in environment variables");
 }

@@ -9,7 +9,10 @@ const safeLogEvent = async (eventName, eventParams = {}) => {
       logEvent(analyticsInstance, eventName, eventParams);
     }
   } catch (error) {
-    console.debug("Analytics event not logged:", error);
+    console.error("[Analytics] Error:", {
+      event: eventName,
+      error: error.message,
+    });
   }
 };
 
@@ -32,18 +35,12 @@ export const trackArtworkInteraction = (action, artworkId, artworkTitle) => {
 
 // Track user actions
 export const trackUserAction = (action, userId = null) => {
-  safeLogEvent("user_action", {
-    action,
-    user_id: userId,
-  });
+  safeLogEvent("user_action", { action, user_id: userId });
 };
 
 // Track form submissions
 export const trackFormSubmission = (formType, formData = {}) => {
-  safeLogEvent("form_submit", {
-    form_type: formType,
-    ...formData,
-  });
+  safeLogEvent("form_submit", { form_type: formType, ...formData });
 };
 
 // Track likes
