@@ -8,6 +8,7 @@ export default function DeleteConfirmationDialog({
   onClose,
   onConfirm,
   title,
+  isDeleting,
 }) {
   return (
     <Transition.Root show={isOpen} as={Fragment}>
@@ -21,7 +22,7 @@ export default function DeleteConfirmationDialog({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" />
+          <div className="fixed inset-0 bg-gray-500/75 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
@@ -58,22 +59,67 @@ export default function DeleteConfirmationDialog({
                     </div>
                   </div>
                 </div>
+
+                {isDeleting && (
+                  <div className="mt-4">
+                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                      <motion.div
+                        className="h-1.5 rounded-full bg-red-500"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 1.5, ease: "easeInOut" }}
+                      />
+                    </div>
+                    <p className="text-sm text-center font-sans text-gray-500">
+                      Deleting artwork...
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-6 sm:mt-6 sm:flex sm:flex-row-reverse gap-3">
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="inline-flex w-full justify-center items-center px-5 py-2.5 rounded-full bg-red-600 font-sans text-sm font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto transition-colors duration-200"
+                    className="inline-flex w-full justify-center items-center px-5 py-2.5 rounded-full bg-red-600 font-sans text-sm font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={onConfirm}
+                    disabled={isDeleting}
                   >
-                    Delete Artwork
+                    {isDeleting ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Artwork"
+                    )}
                   </motion.button>
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="mt-3 inline-flex w-full justify-center items-center px-5 py-2.5 rounded-full bg-white font-sans text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto transition-colors duration-200"
+                    className="mt-3 inline-flex w-full justify-center items-center px-5 py-2.5 rounded-full bg-white font-sans text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={onClose}
+                    disabled={isDeleting}
                   >
                     Cancel
                   </motion.button>

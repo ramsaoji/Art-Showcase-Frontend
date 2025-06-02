@@ -56,6 +56,9 @@ export default function ArtworkActions({ artworkId, onDelete }) {
         }
       }
 
+      // Add a small delay to show the progress animation
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Delete the document from Firestore
       await deleteDoc(doc(db, "artworks", artworkId));
 
@@ -102,6 +105,7 @@ export default function ArtworkActions({ artworkId, onDelete }) {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title="Artwork"
+        isDeleting={isDeleting}
       />
 
       {error && <Alert type="error" message={error} className="mt-3" />}
