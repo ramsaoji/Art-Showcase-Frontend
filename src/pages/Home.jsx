@@ -10,6 +10,10 @@ import ArtworkCard from "../components/ArtworkCard";
 import HeroCarousel from "../components/HeroCarousel";
 import Alert from "../components/Alert";
 import Loader from "../components/ui/Loader";
+import {
+  trackArtworkInteraction,
+  trackUserAction,
+} from "../services/analytics";
 
 const container = {
   hidden: { opacity: 0 },
@@ -64,6 +68,15 @@ export default function Home() {
     setFeaturedArtworks((prev) =>
       prev.filter((artwork) => artwork.id !== deletedId)
     );
+  };
+
+  const handleViewAllClick = () => {
+    trackUserAction("view_all_featured");
+  };
+
+  const handleArtworkSelect = (artwork) => {
+    setSelectedArtwork(artwork);
+    trackArtworkInteraction("quick_view_from_home", artwork.id, artwork.title);
   };
 
   return (
@@ -330,7 +343,7 @@ export default function Home() {
                       key={artwork.id}
                       artwork={artwork}
                       onDelete={handleDelete}
-                      onQuickView={setSelectedArtwork}
+                      onQuickView={handleArtworkSelect}
                     />
                   ))}
                 </AnimatePresence>
@@ -345,6 +358,7 @@ export default function Home() {
               >
                 <Link
                   to="/gallery?filter=featured"
+                  onClick={handleViewAllClick}
                   className="inline-flex items-center px-8 py-3 border-2 border-indigo-600/20 rounded-full bg-white/80 backdrop-blur-sm font-artistic text-lg text-indigo-600 hover:bg-indigo-50/80 transition-colors duration-300"
                 >
                   View All Featured Works
@@ -365,7 +379,13 @@ export default function Home() {
             (artwork) => artwork.id === selectedArtwork?.id
           );
           if (currentIndex > 0) {
-            setSelectedArtwork(featuredArtworks[currentIndex - 1]);
+            const prevArtwork = featuredArtworks[currentIndex - 1];
+            setSelectedArtwork(prevArtwork);
+            trackArtworkInteraction(
+              "view_previous_from_home",
+              prevArtwork.id,
+              prevArtwork.title
+            );
           }
         }}
         onNext={() => {
@@ -373,7 +393,13 @@ export default function Home() {
             (artwork) => artwork.id === selectedArtwork?.id
           );
           if (currentIndex < featuredArtworks.length - 1) {
-            setSelectedArtwork(featuredArtworks[currentIndex + 1]);
+            const nextArtwork = featuredArtworks[currentIndex + 1];
+            setSelectedArtwork(nextArtwork);
+            trackArtworkInteraction(
+              "view_next_from_home",
+              nextArtwork.id,
+              nextArtwork.title
+            );
           }
         }}
         hasPrevious={

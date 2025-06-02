@@ -10,6 +10,7 @@ import {
 import { motion } from "framer-motion";
 import { formatPrice } from "../utils/formatters";
 import { getOptimizedImageUrl } from "../config/cloudinary";
+import { trackArtworkInteraction } from "../services/analytics";
 import Badge from "./Badge";
 import Loader from "./ui/Loader";
 
@@ -34,11 +35,24 @@ export default function ImageModal({
   const handleImageLoad = () => {
     setIsLoading(false);
     setHasError(false);
+    if (image) {
+      trackArtworkInteraction("artwork_view", image.id, image.title);
+    }
   };
 
   const handleImageError = () => {
     setIsLoading(false);
     setHasError(true);
+    if (image) {
+      trackArtworkInteraction("artwork_view_error", image.id, image.title);
+    }
+  };
+
+  const handleClose = () => {
+    if (image) {
+      trackArtworkInteraction("artwork_close", image.id, image.title);
+    }
+    onClose();
   };
 
   const getImageUrl = () => {
@@ -161,7 +175,7 @@ export default function ImageModal({
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={onClose}
+                      onClick={handleClose}
                       className="absolute right-3 sm:right-4 top-3 sm:top-4 z-10 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 sm:p-2 transition-all duration-200"
                     >
                       <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />

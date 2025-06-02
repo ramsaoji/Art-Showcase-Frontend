@@ -9,6 +9,7 @@ import { formatPrice } from "../utils/formatters";
 import Alert from "../components/Alert";
 import Badge from "../components/Badge";
 import Loader from "../components/ui/Loader";
+import { trackArtworkView, trackShare } from "../services/analytics";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
@@ -28,6 +29,8 @@ export default function ArtworkDetail() {
           const artworkData = { id: docSnap.id, ...docSnap.data() };
           console.log("Fetched artwork data:", artworkData);
           setArtwork(artworkData);
+          // Track artwork view when the data is loaded
+          trackArtworkView(artworkData.id, artworkData.title);
         } else {
           setError("Artwork not found");
         }
@@ -44,21 +47,25 @@ export default function ArtworkDetail() {
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
-
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: artwork.title,
-          text: `Check out "${artwork.title}" by ${artwork.artist}`,
-          url: shareUrl,
-        });
-      } else {
+      await navigator.share({
+        title: artwork?.title,
+        text: `Check out "${artwork?.title}" by ${artwork?.artist}`,
+        url: shareUrl,
+      });
+      // Track successful share
+      trackShare(artwork.id, "native_share");
+    } catch (error) {
+      // Fallback to clipboard copy if native share is not supported
+      try {
         await navigator.clipboard.writeText(shareUrl);
         setShowShareToast(true);
         setTimeout(() => setShowShareToast(false), 2000);
+        // Track clipboard share
+        trackShare(artwork.id, "clipboard");
+      } catch (clipboardError) {
+        console.error("Failed to copy to clipboard:", clipboardError);
       }
-    } catch (error) {
-      console.error("Error sharing:", error);
     }
   };
 

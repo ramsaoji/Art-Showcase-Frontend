@@ -11,56 +11,17 @@ import {
 } from "@heroicons/react/24/outline";
 import { collection, query, orderBy, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
+import {
+  trackArtworkInteraction,
+  trackUserAction,
+} from "../services/analytics";
 // import { useAuth } from "../contexts/AuthContext";
 import ImageModal from "../components/ImageModal";
-import ArtworkActions from "../components/ArtworkActions";
-import { formatPrice } from "../utils/formatters";
-import { getOptimizedImageUrl } from "../config/cloudinary";
 import ArtworkCard from "../components/ArtworkCard";
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { Dialog } from "@headlessui/react";
 import Loader from "../components/ui/Loader";
-
-// Generate more detailed artwork data
-const generateImages = (start, count) => {
-  const styles = [
-    "Abstract",
-    "Impressionist",
-    "Modern",
-    "Contemporary",
-    "Minimalist",
-  ];
-  const materials = [
-    "Oil on Canvas",
-    "Acrylic",
-    "Digital Art",
-    "Mixed Media",
-    "Watercolor",
-  ];
-  const descriptions = [
-    "A stunning piece that captures the essence of modern expression through bold colors and dynamic forms.",
-    "An elegant composition that explores the relationship between light and shadow in contemporary spaces.",
-    "A powerful artwork that challenges traditional perspectives with innovative techniques.",
-    "A mesmerizing piece that blends traditional methods with contemporary vision.",
-    "An evocative work that draws viewers into a world of color and emotion.",
-  ];
-
-  return Array.from({ length: count }, (_, i) => ({
-    id: start + i,
-    url: `https://picsum.photos/seed/${start + i}/800/600`,
-    title: `${styles[i % styles.length]} ${materials[i % materials.length]} #${
-      start + i
-    }`,
-    artist: `Artist ${((start + i) % 10) + 1}`,
-    description: descriptions[i % descriptions.length],
-    price: Math.floor(Math.random() * 4000 + 1000),
-    dimensions: `${30 + (i % 3) * 10}x${40 + (i % 3) * 10} cm`,
-    style: styles[i % styles.length],
-    material: materials[i % materials.length],
-    year: 2024 - (i % 3),
-  }));
-};
 
 export default function Gallery() {
   const [searchParams] = useSearchParams();
@@ -187,10 +148,12 @@ export default function Gallery() {
 
   const handleImageClick = (image) => {
     setSelectedImage(image);
+    trackArtworkInteraction("gallery_artwork_view", image.id, image.title);
   };
 
   const handleImageError = (imageId) => {
     setImageErrors((prev) => ({ ...prev, [imageId]: true }));
+    trackArtworkInteraction("gallery_artwork_error", imageId);
   };
 
   const handleDelete = (deletedId) => {
@@ -198,6 +161,30 @@ export default function Gallery() {
     if (selectedImage?.id === deletedId) {
       setSelectedImage(null);
     }
+    trackArtworkInteraction("gallery_artwork_delete", deletedId);
+  };
+
+  const handleSearch = (value) => {
+    setSearchQuery(value);
+    if (value.trim()) {
+      trackUserAction("gallery_search", { query: value.trim() });
+    }
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters((prev) => ({ ...prev, [filterType]: value }));
+    trackUserAction("gallery_filter", { type: filterType, value });
+  };
+
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    trackUserAction("gallery_sort", { sort_by: value });
+  };
+
+  const handleResetAllFilters = () => {
+    handleFilterChange("material", "all");
+    handleFilterChange("availability", "all");
+    handleFilterChange("featured", "all");
   };
 
   if (loading) {
@@ -237,7 +224,7 @@ export default function Gallery() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Search by title, artist, style, or material..."
                 className="w-full pl-12 pr-4 py-4 text-base font-sans rounded-full bg-white/80 border border-gray-200 focus:border-indigo-400 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 shadow-sm hover:shadow-md"
               />
@@ -352,7 +339,7 @@ export default function Gallery() {
                           ].map((option) => (
                             <button
                               key={option.value}
-                              onClick={() => setSortBy(option.value)}
+                              onClick={() => handleSortChange(option.value)}
                               className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
                                 sortBy === option.value
                                   ? "bg-indigo-50 text-indigo-600 font-medium"
@@ -379,10 +366,7 @@ export default function Gallery() {
                             <button
                               key={option.value}
                               onClick={() =>
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  featured: option.value,
-                                }))
+                                handleFilterChange("featured", option.value)
                               }
                               className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
                                 filters.featured === option.value
@@ -404,10 +388,7 @@ export default function Gallery() {
                         <div className="space-y-3">
                           <button
                             onClick={() =>
-                              setFilters((prev) => ({
-                                ...prev,
-                                material: "all",
-                              }))
+                              handleFilterChange("material", "all")
                             }
                             className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
                               filters.material === "all"
@@ -421,7 +402,7 @@ export default function Gallery() {
                             <button
                               key={material}
                               onClick={() =>
-                                setFilters((prev) => ({ ...prev, material }))
+                                handleFilterChange("material", material)
                               }
                               className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
                                 filters.material === material
@@ -449,10 +430,7 @@ export default function Gallery() {
                             <button
                               key={option.value}
                               onClick={() =>
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  availability: option.value,
-                                }))
+                                handleFilterChange("availability", option.value)
                               }
                               className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
                                 filters.availability === option.value
@@ -472,16 +450,10 @@ export default function Gallery() {
                         filters.featured !== "all") && (
                         <div className="mb-4">
                           <button
-                            onClick={() =>
-                              setFilters({
-                                material: "all",
-                                availability: "all",
-                                featured: "all",
-                              })
-                            }
+                            onClick={handleResetAllFilters}
                             className="w-full text-center px-4 py-2.5 rounded-xl text-sm font-sans text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
                           >
-                            Reset All Filters
+                            Reset All
                           </button>
                         </div>
                       )}
@@ -541,10 +513,7 @@ export default function Gallery() {
                         <button
                           key={option.value}
                           onClick={() =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              featured: option.value,
-                            }))
+                            handleFilterChange("featured", option.value)
                           }
                           className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
                             filters.featured === option.value
@@ -580,9 +549,7 @@ export default function Gallery() {
                     </h3>
                     <div className="space-y-2">
                       <button
-                        onClick={() =>
-                          setFilters((prev) => ({ ...prev, material: "all" }))
-                        }
+                        onClick={() => handleFilterChange("material", "all")}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
                           filters.material === "all"
                             ? "bg-indigo-50 text-indigo-600 font-medium"
@@ -610,7 +577,7 @@ export default function Gallery() {
                         <button
                           key={material}
                           onClick={() =>
-                            setFilters((prev) => ({ ...prev, material }))
+                            handleFilterChange("material", material)
                           }
                           className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
                             filters.material === material
@@ -653,10 +620,7 @@ export default function Gallery() {
                         <button
                           key={option.value}
                           onClick={() =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              availability: option.value,
-                            }))
+                            handleFilterChange("availability", option.value)
                           }
                           className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
                             filters.availability === option.value
@@ -691,16 +655,10 @@ export default function Gallery() {
                     filters.featured !== "all") && (
                     <div className="p-4">
                       <button
-                        onClick={() =>
-                          setFilters({
-                            material: "all",
-                            availability: "all",
-                            featured: "all",
-                          })
-                        }
+                        onClick={handleResetAllFilters}
                         className="w-full text-center px-3 py-2 rounded-lg text-sm font-sans text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
                       >
-                        Reset All Filters
+                        Reset All
                       </button>
                     </div>
                   )}
@@ -712,7 +670,7 @@ export default function Gallery() {
             <Menu as="div" className="relative">
               <Menu.Button className="inline-flex items-center px-4 py-2.5 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
                 <ArrowsUpDownIcon className="h-5 w-5 mr-2" />
-                <span className="font-medium">Sort by:</span>{" "}
+                <span className="font-medium">Sort by:&nbsp;</span>
                 {sortBy
                   .split("-")
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -740,14 +698,14 @@ export default function Gallery() {
                       <Menu.Item key={option.value}>
                         {({ active }) => (
                           <button
-                            onClick={() => setSortBy(option.value)}
+                            onClick={() => handleSortChange(option.value)}
                             className={`${
                               active
                                 ? "bg-gray-50 text-indigo-600"
                                 : "text-gray-700"
                             } ${
                               sortBy === option.value ? "font-medium" : ""
-                            } block w-full px-4 py-2.5 text-sm text-left font-sans`}
+                            } block px-4 py-2 text-sm w-full text-left font-sans`}
                           >
                             {option.label}
                           </button>
@@ -774,9 +732,7 @@ export default function Gallery() {
                       : "Non-Featured"}
                   </span>
                   <button
-                    onClick={() =>
-                      setFilters((prev) => ({ ...prev, featured: "all" }))
-                    }
+                    onClick={() => handleFilterChange("featured", "all")}
                     className="ml-2 hover:text-indigo-900"
                   >
                     ×
@@ -788,9 +744,7 @@ export default function Gallery() {
                   <span className="mr-1">Material:</span>{" "}
                   <span className="font-semibold">{filters.material}</span>
                   <button
-                    onClick={() =>
-                      setFilters((prev) => ({ ...prev, material: "all" }))
-                    }
+                    onClick={() => handleFilterChange("material", "all")}
                     className="ml-2 hover:text-indigo-900"
                   >
                     ×
@@ -806,9 +760,7 @@ export default function Gallery() {
                       : "Sold"}
                   </span>
                   <button
-                    onClick={() =>
-                      setFilters((prev) => ({ ...prev, availability: "all" }))
-                    }
+                    onClick={() => handleFilterChange("availability", "all")}
                     className="ml-2 hover:text-indigo-900"
                   >
                     ×
@@ -816,16 +768,13 @@ export default function Gallery() {
                 </span>
               )}
               <button
-                onClick={() =>
-                  setFilters({
-                    material: "all",
-                    availability: "all",
-                    featured: "all",
-                  })
-                }
+                onClick={() => {
+                  handleResetAllFilters();
+                  setSearchQuery("");
+                }}
                 className="text-sm font-sans font-medium tracking-wide text-gray-500 hover:text-indigo-600 transition-colors"
               >
-                Clear all filters
+                Clear All
               </button>
             </div>
           )}
@@ -864,11 +813,7 @@ export default function Gallery() {
               )}
               <button
                 onClick={() => {
-                  setFilters({
-                    material: "all",
-                    availability: "all",
-                    featured: "all",
-                  });
+                  handleResetAllFilters();
                   setSearchQuery("");
                 }}
                 className="inline-flex font-medium text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"

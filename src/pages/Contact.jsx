@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { trackFormSubmission } from "../services/analytics";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,15 @@ const Contact = () => {
       ...prevState,
       [name]: value,
     }));
+  };
+
+  const handleSubmit = (e) => {
+    // Track form submission
+    trackFormSubmission("contact", {
+      has_name: !!formData.name,
+      has_email: !!formData.email,
+      message_length: formData.message.length,
+    });
   };
 
   return (
@@ -72,6 +82,7 @@ const Contact = () => {
                   action="https://formsubmit.co/myofficial@techness.in"
                   method="POST"
                   className="space-y-6"
+                  onSubmit={handleSubmit}
                 >
                   {/* Honeypot */}
                   <input
@@ -170,10 +181,14 @@ const Contact = () => {
             <h2 className="font-artistic text-2xl font-bold text-gray-900 mb-6">
               Other Ways to Connect
             </h2>
+
             <div className="space-y-4 font-sans text-lg text-gray-600">
-              <p className="flex items-center justify-center space-x-2">
+              <a
+                href="mailto:art-showcase@techness.in"
+                className="inline-flex items-center space-x-2 group relative"
+              >
                 <svg
-                  className="w-6 h-6 text-indigo-600"
+                  className="w-6 h-6 text-indigo-600 transition-transform group-hover:scale-110 duration-300"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -185,8 +200,11 @@ const Contact = () => {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                <span>art-showcase@techness.in</span>
-              </p>
+                <span className="font-medium group-hover:text-indigo-600 transition-colors">
+                  art-showcase@techness.in
+                </span>
+                <div className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-indigo-300/0 via-indigo-300/50 to-indigo-300/0 scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
+              </a>
             </div>
           </motion.div>
         </div>
