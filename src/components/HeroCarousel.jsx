@@ -150,8 +150,8 @@ export default function HeroCarousel() {
         </AnimatePresence>
 
         {/* Hero Content */}
-        <div className="absolute inset-0 z-20 flex flex-col justify-center px-4 sm:px-6">
-          <div className="relative mx-auto max-w-7xl">
+        <div className="absolute inset-0 z-20 flex flex-col justify-center sm:justify-center md:justify-center px-4 sm:px-6">
+          <div className="relative mx-auto max-w-7xl -mt-16 sm:mt-0">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -186,7 +186,7 @@ export default function HeroCarousel() {
         </div>
 
         {/* Navigation dots */}
-        <div className="absolute bottom-24 sm:bottom-28 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">
+        <div className="absolute bottom-16 sm:bottom-24 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">
           {images.map((_, index) => (
             <button
               key={index}
