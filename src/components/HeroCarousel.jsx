@@ -1,75 +1,229 @@
-import { useEffect, useState } from "react";
-import { collection, query, where, limit, getDocs } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { getOptimizedImageUrl } from "../config/cloudinary";
+import { Link } from "react-router-dom";
+import { ArrowRightIcon, PhotoIcon } from "@heroicons/react/24/outline";
 
 export default function HeroCarousel() {
   const [images, setImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadImages = async () => {
+    const loadFeaturedImages = async () => {
       try {
         const artworksQuery = query(
-          collection(db, "artworks")
-          //   where("featured", "==", true),
-          //   limit(3)
+          collection(db, "artworks"),
+          orderBy("createdAt", "desc"),
+          limit(5)
         );
-
         const querySnapshot = await getDocs(artworksQuery);
-        const artworks = querySnapshot.docs.map((doc) => ({
+        const recentArtworks = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-
-        setImages(artworks);
+        setImages(recentArtworks);
       } catch (error) {
-        console.error("Error loading carousel images:", error);
+        console.error("Error loading recent images:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadImages();
+    loadFeaturedImages();
   }, []);
 
-  if (images.length === 0) return null;
+  useEffect(() => {
+    if (images.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentImageIndex((prevIndex) =>
+          prevIndex === images.length - 1 ? 0 : prevIndex + 1
+        );
+      }, 5000);
+
+      return () => clearInterval(timer);
+    }
+  }, [images.length]);
+
+  // Fallback content when no images are available
+  if (!isLoading && images.length === 0) {
+    return (
+      <div className="relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden">
+        {/* Background Image */}
+        <img
+          src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80"
+          alt="Art gallery background"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {/* Background gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30 backdrop-blur-[2px]" />
+
+        {/* Content */}
+        <div className="relative h-full flex flex-col items-center justify-center px-4 sm:px-6 text-center z-20">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <div className="w-24 h-24 mx-auto bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20">
+              <PhotoIcon className="w-12 h-12 text-white" />
+            </div>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="font-artistic text-[3rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-8 leading-tight tracking-wide"
+          >
+            Welcome to{" "}
+            <span className="italic block sm:inline">Art Showcase</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="font-sans text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-10 max-w-2xl leading-relaxed tracking-wide"
+          >
+            Discover unique artworks from talented artists around the world
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+          >
+            <Link
+              to="/gallery"
+              className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
+            >
+              Explore Gallery
+              <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
+            </Link>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/40 z-10" />
-      <div className="flex animate-scroll z-[5]">
-        {/* First set */}
-        {images.map((image) => (
-          <div
-            key={image.id}
-            className="flex-none w-full sm:w-1/2 md:w-1/3 h-full relative"
+    <div className="relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] overflow-hidden">
+      {/* Background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+
+      {/* Image carousel */}
+      <div className="relative h-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentImageIndex}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0"
           >
             <img
               src={
-                image.public_id
-                  ? getOptimizedImageUrl(image.public_id)
-                  : image.url
+                images[currentImageIndex].public_id
+                  ? getOptimizedImageUrl(images[currentImageIndex].public_id)
+                  : images[currentImageIndex].url
               }
-              alt={image.title}
+              alt={images[currentImageIndex].title}
               className="w-full h-full object-cover"
             />
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Hero Content */}
+        <div className="absolute inset-0 z-20 flex flex-col justify-center px-4 sm:px-6">
+          <div className="relative mx-auto max-w-7xl">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="font-artistic text-[3rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-8 leading-tight tracking-wide"
+            >
+              Welcome to{" "}
+              <span className="italic block sm:inline">Art Showcase</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="font-sans text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-10 max-w-2xl leading-relaxed tracking-wide"
+            >
+              Discover unique artworks from talented artists around the world
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
+              <Link
+                to="/gallery"
+                className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
+              >
+                Explore Gallery
+                <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
+              </Link>
+            </motion.div>
           </div>
-        ))}
-        {/* Duplicate set for seamless loop */}
-        {images.map((image) => (
-          <div
-            key={`${image.id}-duplicate`}
-            className="flex-none w-full sm:w-1/2 md:w-1/3 h-full relative"
-          >
-            <img
-              src={
-                image.public_id
-                  ? getOptimizedImageUrl(image.public_id)
-                  : image.url
-              }
-              alt={image.title}
-              className="w-full h-full object-cover"
-            />
+        </div>
+
+        {/* Navigation dots */}
+        <div className="absolute bottom-24 sm:bottom-28 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">
+          {images.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentImageIndex(index)}
+              className={`w-2 sm:w-3 h-2 sm:h-3 rounded-full transition-all duration-300 ${
+                index === currentImageIndex
+                  ? "bg-white scale-100"
+                  : "bg-white/50 scale-75 hover:scale-90 hover:bg-white/70"
+              }`}
+            >
+              <span className="sr-only">Go to slide {index + 1}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Image details overlay */}
+        <div className="absolute bottom-0 inset-x-0 sm:right-0 sm:inset-x-auto z-20 p-4 sm:p-8 bg-gradient-to-t from-black/80 via-black/50 to-transparent">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              key={`details-${currentImageIndex}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center space-x-4"
+            >
+              <div>
+                <h3 className="text-xl sm:text-2xl font-artistic font-bold text-white tracking-wide">
+                  {images[currentImageIndex].title}
+                </h3>
+                <p className="text-base sm:text-lg font-sans text-white/90 mt-1">
+                  By {images[currentImageIndex].artist}
+                </p>
+              </div>
+            </motion.div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );

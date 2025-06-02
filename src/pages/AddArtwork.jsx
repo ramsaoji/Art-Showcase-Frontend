@@ -9,6 +9,7 @@ import {
 import { db } from "../firebase/config";
 import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
+import { motion } from "framer-motion";
 
 export default function AddArtwork() {
   const navigate = useNavigate();
@@ -33,11 +34,6 @@ export default function AddArtwork() {
           console.error("Upload error:", uploadError);
           throw new Error(`Failed to upload image: ${uploadError.message}`);
         }
-      }
-
-      // Log all form data
-      for (let [key, value] of formData.entries()) {
-        console.log(`Form data: ${key} = ${value}`);
       }
 
       // Create artwork document in Firestore
@@ -78,28 +74,56 @@ export default function AddArtwork() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="md:flex md:items-center md:justify-between mb-8">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-            Add New Artwork
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Fill in the details below to add a new artwork to your gallery.
-          </p>
+    <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
+          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
+        </div>
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
+        </div>
+        <div className="absolute left-0 bottom-0">
+          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-amber-100/20 to-pink-100/20 blur-3xl" />
         </div>
       </div>
 
-      {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-12"
+        >
+          <h2 className="font-artistic text-4xl sm:text-5xl font-bold text-gray-900 tracking-wide mb-4">
+            Add New Artwork
+          </h2>
+          <p className="font-sans text-lg text-gray-600 max-w-2xl mx-auto">
+            Share your masterpiece with the world. Fill in the details below to
+            add a new artwork to the gallery.
+          </p>
+        </motion.div>
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <ArtworkForm onSubmit={handleSubmit} />
-        </div>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-xl font-sans text-sm"
+          >
+            {error}
+          </motion.div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/50 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
+        >
+          <div className="p-6 sm:p-8">
+            <ArtworkForm onSubmit={handleSubmit} />
+          </div>
+        </motion.div>
       </div>
     </div>
   );

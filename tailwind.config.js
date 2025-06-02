@@ -16,6 +16,10 @@ export default {
         default: "0 2px 4px rgba(0,0,0,0.10)",
         lg: "0 2px 10px rgba(0,0,0,0.5)",
       },
+      fontFamily: {
+        artistic: ["Playfair Display", "serif"],
+        body: ["Cormorant Garamond", "serif"],
+      },
     },
   },
   plugins: [

@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import Alert from "./Alert";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
   return (
     <div className="w-full">
       <div className="flex justify-between mb-1">
-        <span className="text-sm font-medium text-indigo-700">{label}</span>
-        <span className="text-sm font-medium text-indigo-700">{progress}%</span>
+        <span className="text-base font-sans font-medium text-indigo-700">
+          {label}
+        </span>
+        <span className="text-base font-sans font-medium text-indigo-700">
+          {progress}%
+        </span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2.5">
         <div
@@ -172,92 +177,89 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Image Upload Section */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Artwork Image
+        <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
+          Artwork Image <span className="text-red-500">*</span>
         </label>
         <label
-          className={`block mt-2 cursor-pointer ${
-            imageError ? "border-red-300" : "border-gray-300"
-          } border-2 border-dashed rounded-lg hover:bg-gray-50 transition-colors duration-200`}
+          className={`block cursor-pointer ${
+            imageError ? "border-red-300" : "border-gray-200"
+          } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
         >
-          <div className="px-6 pt-5 pb-6">
-            <div className="space-y-2 text-center">
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="mx-auto h-64 w-auto object-contain"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setImageFile(null);
-                      setImagePreview(null);
-                      setImageError("");
-                    }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600"
+          <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
+            {imagePreview ? (
+              <div className="relative w-full flex justify-center">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="h-64 w-auto object-contain rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setImageFile(null);
+                    setImagePreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500/80 backdrop-blur-sm text-white rounded-full hover:bg-red-600/80 transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <PhotoIcon
-                    className={`mx-auto h-12 w-12 ${
-                      imageError ? "text-red-400" : "text-gray-400"
-                    }`}
-                  />
-                  <div className="flex text-sm text-gray-600 justify-center">
-                    <span
-                      className={`${
-                        imageError
-                          ? "text-red-600 hover:text-red-500"
-                          : "text-indigo-600 hover:text-indigo-500"
-                      } font-medium`}
-                    >
-                      Upload a file
-                    </span>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <>
+                <PhotoIcon className="h-12 w-12 text-gray-400" />
+                <div className="mt-4 flex flex-col items-center text-sm text-gray-600 font-sans">
+                  <label className="relative cursor-pointer rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500">
+                    <span>Upload a file</span>
                     <input
+                      id="file-upload"
+                      name="file-upload"
                       type="file"
                       className="sr-only"
-                      accept=".jpg,.jpeg,.png"
                       onChange={handleImageChange}
+                      accept="image/*"
+                      required={!initialData?.url}
                     />
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p
-                    className={`text-xs ${
-                      imageError ? "text-red-500" : "text-gray-500"
-                    }`}
-                  >
-                    JPG, JPEG, PNG up to 5MB
+                  </label>
+                  <p className="mt-1 text-sm text-gray-500">
+                    PNG, JPG up to 5MB
                   </p>
-                  {imageError && (
-                    <div className="flex items-center justify-center gap-1 text-sm text-red-600 mt-2">
-                      <ExclamationCircleIcon className="h-5 w-5" />
-                      <span>{imageError}</span>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
+          {/* Decorative gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50/30 to-gray-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
         </label>
+        {imageError && (
+          <Alert type="error" message={imageError} className="mt-2" />
+        )}
       </div>
 
-      {/* Artwork Details */}
-      <div className="grid grid-cols-1 gap-y-6 gap-x-8 sm:grid-cols-2">
-        <div>
+      {/* Form Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Title */}
+        <div className="col-span-2">
           <label
             htmlFor="title"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Title
+            Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -266,16 +268,18 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
             required
             value={formData.title}
             onChange={handleInputChange}
-            className="block w-full h-10 px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="Enter the artwork title"
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
           />
         </div>
 
+        {/* Artist */}
         <div>
           <label
             htmlFor="artist"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Artist
+            Artist <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -284,196 +288,214 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
             required
             value={formData.artist}
             onChange={handleInputChange}
-            className="block w-full h-10 px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="Enter artist's name"
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
           />
         </div>
 
+        {/* Price */}
         <div>
           <label
             htmlFor="price"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Price
+            Price <span className="text-red-500">*</span>
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">₹</span>
-            </div>
-            <input
-              type="number"
-              name="price"
-              id="price"
-              required
-              min="0"
-              step="1"
-              value={formData.price}
-              onChange={handleInputChange}
-              className="block w-full h-10 pl-7 pr-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
+          <input
+            type="number"
+            name="price"
+            id="price"
+            required
+            value={formData.price}
+            onChange={handleInputChange}
+            placeholder="Enter price in INR"
+            min="0"
+            step="1"
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+          />
         </div>
 
+        {/* Description */}
+        <div className="col-span-2">
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
+          >
+            Description <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            name="description"
+            id="description"
+            rows={4}
+            required
+            value={formData.description}
+            onChange={handleInputChange}
+            placeholder="Describe the artwork, its inspiration, and any unique features..."
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans resize-none"
+          />
+        </div>
+
+        {/* Dimensions */}
         <div>
           <label
             htmlFor="dimensions"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Dimensions
+            Dimensions <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             name="dimensions"
             id="dimensions"
             required
-            placeholder="e.g., 80x100 cm"
             value={formData.dimensions}
             onChange={handleInputChange}
-            className="block w-full h-10 px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="e.g., 24cm × 36cm"
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
           />
         </div>
 
+        {/* Material */}
         <div>
           <label
             htmlFor="material"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Material
+            Material <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             name="material"
             id="material"
             required
-            placeholder="e.g., Oil on Canvas"
             value={formData.material}
             onChange={handleInputChange}
-            className="block w-full h-10 px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="e.g., Oil on Canvas, Acrylic, Mixed Media"
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
           />
         </div>
 
+        {/* Style */}
         <div>
           <label
             htmlFor="style"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Style
+            Style <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             name="style"
             id="style"
             required
-            placeholder="e.g., Abstract"
             value={formData.style}
             onChange={handleInputChange}
-            className="block w-full h-10 px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder="e.g., Abstract, Contemporary, Impressionist"
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
           />
         </div>
 
+        {/* Year */}
         <div>
           <label
             htmlFor="year"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
-            Year
+            Year <span className="text-red-500">*</span>
           </label>
           <input
             type="number"
             name="year"
             id="year"
             required
-            min="1800"
-            max={new Date().getFullYear()}
             value={formData.year}
             onChange={handleInputChange}
-            className="block w-full h-10 px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            placeholder={new Date().getFullYear().toString()}
+            min="1800"
+            max={new Date().getFullYear()}
+            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
           />
         </div>
 
-        <div className="sm:col-span-2 flex items-center space-x-8">
-          <div className="flex items-center">
+        {/* Checkboxes */}
+        <div className="col-span-2 flex flex-wrap gap-6">
+          <label className="flex items-center space-x-3">
             <input
               type="checkbox"
-              id="featured"
               name="featured"
               checked={formData.featured}
               onChange={handleInputChange}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
-            <label
-              htmlFor="featured"
-              className="ml-2 block text-sm text-gray-700"
-            >
+            <span className="text-sm font-medium text-gray-700 font-sans">
               Featured Artwork
-            </label>
-          </div>
+            </span>
+          </label>
           {initialData && (
-            <div className="flex items-center">
+            <label className="flex items-center space-x-3">
               <input
                 type="checkbox"
-                id="sold"
                 name="sold"
                 checked={formData.sold}
                 onChange={handleInputChange}
-                className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
               />
-              <label
-                htmlFor="sold"
-                className="ml-2 block text-sm text-gray-700"
-              >
+              <span className="text-sm font-medium text-gray-700 font-sans">
                 Mark as Sold
-              </label>
-            </div>
+              </span>
+            </label>
           )}
         </div>
-
-        <div className="sm:col-span-2">
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Description
-          </label>
-          <textarea
-            name="description"
-            id="description"
-            required
-            rows={4}
-            value={formData.description}
-            onChange={handleInputChange}
-            className="block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            style={{ minHeight: "6rem" }}
-          />
-        </div>
       </div>
 
-      <div className="flex flex-col gap-4 pt-6">
-        {isSubmitting && (
-          <div className="space-y-4">
-            {currentStep === "uploading" && (
-              <ProgressBar
-                progress={uploadProgress}
-                label="Uploading image..."
-              />
-            )}
-            {currentStep === "saving" && (
-              <ProgressBar
-                progress={savingProgress}
-                label="Saving artwork details..."
-              />
-            )}
-          </div>
-        )}
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex justify-center py-2.5 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? "Saving..." : "Save Artwork"}
-          </button>
-        </div>
+      {/* Submit Button */}
+      <div className="pt-4">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full inline-flex justify-center items-center px-6 py-3.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+        >
+          {isSubmitting ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              {currentStep === "uploading" ? "Uploading..." : "Saving..."}
+            </>
+          ) : (
+            "Save Artwork"
+          )}
+        </button>
       </div>
+
+      {/* Progress Indicators */}
+      {isSubmitting && (
+        <div className="space-y-4 pt-4">
+          {currentStep === "uploading" && (
+            <ProgressBar progress={uploadProgress} label="Uploading image..." />
+          )}
+          {currentStep === "saving" && (
+            <ProgressBar progress={savingProgress} label="Saving artwork..." />
+          )}
+        </div>
+      )}
     </form>
   );
 }

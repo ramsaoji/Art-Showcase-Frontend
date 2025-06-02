@@ -1,55 +1,56 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRightIcon } from "@heroicons/react/20/solid";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRightIcon, HeartIcon, StarIcon } from "@heroicons/react/20/solid";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import ImageModal from "../components/ImageModal";
-import ArtworkActions from "../components/ArtworkActions";
-import { formatPrice } from "../utils/formatters";
-import { getOptimizedImageUrl } from "../config/cloudinary";
+import ArtworkCard from "../components/ArtworkCard";
 import HeroCarousel from "../components/HeroCarousel";
+import Alert from "../components/Alert";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.3,
+    },
+  },
+};
 
 export default function Home() {
   const [featuredArtworks, setFeaturedArtworks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedArtwork, setSelectedArtwork] = useState(null);
-  const [imageErrors, setImageErrors] = useState({});
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadFeaturedArtworks = async () => {
       setLoading(true);
       try {
-        console.log("Fetching featured artworks...");
-
-        // Get all artworks ordered by creation time
         const artworksQuery = query(
           collection(db, "artworks"),
           orderBy("createdAt", "desc")
         );
 
         const querySnapshot = await getDocs(artworksQuery);
-
-        // Convert and filter the documents
         const allArtworks = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate(),
         }));
 
-        console.log("All artworks:", allArtworks);
-
-        // Filter featured artworks and take only the first 3
         const featuredArtworks = allArtworks
           .filter((artwork) => artwork.featured === true)
           .slice(0, 3);
 
-        console.log("Featured artworks:", featuredArtworks);
         setFeaturedArtworks(featuredArtworks);
-      } catch (error) {
-        console.error("Error loading featured artworks:", error);
-        setError(error.message);
+      } catch (err) {
+        console.error("Error loading featured artworks:", err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -58,38 +59,10 @@ export default function Home() {
     loadFeaturedArtworks();
   }, []);
 
-  const handleArtworkClick = (artwork, e) => {
-    e.preventDefault(); // Prevent navigation
-    setSelectedArtwork(artwork);
-  };
-
-  const handleImageError = (artworkId) => {
-    setImageErrors((prev) => ({ ...prev, [artworkId]: true }));
-  };
-
-  const handlePrevious = () => {
-    const currentIndex = featuredArtworks.findIndex(
-      (art) => art.id === selectedArtwork?.id
-    );
-    if (currentIndex > 0) {
-      setSelectedArtwork(featuredArtworks[currentIndex - 1]);
-    }
-  };
-
-  const handleNext = () => {
-    const currentIndex = featuredArtworks.findIndex(
-      (art) => art.id === selectedArtwork?.id
-    );
-    if (currentIndex < featuredArtworks.length - 1) {
-      setSelectedArtwork(featuredArtworks[currentIndex + 1]);
-    }
-  };
-
   const handleDelete = (deletedId) => {
-    setFeaturedArtworks((prev) => prev.filter((art) => art.id !== deletedId));
-    if (selectedArtwork?.id === deletedId) {
-      setSelectedArtwork(null);
-    }
+    setFeaturedArtworks((prev) =>
+      prev.filter((artwork) => artwork.id !== deletedId)
+    );
   };
 
   return (
@@ -97,216 +70,316 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative">
         <HeroCarousel />
-        <div className="relative mx-auto max-w-7xl py-24 px-6 sm:py-32 lg:px-8 z-20">
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl drop-shadow-2xl text-shadow-lg">
-            Discover Unique Artworks
-          </h1>
-          <p className="mt-6 max-w-2xl text-xl text-white drop-shadow-2xl text-shadow">
-            Explore our curated collection of exceptional pieces from talented
-            artists around the world.
-          </p>
-          <div className="mt-10 flex gap-x-6">
-            <Link
-              to="/gallery"
-              className="rounded-md bg-indigo-600 px-3.5 py-2 sm:px-6 sm:py-3 text-sm sm:text-lg font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Browse Gallery
-            </Link>
-            <Link
-              to="/about"
-              className="rounded-md bg-white/10 px-3.5 py-2 sm:px-6 sm:py-3 text-sm sm:text-lg font-semibold text-white hover:bg-white/20"
-            >
-              Learn More
-            </Link>
-          </div>
-        </div>
       </div>
 
       {/* Featured Artworks Section */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex items-center justify-between mb-12">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Featured Artworks
-            </h2>
-            <p className="mt-4 text-lg text-gray-500">
-              Discover our handpicked selection of exceptional pieces.
-            </p>
+      <section className="relative py-20 sm:py-32 overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white/95" />
+          <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-white" />
+          <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
+            <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/40 to-purple-100/40 blur-3xl" />
           </div>
-          <Link
-            to="/featured"
-            className="hidden sm:flex items-center text-indigo-600 hover:text-indigo-500"
-          >
-            View all featured works
-            <ArrowRightIcon className="ml-2 h-5 w-5" />
-          </Link>
+          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute left-0 bottom-0 w-96 h-96 bg-gradient-to-tr from-amber-500/10 to-pink-500/10 rounded-full blur-3xl" />
         </div>
 
-        {loading ? (
-          <div className="flex justify-center my-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center text-center mb-16 sm:mb-20">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="relative flex items-center justify-center gap-2 text-indigo-600 font-body italic text-2xl mb-6 px-4 sm:px-16 w-full"
+            >
+              {/* Decorative elements */}
+              <div className="absolute left-0 -top-8 w-20 h-20 bg-gradient-to-tr from-amber-500/20 to-pink-500/20 rounded-full blur-xl" />
+              <div className="absolute right-0 -top-8 w-20 h-20 bg-gradient-to-tl from-indigo-500/20 to-purple-500/20 rounded-full blur-xl" />
+              <div className="absolute left-1/2 -translate-x-1/2 -top-4 w-32 h-32 bg-gradient-to-b from-indigo-500/10 to-transparent rounded-full blur-2xl" />
+
+              {/* Decorative lines */}
+              <div className="relative flex items-center gap-3 sm:gap-4 min-w-0">
+                <span className="hidden sm:block w-12 sm:w-16 h-[2px] bg-indigo-600/50 rounded-full" />
+                <div className="relative whitespace-nowrap">
+                  <span className="relative z-10">Curated Selection</span>
+                  {/* Decorative brush stroke */}
+                  <svg
+                    className="absolute -bottom-3 left-0 w-full h-3 text-indigo-600/20"
+                    viewBox="0 0 100 12"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M0,0 Q25,12 50,6 T100,0"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                  </svg>
+                </div>
+                <span className="hidden sm:block w-12 sm:w-16 h-[2px] bg-indigo-600/50 rounded-full" />
+              </div>
+
+              {/* Additional floating elements */}
+              <motion.div
+                className="absolute -left-8 top-1/2 w-4 h-4 rounded-full bg-indigo-400/30"
+                animate={{
+                  y: [0, -10, 0],
+                  opacity: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+              <motion.div
+                className="absolute -right-8 top-1/2 w-4 h-4 rounded-full bg-amber-400/30"
+                animate={{
+                  y: [0, 10, 0],
+                  opacity: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+              <motion.div
+                className="absolute left-1/2 -translate-x-1/2 -bottom-4 w-3 h-3 rounded-full bg-rose-400/30"
+                animate={{
+                  scale: [1, 1.5, 1],
+                  opacity: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              />
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="font-artistic text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight mb-6"
+            >
+              Featured Artworks
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="font-body text-xl text-gray-600 max-w-2xl leading-relaxed"
+            >
+              Discover our handpicked selection of exceptional pieces that
+              showcase the finest in contemporary art.
+            </motion.p>
           </div>
-        ) : featuredArtworks.length === 0 ? (
-          <div className="text-center py-12">
-            <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-semibold text-gray-900">
-              No featured artworks
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Check back later for our featured collection.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-            {featuredArtworks.map((artwork) => (
-              <div
-                key={artwork.id}
-                className="group bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-all duration-300 hover:shadow-2xl"
+
+          {loading ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-4 border-indigo-500/30 border-t-indigo-600 animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full border-4 border-indigo-300/30 border-t-indigo-400 animate-spin" />
+                </div>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="max-w-2xl mx-auto">
+              <Alert
+                type="error"
+                message={error}
+                className="text-center py-8"
+              />
+            </div>
+          ) : featuredArtworks.length === 0 ? (
+            <motion.div
+              className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <PhotoIcon className="mx-auto h-16 w-16 text-gray-400" />
+              <h3 className="mt-4 font-artistic text-xl font-semibold text-gray-900">
+                No featured artworks
+              </h3>
+              <p className="mt-2 font-body text-gray-500">
+                Check back later for our featured collection.
+              </p>
+            </motion.div>
+          ) : (
+            <>
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10"
+                variants={container}
+                initial="hidden"
+                animate="show"
               >
-                <div className="relative h-[300px] bg-gray-100 overflow-hidden">
-                  {imageErrors[artwork.id] ? (
-                    <div className="flex items-center justify-center h-full">
-                      <PhotoIcon className="h-12 w-12 text-gray-400" />
-                    </div>
-                  ) : (
-                    <>
-                      <img
-                        src={
-                          artwork.public_id
-                            ? getOptimizedImageUrl(artwork.public_id)
-                            : artwork.url
-                        }
-                        alt={artwork.title}
-                        className={`w-full h-full object-cover object-center ${
-                          artwork.sold ? "opacity-90" : ""
-                        }`}
-                        onError={(e) => {
-                          console.error("Image failed to load:", e);
-                          if (
-                            artwork.public_id &&
-                            e.target.src !== artwork.url
-                          ) {
-                            e.target.src = artwork.url;
-                          } else {
-                            handleImageError(artwork.id);
-                          }
-                        }}
+                {/* Background decorative elements */}
+                <div className="absolute inset-0 overflow-hidden">
+                  {/* Large gradient orbs */}
+                  <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-amber-500/10 to-pink-500/10 blur-3xl" />
+                  <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] rounded-full bg-gradient-to-tl from-indigo-500/10 to-purple-500/10 blur-3xl" />
+
+                  {/* Animated floating elements */}
+                  <motion.div
+                    className="absolute top-1/3 left-1/4 w-32 h-32"
+                    animate={{
+                      y: [-20, 20, -20],
+                      rotate: [0, 45, 0],
+                    }}
+                    transition={{
+                      duration: 8,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-gradient-to-r from-indigo-500/5 to-purple-500/5 blur-2xl" />
+                  </motion.div>
+
+                  <motion.div
+                    className="absolute bottom-1/3 right-1/4 w-40 h-40"
+                    animate={{
+                      y: [20, -20, 20],
+                      rotate: [0, -45, 0],
+                    }}
+                    transition={{
+                      duration: 10,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-gradient-to-r from-amber-500/5 to-pink-500/5 blur-2xl" />
+                  </motion.div>
+
+                  {/* Decorative patterns */}
+                  <svg
+                    className="absolute top-1/2 left-0 w-40 h-40 text-indigo-500/5"
+                    viewBox="0 0 100 100"
+                  >
+                    <pattern
+                      id="grid"
+                      x="0"
+                      y="0"
+                      width="20"
+                      height="20"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <path
+                        d="M 20 0 L 0 0 0 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 sm:block hidden" />
-                      {artwork.sold && (
-                        <div className="absolute top-2 right-2 z-20">
-                          <div className="inline-flex bg-white/90 text-red-600 border border-red-200 px-3 py-1 rounded-full text-xs font-medium shadow-sm ml-2">
-                            Sold
-                          </div>
-                        </div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            setSelectedArtwork(artwork);
-                          }}
-                          className="bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-black/60 transition-colors duration-200 sm:opacity-0 sm:group-hover:opacity-100 z-30"
-                        >
-                          Quick View
-                        </button>
-                      </div>
-                      <Link
-                        to={`/artwork/${artwork.id}`}
-                        className="absolute inset-0 z-10"
-                      >
-                        <span className="sr-only">
-                          View details for {artwork.title}
-                        </span>
-                      </Link>
-                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform sm:translate-y-full sm:group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/70 to-transparent sm:bg-none">
-                        <p className="text-sm font-medium">
-                          {artwork.material}
-                        </p>
-                        <p className="text-sm opacity-90">
-                          {artwork.dimensions}
-                        </p>
-                      </div>
-                    </>
-                  )}
+                    </pattern>
+                    <rect width="100" height="100" fill="url(#grid)" />
+                  </svg>
+
+                  <svg
+                    className="absolute bottom-0 right-0 w-40 h-40 text-amber-500/5"
+                    viewBox="0 0 100 100"
+                  >
+                    <pattern
+                      id="dots"
+                      x="0"
+                      y="0"
+                      width="10"
+                      height="10"
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <circle cx="5" cy="5" r="1" fill="currentColor" />
+                    </pattern>
+                    <rect width="100" height="100" fill="url(#dots)" />
+                  </svg>
+
+                  {/* Animated lines */}
+                  <motion.div
+                    className="absolute top-0 left-1/2 w-[1px] h-32 bg-gradient-to-b from-indigo-500/0 via-indigo-500/10 to-indigo-500/0"
+                    animate={{
+                      scaleY: [1, 1.5, 1],
+                      opacity: [0.3, 0.6, 0.3],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                    }}
+                  />
+                  <motion.div
+                    className="absolute bottom-0 left-1/3 w-[1px] h-40 bg-gradient-to-b from-amber-500/0 via-amber-500/10 to-amber-500/0"
+                    animate={{
+                      scaleY: [1, 1.3, 1],
+                      opacity: [0.2, 0.5, 0.2],
+                    }}
+                    transition={{
+                      duration: 5,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                    }}
+                  />
                 </div>
 
-                <Link to={`/artwork/${artwork.id}`} className="block p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors duration-300">
-                        {artwork.title}
-                      </h3>
-                      <div className="mt-1 flex items-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          By {artwork.artist}
-                        </span>
-                        <span className="mx-2 text-gray-300">•</span>
-                        <span className="text-sm text-gray-500">
-                          {artwork.year}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-lg font-bold text-indigo-600">
-                        {formatPrice(artwork.price)}
-                      </p>
-                    </div>
-                  </div>
+                <AnimatePresence>
+                  {featuredArtworks.map((artwork) => (
+                    <ArtworkCard
+                      key={artwork.id}
+                      artwork={artwork}
+                      onDelete={handleDelete}
+                      onQuickView={setSelectedArtwork}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
 
-                  {artwork.description && (
-                    <div className="mt-3 mb-4">
-                      <p className="text-sm text-gray-600 line-clamp-3">
-                        {artwork.description}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col space-y-3 pt-4 border-t border-gray-100">
-                    <div className="flex items-center flex-wrap gap-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {artwork.style}
-                      </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                        Featured
-                      </span>
-                      {artwork.sold && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Sold
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex justify-end">
-                      <ArtworkActions
-                        artworkId={artwork.id}
-                        onDelete={handleDelete}
-                      />
-                    </div>
-                  </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="mt-16 text-center"
+              >
+                <Link
+                  to="/gallery?filter=featured"
+                  className="inline-flex items-center px-8 py-3 border-2 border-indigo-600/20 rounded-full bg-white/80 backdrop-blur-sm font-artistic text-lg text-indigo-600 hover:bg-indigo-50/80 transition-colors duration-300"
+                >
+                  View All Featured Works
+                  <ArrowRightIcon className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-12 text-center sm:hidden">
-          <Link
-            to="/featured"
-            className="inline-flex items-center text-indigo-600 hover:text-indigo-500"
-          >
-            View all featured works
-            <ArrowRightIcon className="ml-2 h-5 w-5" />
-          </Link>
+              </motion.div>
+            </>
+          )}
         </div>
-      </div>
+      </section>
 
       <ImageModal
         isOpen={!!selectedArtwork}
         onClose={() => setSelectedArtwork(null)}
         image={selectedArtwork}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
+        onPrevious={() => {
+          const currentIndex = featuredArtworks.findIndex(
+            (artwork) => artwork.id === selectedArtwork?.id
+          );
+          if (currentIndex > 0) {
+            setSelectedArtwork(featuredArtworks[currentIndex - 1]);
+          }
+        }}
+        onNext={() => {
+          const currentIndex = featuredArtworks.findIndex(
+            (artwork) => artwork.id === selectedArtwork?.id
+          );
+          if (currentIndex < featuredArtworks.length - 1) {
+            setSelectedArtwork(featuredArtworks[currentIndex + 1]);
+          }
+        }}
         hasPrevious={
           featuredArtworks.findIndex(
             (artwork) => artwork.id === selectedArtwork?.id

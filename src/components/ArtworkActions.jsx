@@ -6,6 +6,8 @@ import { db } from "../firebase/config";
 import { useAuth } from "../contexts/AuthContext";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import { deleteImage } from "../config/cloudinary";
+import { motion } from "framer-motion";
+import Alert from "./Alert";
 
 export default function ArtworkActions({ artworkId, onDelete }) {
   const { isAdmin } = useAuth();
@@ -71,24 +73,28 @@ export default function ArtworkActions({ artworkId, onDelete }) {
 
   return (
     <>
-      <div className="flex items-center space-x-2">
-        <button
+      <div className="flex items-center space-x-3">
+        <motion.button
           onClick={handleEdit}
-          className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="inline-flex items-center px-4 py-2 text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
           title="Edit artwork"
         >
-          <PencilSquareIcon className="h-4 w-4 mr-1" />
+          <PencilSquareIcon className="h-4 w-4 mr-1.5" />
           Edit
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           onClick={handleDeleteClick}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           disabled={isDeleting}
-          className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center px-4 py-2 text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Delete artwork"
         >
-          <TrashIcon className="h-4 w-4 mr-1" />
+          <TrashIcon className="h-4 w-4 mr-1.5" />
           {isDeleting ? "Deleting..." : "Delete"}
-        </button>
+        </motion.button>
       </div>
 
       <DeleteConfirmationDialog
@@ -98,7 +104,7 @@ export default function ArtworkActions({ artworkId, onDelete }) {
         title="Artwork"
       />
 
-      {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
+      {error && <Alert type="error" message={error} className="mt-3" />}
     </>
   );
 }
