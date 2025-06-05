@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { trpc } from "../utils/trpc";
 import { ShareIcon, PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { getOptimizedImageUrl } from "../config/cloudinary";
@@ -13,37 +12,21 @@ import { trackArtworkView, trackShare } from "../services/analytics";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
-  const [artwork, setArtwork] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [showShareToast, setShowShareToast] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  // Use tRPC query to fetch artworks
+  const {
+    data: artwork,
+    isLoading,
+    error,
+  } = trpc.getArtworkById.useQuery({ id }, { enabled: !!id });
+
   useEffect(() => {
-    async function fetchArtwork() {
-      try {
-        const docRef = doc(db, "artworks", id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const artworkData = { id: docSnap.id, ...docSnap.data() };
-          console.log("Fetched artwork data:", artworkData);
-          setArtwork(artworkData);
-          // Track artwork view when the data is loaded
-          trackArtworkView(artworkData.id, artworkData.title);
-        } else {
-          setError("Artwork not found");
-        }
-      } catch (err) {
-        console.error("Error fetching artwork:", err);
-        setError("Failed to load artwork");
-      } finally {
-        setLoading(false);
-      }
+    if (artwork) {
+      trackArtworkView(artwork.id, artwork.title);
     }
-
-    fetchArtwork();
-  }, [id]);
+  }, [artwork]);
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
@@ -69,7 +52,7 @@ export default function ArtworkDetail() {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader size="large" />

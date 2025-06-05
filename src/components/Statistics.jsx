@@ -1,8 +1,8 @@
-import { useState, useEffect, memo } from "react";
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { trpc } from "../utils/trpc";
+// import Loader from "./ui/Loader";
 
 // Custom INR Icon component
 const INRIcon = ({ className }) => (
@@ -48,85 +48,123 @@ const StatCard = memo(({ icon: Icon, label, value, subtext, delay }) => (
   </motion.div>
 ));
 
+const SkeletonCard = ({ delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay }}
+    className="relative p-6 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-shadow duration-300 animate-pulse"
+  >
+    {/* Icon placeholder */}
+    <div className="absolute -top-4 left-6">
+      <div className="p-3 bg-gray-300 rounded-xl shadow-lg w-12 h-12" />
+    </div>
+
+    {/* Content placeholder */}
+    <div className="mt-4">
+      <div className="h-10 w-24 bg-gray-300 rounded-md mb-2" />
+      <div className="h-4 w-28 bg-gray-200 rounded-md" />
+      <div className="h-3 w-24 bg-gray-200 rounded-md mt-3" />
+    </div>
+  </motion.div>
+);
+
 StatCard.displayName = "StatCard";
 
 export default function Statistics() {
-  const [stats, setStats] = useState({
-    totalArtworks: 0,
-    featuredCount: 0,
-    soldCount: 0,
-  });
+  const { data, isLoading, error } = trpc.getArtworkStats.useQuery();
+  const {
+    totalArtworksCount = 0,
+    featuredArtworksCount = 0,
+    soldArtworksCount = 0,
+  } = data ?? {};
 
-  useEffect(() => {
-    const unsubscribers = [];
-
-    // Total artworks
-    const artworksQuery = query(collection(db, "artworks"));
-    unsubscribers.push(
-      onSnapshot(artworksQuery, (snapshot) => {
-        setStats((prev) => ({
-          ...prev,
-          totalArtworks: snapshot.size,
-        }));
-      })
-    );
-
-    // Featured artworks
-    const featuredQuery = query(
-      collection(db, "artworks"),
-      where("featured", "==", true)
-    );
-    unsubscribers.push(
-      onSnapshot(featuredQuery, (snapshot) => {
-        setStats((prev) => ({
-          ...prev,
-          featuredCount: snapshot.size,
-        }));
-      })
-    );
-
-    // Sold artworks
-    const soldQuery = query(
-      collection(db, "artworks"),
-      where("sold", "==", true)
-    );
-    unsubscribers.push(
-      onSnapshot(soldQuery, (snapshot) => {
-        setStats((prev) => ({
-          ...prev,
-          soldCount: snapshot.size,
-        }));
-      })
-    );
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    };
-  }, []);
+  const allZero =
+    totalArtworksCount === 0 &&
+    featuredArtworksCount === 0 &&
+    soldArtworksCount === 0;
 
   const cards = [
     {
       icon: PhotoIcon,
       label: "Total Artworks",
-      value: stats.totalArtworks,
+      value: totalArtworksCount,
       subtext: "Unique pieces in our gallery",
       delay: 0.1,
     },
     {
       icon: StarIcon,
       label: "Featured Works",
-      value: stats.featuredCount,
-      subtext: "Curated by our team",
+      value: featuredArtworksCount,
+      subtext: "Curated Selection",
       delay: 0.2,
     },
     {
       icon: INRIcon,
       label: "Artworks Sold",
-      value: stats.soldCount,
+      value: soldArtworksCount,
       subtext: "Finding new homes",
       delay: 0.3,
     },
   ];
+
+  // if (isLoading) {
+  //   return (
+  //     <section className="py-20 px-4 text-center flex flex-col items-center justify-center gap-6">
+  //       <Loader size="medium" />
+  //       <p className="text-gray-500 font-sans text-sm">Loading statistics...</p>
+  //     </section>
+  //   );
+  // }
+
+  if (isLoading) {
+    return (
+      <section className="relative py-20 overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-3xl" />
+          </div>
+        </div>
+
+        <div className="relative container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <div className="font-artistic text-4xl sm:text-5xl font-bold text-gray-400 tracking-wide mb-4">
+              Our Growing Community
+            </div>
+            <div className="font-sans text-lg text-gray-400 max-w-2xl mx-auto">
+              Loading community stats...
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            {[0.1, 0.2, 0.3].map((delay) => (
+              <SkeletonCard key={delay} delay={delay} />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-xl font-sans text-sm"
+          >
+            {error.message ||
+              "An unexpected error occurred while fetching statistics."}
+          </motion.div>
+        </div>
+      </section>
+    );
+  }
+
+  if (allZero) return null;
 
   return (
     <section className="relative py-20 overflow-hidden">
@@ -137,7 +175,7 @@ export default function Statistics() {
         </div>
       </div>
 
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}

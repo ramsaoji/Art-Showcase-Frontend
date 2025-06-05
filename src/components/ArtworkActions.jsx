@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { trpc } from "../utils/trpc"; // Adjust path to your trpc setup
 import { useAuth } from "../contexts/AuthContext";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import { deleteImage } from "../config/cloudinary";
@@ -12,9 +11,44 @@ import Alert from "./Alert";
 export default function ArtworkActions({ artworkId, onDelete }) {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [error, setError] = useState(null);
+
+  // tRPC utils for cache invalidation
+  const utils = trpc.useContext();
+
+  // Get artwork data for Cloudinary cleanup
+  const { data: artwork } = trpc.getArtworkById.useQuery(
+    { id: artworkId },
+    {
+      enabled: false, // Only fetch when needed for deletion
+    }
+  );
+
+  // Delete mutation
+  const deleteArtworkMutation = trpc.deleteArtwork.useMutation({
+    onSuccess: (data) => {
+      console.log("Artwork deleted successfully:", data.deletedId);
+
+      // Call parent callback if provided
+      if (onDelete) {
+        onDelete(artworkId);
+      }
+
+      // Invalidate relevant queries to refresh the UI
+      utils.getAllArtworks.invalidate();
+      utils.getFeaturedArtworks.invalidate();
+
+      setShowDeleteDialog(false);
+      setError(null);
+    },
+    onError: (error) => {
+      console.error("Error deleting artwork:", error);
+      setError("Failed to delete artwork. Please try again.");
+    },
+  });
 
   if (!isAdmin) return null;
 
@@ -31,18 +65,21 @@ export default function ArtworkActions({ artworkId, onDelete }) {
   };
 
   const handleDelete = async () => {
-    setIsDeleting(true);
     setError(null);
+    setIsDeleting(true); // Start loading
+
     try {
-      // First, get the artwork document to get the Cloudinary public_id
-      const artworkDoc = await getDoc(doc(db, "artworks", artworkId));
-      if (!artworkDoc.exists()) {
+      let artworkData = artwork;
+      if (!artworkData) {
+        artworkData = await utils.getArtworkById.fetch({ id: artworkId });
+      }
+
+      if (!artworkData) {
         throw new Error("Artwork not found");
       }
 
-      const { cloudinary_public_id } = artworkDoc.data();
+      const { cloudinary_public_id } = artworkData;
 
-      // Delete the image from Cloudinary if public_id exists
       if (cloudinary_public_id) {
         try {
           await deleteImage(cloudinary_public_id);
@@ -52,25 +89,21 @@ export default function ArtworkActions({ artworkId, onDelete }) {
             "Error deleting image from Cloudinary:",
             cloudinaryError
           );
-          // Continue with Firestore deletion even if Cloudinary deletion fails
         }
       }
 
-      // Add a small delay to show the progress animation
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Optional delay
 
-      // Delete the document from Firestore
-      await deleteDoc(doc(db, "artworks", artworkId));
-
-      if (onDelete) {
-        onDelete(artworkId);
-      }
+      await deleteArtworkMutation.mutateAsync({ id: artworkId });
     } catch (error) {
-      console.error("Error deleting artwork:", error);
-      setError("Failed to delete artwork. Please try again.");
+      console.error("Error in handleDelete:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete artwork. Please try again."
+      );
     } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
+      setIsDeleting(false); // End loading
     }
   };
 

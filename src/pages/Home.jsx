@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRightIcon, HeartIcon, StarIcon } from "@heroicons/react/20/solid";
 import { PhotoIcon } from "@heroicons/react/24/outline";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { trpc } from "../utils/trpc";
 import ImageModal from "../components/ImageModal";
 import ArtworkCard from "../components/ArtworkCard";
 import HeroCarousel from "../components/HeroCarousel";
@@ -14,6 +13,7 @@ import {
   trackArtworkInteraction,
   trackUserAction,
 } from "../services/analytics";
+import Statistics from "../components/Statistics";
 
 const container = {
   hidden: { opacity: 0 },
@@ -27,48 +27,25 @@ const container = {
 };
 
 export default function Home() {
-  const [featuredArtworks, setFeaturedArtworks] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedArtwork, setSelectedArtwork] = useState(null);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const loadFeaturedArtworks = async () => {
-      setLoading(true);
-      try {
-        const artworksQuery = query(
-          collection(db, "artworks"),
-          orderBy("createdAt", "desc")
-        );
+  const {
+    data: featuredArtworks = [],
+    isLoading,
+    refetch,
+    error,
+  } = trpc.getFeaturedArtworks.useQuery();
 
-        const querySnapshot = await getDocs(artworksQuery);
-        const allArtworks = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-        }));
-
-        const featuredArtworks = allArtworks
-          .filter((artwork) => artwork.featured === true)
-          .slice(0, 3);
-
-        setFeaturedArtworks(featuredArtworks);
-      } catch (err) {
-        console.error("Error loading featured artworks:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const handleDelete = useCallback(
+    (deletedId) => {
+      refetch();
+      if (selectedArtwork?.id === deletedId) {
+        setSelectedArtwork(null);
       }
-    };
-
-    loadFeaturedArtworks();
-  }, []);
-
-  const handleDelete = (deletedId) => {
-    setFeaturedArtworks((prev) =>
-      prev.filter((artwork) => artwork.id !== deletedId)
-    );
-  };
+      trackArtworkInteraction("featured_artwork_delete_from_home", deletedId);
+    },
+    [refetch, selectedArtwork?.id]
+  );
 
   const handleViewAllClick = () => {
     trackUserAction("view_all_featured");
@@ -196,15 +173,21 @@ export default function Home() {
             </motion.p>
           </div>
 
-          {loading ? (
-            <div className="flex justify-center items-center min-h-[400px]">
-              <Loader size="large" />
+          {isLoading ? (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="animate-pulse">
+                    <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4"></div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : error ? (
             <div className="max-w-2xl mx-auto">
               <Alert
                 type="error"
-                message={error}
+                message={error.message || "Failed to load featured artworks"}
                 className="text-center py-8"
               />
             </div>
@@ -357,7 +340,7 @@ export default function Home() {
                 className="mt-16 text-center"
               >
                 <Link
-                  to="/gallery?filter=featured"
+                  to="/gallery?featured=featured"
                   onClick={handleViewAllClick}
                   className="inline-flex items-center px-8 py-3 border-2 border-indigo-600/20 rounded-full bg-white/80 backdrop-blur-sm font-artistic text-lg text-indigo-600 hover:bg-indigo-50/80 transition-colors duration-300"
                 >
@@ -370,50 +353,55 @@ export default function Home() {
         </div>
       </section>
 
-      <ImageModal
-        isOpen={!!selectedArtwork}
-        onClose={() => setSelectedArtwork(null)}
-        image={selectedArtwork}
-        onPrevious={() => {
-          const currentIndex = featuredArtworks.findIndex(
-            (artwork) => artwork.id === selectedArtwork?.id
-          );
-          if (currentIndex > 0) {
-            const prevArtwork = featuredArtworks[currentIndex - 1];
-            setSelectedArtwork(prevArtwork);
-            trackArtworkInteraction(
-              "view_previous_from_home",
-              prevArtwork.id,
-              prevArtwork.title
+      {/* Stats Section */}
+      <Statistics />
+
+      {selectedArtwork && (
+        <ImageModal
+          isOpen={!!selectedArtwork}
+          onClose={() => setSelectedArtwork(null)}
+          image={selectedArtwork}
+          onPrevious={() => {
+            const currentIndex = featuredArtworks.findIndex(
+              (artwork) => artwork.id === selectedArtwork?.id
             );
-          }
-        }}
-        onNext={() => {
-          const currentIndex = featuredArtworks.findIndex(
-            (artwork) => artwork.id === selectedArtwork?.id
-          );
-          if (currentIndex < featuredArtworks.length - 1) {
-            const nextArtwork = featuredArtworks[currentIndex + 1];
-            setSelectedArtwork(nextArtwork);
-            trackArtworkInteraction(
-              "view_next_from_home",
-              nextArtwork.id,
-              nextArtwork.title
+            if (currentIndex > 0) {
+              const prevArtwork = featuredArtworks[currentIndex - 1];
+              setSelectedArtwork(prevArtwork);
+              trackArtworkInteraction(
+                "view_previous_from_home",
+                prevArtwork.id,
+                prevArtwork.title
+              );
+            }
+          }}
+          onNext={() => {
+            const currentIndex = featuredArtworks.findIndex(
+              (artwork) => artwork.id === selectedArtwork?.id
             );
+            if (currentIndex < featuredArtworks.length - 1) {
+              const nextArtwork = featuredArtworks[currentIndex + 1];
+              setSelectedArtwork(nextArtwork);
+              trackArtworkInteraction(
+                "view_next_from_home",
+                nextArtwork.id,
+                nextArtwork.title
+              );
+            }
+          }}
+          hasPrevious={
+            featuredArtworks.findIndex(
+              (artwork) => artwork.id === selectedArtwork?.id
+            ) > 0
           }
-        }}
-        hasPrevious={
-          featuredArtworks.findIndex(
-            (artwork) => artwork.id === selectedArtwork?.id
-          ) > 0
-        }
-        hasNext={
-          featuredArtworks.findIndex(
-            (artwork) => artwork.id === selectedArtwork?.id
-          ) <
-          featuredArtworks.length - 1
-        }
-      />
+          hasNext={
+            featuredArtworks.findIndex(
+              (artwork) => artwork.id === selectedArtwork?.id
+            ) <
+            featuredArtworks.length - 1
+          }
+        />
+      )}
     </div>
   );
 }

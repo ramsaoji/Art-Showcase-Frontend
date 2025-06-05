@@ -1,40 +1,20 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { db } from "../firebase/config";
 import { getOptimizedImageUrl } from "../config/cloudinary";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Loader from "./ui/Loader";
+import { trpc } from "../utils/trpc"; // Adjust import path as needed
 
 export default function HeroCarousel() {
-  const [images, setImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadFeaturedImages = async () => {
-      try {
-        const artworksQuery = query(
-          collection(db, "artworks"),
-          orderBy("createdAt", "desc"),
-          limit(5)
-        );
-        const querySnapshot = await getDocs(artworksQuery);
-        const recentArtworks = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setImages(recentArtworks);
-      } catch (error) {
-        console.error("Error loading recent images:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadFeaturedImages();
-  }, []);
+  // Use tRPC query to fetch artworks
+  const {
+    data: images = [],
+    isLoading,
+    error,
+  } = trpc.getArtworksForHeroCarousel.useQuery();
 
   useEffect(() => {
     if (images.length > 0) {
@@ -47,6 +27,11 @@ export default function HeroCarousel() {
       return () => clearInterval(timer);
     }
   }, [images.length]);
+
+  // Handle error state
+  if (error) {
+    console.error("Error loading featured images:", error);
+  }
 
   // Fallback content when no images are available
   if (!isLoading && images.length === 0) {
@@ -138,8 +123,10 @@ export default function HeroCarousel() {
           >
             <img
               src={
-                images[currentImageIndex].public_id
-                  ? getOptimizedImageUrl(images[currentImageIndex].public_id)
+                images[currentImageIndex].cloudinary_public_id
+                  ? getOptimizedImageUrl(
+                      images[currentImageIndex].cloudinary_public_id
+                    )
                   : images[currentImageIndex].url
               }
               alt={images[currentImageIndex].title}

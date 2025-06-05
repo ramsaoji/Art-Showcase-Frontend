@@ -1,16 +1,15 @@
 import { Fragment, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Disclosure, Menu, Transition } from "@headlessui/react";
-import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
+import { Disclosure } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 
 const navigation = [
-  { name: "Home", href: "/" },
-  { name: "Gallery", href: "/gallery" },
-  { name: "About", href: "/about" },
-  { name: "Contact", href: "/contact" },
+  { name: "Home", href: "/", icon: "🏠" },
+  { name: "Gallery", href: "/gallery", icon: "🖼️" },
+  { name: "About", href: "/about", icon: "ℹ️" },
+  { name: "Contact", href: "/contact", icon: "✉️" },
 ];
 
 function classNames(...classes) {
@@ -43,12 +42,10 @@ export default function Navbar() {
   const handleLogoClick = (e) => {
     e.preventDefault();
 
-    // If we're not on the home page, navigate home first
     if (location.pathname !== "/") {
       navigate("/");
     }
 
-    // Smooth scroll to top
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -71,64 +68,16 @@ export default function Navbar() {
                   : "bg-white/90"
               )}
             >
-              {/* Background decorative elements */}
-              <div className="absolute inset-0">
-                {/* Multi-layered gradient background */}
-                <div className="absolute inset-0">
-                  <div className="absolute inset-0 bg-gradient-to-r from-rose-100/50 via-transparent to-indigo-100/50 pointer-events-none" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,_transparent_50%,_rgba(236,_252,_255,_0.5)_100%)]" />
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_100%,_transparent_50%,_rgba(244,_238,_255,_0.5)_100%)]" />
-                </div>
-
-                {/* Ornamental corner details */}
-                <div className="absolute top-0 left-0 w-32 h-32">
-                  <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-indigo-300" />
-                  <div className="absolute top-3 left-3 w-2 h-2 bg-indigo-300 rounded-full" />
-                </div>
-                <div className="absolute top-0 right-0 w-32 h-32">
-                  <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-indigo-300" />
-                  <div className="absolute top-3 right-3 w-2 h-2 bg-indigo-300 rounded-full" />
-                </div>
-
-                {/* Subtle animated floating elements */}
-                <div className="hidden lg:block">
-                  {[...Array(5)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="absolute"
-                      style={{
-                        left: `${20 + i * 15}%`,
-                        top: "50%",
-                      }}
-                      initial={{ y: 0 }}
-                      animate={{
-                        y: [-6, 6, -6],
-                      }}
-                      transition={{
-                        duration: 4,
-                        delay: i * 0.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-indigo-400/60" />
-                      <div className="absolute -inset-3 bg-indigo-200/30 blur-md rounded-full" />
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Bottom decorative border */}
-                <div className="absolute bottom-0 left-0 right-0">
-                  <div className="h-[2px] bg-gradient-to-r from-transparent via-indigo-300 to-transparent" />
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                    <div className="w-16 h-[2px] bg-gradient-to-r from-transparent to-indigo-300" />
-                    <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                    <div className="w-16 h-[2px] bg-gradient-to-l from-transparent to-indigo-300" />
-                  </div>
+              <div className="absolute bottom-0 left-0 right-0">
+                <div className="h-[2px] bg-gradient-to-r from-transparent via-indigo-300 to-transparent" />
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                  <div className="w-16 h-[2px] bg-gradient-to-r from-transparent to-indigo-300" />
+                  <div className="w-2 h-2 rounded-full bg-indigo-400" />
+                  <div className="w-16 h-[2px] bg-gradient-to-l from-transparent to-indigo-300" />
                 </div>
               </div>
 
-              <div className="mx-auto max-w-7xl relative">
+              <div className="container mx-auto relative">
                 <div className="flex h-16 sm:h-20 justify-between items-center px-4 sm:px-6 lg:px-8">
                   <div className="flex items-center">
                     <motion.div
@@ -142,7 +91,7 @@ export default function Navbar() {
                         onClick={handleLogoClick}
                         className="relative group"
                       >
-                        <span className="font-artistic text-2xl sm:text-3xl font-bold tracking-wide">
+                        <span className="font-artistic text-xl sm:text-2xl font-bold tracking-wide">
                           <span className="text-indigo-600">Art</span>
                           <span className="text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">
                             Showcase
@@ -151,18 +100,19 @@ export default function Navbar() {
                         <div className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                       </Link>
                     </motion.div>
-                    <div className="hidden sm:ml-6 lg:ml-12 sm:flex sm:space-x-2 lg:space-x-3">
+
+                    <div className="hidden sm:ml-6 sm:flex items-center h-full">
                       {navigation.map((item, index) => (
                         <motion.div
                           key={item.name}
                           initial={{ opacity: 0, y: -20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.5, delay: index * 0.1 }}
-                          className="p-2"
+                          className="ml-2 lg:ml-4 h-full flex items-center"
                         >
                           <Link
                             to={item.href}
-                            className="relative group px-3 py-2 text-base lg:text-lg font-sans tracking-wide transition-all duration-300"
+                            className="relative group px-3 py-2 text-base lg:text-lg font-sans tracking-wide transition-all duration-300 h-full flex items-center"
                           >
                             <span
                               className={classNames(
@@ -191,23 +141,25 @@ export default function Navbar() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
+
+                  <div className="flex items-center space-x-2 sm:space-x-4">
                     {isAdmin && (
                       <motion.div
-                        className="hidden sm:flex items-center space-x-4"
+                        className="hidden sm:flex items-center gap-2"
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.5 }}
                       >
                         <Link
                           to="/add-artwork"
-                          className="inline-flex items-center px-5 py-2.5 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow"
+                          className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 whitespace-nowrap"
                         >
                           Add Artwork
                         </Link>
+
                         <button
                           onClick={handleLogout}
-                          className="inline-flex items-center px-5 py-2.5 text-base font-sans font-medium rounded-full border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+                          className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base font-sans font-medium rounded-full border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 whitespace-nowrap"
                         >
                           Logout
                         </button>
@@ -241,7 +193,7 @@ export default function Navbar() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                 >
                   <Disclosure.Panel className="sm:hidden">
                     <div className="backdrop-blur-xl bg-white/95 shadow-sm border-t border-indigo-50">
@@ -255,24 +207,25 @@ export default function Navbar() {
                               location.pathname === item.href
                                 ? "text-indigo-600 bg-indigo-50 font-semibold"
                                 : "text-gray-700 hover:text-indigo-600 hover:bg-indigo-50",
-                              "block px-4 py-2.5 text-base font-sans rounded-lg transition-all duration-300"
+                              "flex items-center px-4 py-3 text-base font-sans rounded-lg transition-all duration-300"
                             )}
                           >
+                            {/* <span className="mr-3 text-lg">{item.icon}</span> */}
                             {item.name}
                           </Disclosure.Button>
                         ))}
                       </div>
                       {isAdmin && (
-                        <div className="flex flex-col space-y-4 px-4 pt-4 pb-6">
+                        <div className="flex flex-col space-y-3 px-4 pt-2 pb-4">
                           <Link
                             to="/add-artwork"
-                            className="inline-flex items-center justify-center px-5 py-2.5 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300"
+                            className="inline-flex items-center justify-center px-4 py-3 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300"
                           >
                             Add Artwork
                           </Link>
                           <button
                             onClick={handleLogout}
-                            className="inline-flex items-center justify-center px-5 py-2.5 text-base font-sans font-medium rounded-full border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
+                            className="inline-flex items-center justify-center px-4 py-3 text-base font-sans font-medium rounded-full border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
                           >
                             Logout
                           </button>

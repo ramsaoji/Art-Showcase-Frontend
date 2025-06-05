@@ -10,14 +10,37 @@ import { db } from "../firebase/config";
 import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 import { motion } from "framer-motion";
+import { trpc } from "../utils/trpc";
 
 export default function AddArtwork() {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
 
+  // tRPC utils for cache invalidation
+  const utils = trpc.useContext();
+
+  // Add tRPC mutation
+  const createArtworkMutation = trpc.createArtwork.useMutation({
+    onSuccess: () => {
+      console.log("Artwork created successfully");
+
+      // Invalidate relevant queries to refresh the UI
+      utils.getAllArtworks.invalidate();
+      utils.getFeaturedArtworks.invalidate();
+
+      navigate("/gallery");
+    },
+    onError: (error) => {
+      console.error("Error creating artwork:", error);
+      setError(error.message || "Failed to save artwork. Please try again.");
+    },
+  });
+
   const handleSubmit = async (formData) => {
     try {
-      // Handle image upload
+      setError(null); // Clear previous errors
+
+      // Handle image upload (keep this on client side)
       const imageFile = formData.get("image");
       let imageUrl = null;
       let publicId = null;
@@ -36,7 +59,7 @@ export default function AddArtwork() {
         }
       }
 
-      // Create artwork document in Firestore
+      // Prepare data for tRPC mutation
       const artworkData = {
         title: formData.get("title"),
         artist: formData.get("artist"),
@@ -47,29 +70,19 @@ export default function AddArtwork() {
         style: formData.get("style"),
         year: parseInt(formData.get("year")),
         featured: formData.get("featured") === "true",
-        sold: formData.get("sold") === "true",
         url: imageUrl,
         cloudinary_public_id: publicId,
-        createdAt: serverTimestamp(),
       };
 
-      console.log("Saving artwork data:", artworkData);
+      console.log("Submitting artwork data:", artworkData);
 
-      // Add to Firestore
-      const docRef = await addDoc(collection(db, "artworks"), artworkData);
-      console.log("Document written with ID:", docRef.id);
-
-      // Get the saved document to verify
-      const savedDocSnap = await getDoc(docRef);
-      if (savedDocSnap.exists()) {
-        console.log("Saved document data:", savedDocSnap.data());
-      }
-
-      // Navigate to the gallery page
-      navigate("/gallery");
+      // Call tRPC mutation
+      await createArtworkMutation.mutateAsync(artworkData);
     } catch (err) {
-      console.error("Error saving artwork:", err);
-      setError(err.message || "Failed to save artwork. Please try again.");
+      console.error("Error in handleSubmit:", err);
+      if (!createArtworkMutation.error) {
+        setError(err.message || "Failed to save artwork. Please try again.");
+      }
     }
   };
 
