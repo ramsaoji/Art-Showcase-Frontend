@@ -1,23 +1,20 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  useLocation,
-} from "react-router-dom";
-import { useEffect } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { useEffect, lazy, Suspense } from "react";
 import Layout from "./components/Layout";
-import Home from "./pages/Home";
-import Gallery from "./pages/Gallery";
-import Contact from "./pages/Contact";
-import About from "./pages/About";
-import AddArtwork from "./pages/AddArtwork";
-import EditArtwork from "./pages/EditArtwork";
-import Login from "./pages/Login";
-import ArtworkDetail from "./pages/ArtworkDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { AuthProvider } from "./contexts/AuthContext";
 import ScrollToTop from "./components/ScrollToTop";
 import { trackPageView } from "./services/analytics";
+import Loader from "./components/ui/Loader";
+
+// Lazy load page components
+const Home = lazy(() => import("./pages/Home"));
+const Gallery = lazy(() => import("./pages/Gallery"));
+const Contact = lazy(() => import("./pages/Contact"));
+const About = lazy(() => import("./pages/About"));
+const AddArtwork = lazy(() => import("./pages/AddArtwork"));
+const EditArtwork = lazy(() => import("./pages/EditArtwork"));
+const Login = lazy(() => import("./pages/Login"));
+const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
 
 // Analytics wrapper component
 function AnalyticsWrapper({ children }) {
@@ -35,12 +32,20 @@ function AnalyticsWrapper({ children }) {
   return children;
 }
 
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <Loader size="large" />
+  </div>
+);
+
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <AnalyticsWrapper>
+    // Removed duplicate AuthProvider and Router
+    <>
+      <ScrollToTop />
+      <AnalyticsWrapper>
+        <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
@@ -67,9 +72,9 @@ function App() {
               />
             </Route>
           </Routes>
-        </AnalyticsWrapper>
-      </Router>
-    </AuthProvider>
+        </Suspense>
+      </AnalyticsWrapper>
+    </>
   );
 }
 

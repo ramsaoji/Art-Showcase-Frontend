@@ -9,7 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { formatPrice } from "../utils/formatters";
-import { getOptimizedImageUrl } from "../config/cloudinary";
+import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { trackArtworkInteraction } from "../services/analytics";
 import Badge from "./Badge";
 import Loader from "./ui/Loader";
@@ -55,14 +55,41 @@ export default function ImageModal({
     onClose();
   };
 
-  const getImageUrl = () => {
+  // State for progressive image loading
+  const [highQualityLoaded, setHighQualityLoaded] = useState(false);
+
+  // Get preview (medium quality) image URL
+  const getPreviewImageUrl = () => {
     if (!image) return "";
     const publicId = image.public_id || image.cloudinary_public_id;
     if (publicId) {
-      return getOptimizedImageUrl(publicId);
+      return getPreviewUrl(publicId);
     }
     return image.url;
   };
+
+  // Get full quality image URL
+  const getHighQualityImageUrl = () => {
+    if (!image) return "";
+    const publicId = image.public_id || image.cloudinary_public_id;
+    if (publicId) {
+      return getFullSizeUrl(publicId);
+    }
+    return image.url;
+  };
+
+  // Preload high quality image when modal opens
+  useEffect(() => {
+    if (isOpen && image) {
+      const highQualityImg = new Image();
+      highQualityImg.src = getHighQualityImageUrl();
+      highQualityImg.onload = () => {
+        setHighQualityLoaded(true);
+      };
+    } else {
+      setHighQualityLoaded(false);
+    }
+  }, [isOpen, image]);
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
@@ -121,15 +148,35 @@ export default function ImageModal({
                       </div>
                     ) : (
                       <div className="relative h-full">
+                        {/* Progressive image loading - first load preview, then high quality */}
                         <img
-                          src={getImageUrl()}
+                          src={getPreviewImageUrl()}
                           alt={image?.title}
                           className={`w-full h-full object-contain transition-opacity duration-300 ${
-                            isLoading ? "opacity-0" : "opacity-100"
-                          } ${image?.sold ? "opacity-90" : ""}`}
+                            isLoading
+                              ? "opacity-0"
+                              : highQualityLoaded
+                              ? "opacity-0"
+                              : "opacity-100"
+                          } ${
+                            image?.sold ? "opacity-90" : ""
+                          } absolute inset-0`}
                           onLoad={handleImageLoad}
                           onError={handleImageError}
                         />
+
+                        {/* High quality image that loads after preview */}
+                        {!isLoading && !hasError && (
+                          <img
+                            src={getHighQualityImageUrl()}
+                            alt={image?.title}
+                            className={`w-full h-full object-contain transition-opacity duration-500 ${
+                              highQualityLoaded ? "opacity-100" : "opacity-0"
+                            } ${image?.sold ? "opacity-90" : ""}`}
+                            onLoad={() => setHighQualityLoaded(true)}
+                            onError={handleImageError}
+                          />
+                        )}
                         <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-30 flex gap-2">
                           {image?.featured && (
                             <Badge type="featured" variant="overlay">

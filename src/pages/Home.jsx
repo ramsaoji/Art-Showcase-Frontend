@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRightIcon, HeartIcon, StarIcon } from "@heroicons/react/20/solid";
@@ -13,7 +13,9 @@ import {
   trackArtworkInteraction,
   trackUserAction,
 } from "../services/analytics";
-import Statistics from "../components/Statistics";
+
+// Lazy load the Statistics component
+const Statistics = lazy(() => import("../components/Statistics"));
 
 const container = {
   hidden: { opacity: 0 },
@@ -321,13 +323,22 @@ export default function Home() {
                 </div>
 
                 <AnimatePresence>
-                  {featuredArtworks.map((artwork) => (
-                    <ArtworkCard
+                  {featuredArtworks.map((artwork, index) => (
+                    <motion.div
                       key={artwork.id}
-                      artwork={artwork}
-                      onDelete={handleDelete}
-                      onQuickView={handleArtworkSelect}
-                    />
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.1, duration: 0.3 }}
+                    >
+                      <ArtworkCard
+                        key={artwork.id}
+                        artwork={artwork}
+                        onDelete={handleDelete}
+                        onQuickView={handleArtworkSelect}
+                        priority={index < 3} // Prioritize loading for first 3 images
+                      />
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </motion.div>
@@ -353,8 +364,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <Statistics />
+      {/* Stats Section - Lazy loaded */}
+      <Suspense
+        fallback={
+          <div className="py-16 flex justify-center">
+            <Loader size="lg" />
+          </div>
+        }
+      >
+        <Statistics />
+      </Suspense>
 
       {selectedArtwork && (
         <ImageModal

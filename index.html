@@ -2,8 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#4F46E5" />
     <title>Art Showcase | Discover Beautiful Artworks</title>
@@ -15,6 +13,34 @@
       name="keywords"
       content="art gallery, artworks, paintings, digital art, art showcase, artists"
     />
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/favicon.svg" as="image" type="image/svg+xml" />
+    <link rel="preload" href="/src/index.css" as="style" />
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- Add preload hints for main JS chunks that will be created by Vite -->
+    <link rel="modulepreload" href="/src/main.jsx" />
+
+    <!-- Add support for native lazy loading -->
+    <script>
+      // Feature detection for lazy loading
+      if ("loading" in HTMLImageElement.prototype) {
+        // Browser supports native lazy loading
+        // Nothing to do as we're using loading="lazy" on images
+      } else {
+        // Fallback to IntersectionObserver for older browsers
+        // This will be loaded only if needed
+        const script = document.createElement("script");
+        script.src =
+          "https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.min.js";
+        document.head.appendChild(script);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

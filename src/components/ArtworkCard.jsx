@@ -1,28 +1,93 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { formatPrice } from "../utils/formatters";
-import { getOptimizedImageUrl } from "../config/cloudinary";
+import { getThumbnailUrl } from "../config/cloudinary";
+import useOptimizedImage from "../hooks/useOptimizedImage";
 import ArtworkActions from "./ArtworkActions";
 import Badge from "./Badge";
 import { useAuth } from "../contexts/AuthContext";
 
-export default function ArtworkCard({ artwork, onDelete, onQuickView }) {
+export default function ArtworkCard({
+  artwork,
+  onDelete,
+  onQuickView,
+  priority = false,
+}) {
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [isVisible, setIsVisible] = useState(priority); // If priority is true, consider it visible immediately
+  const cardRef = useRef(null);
+  const imageRef = useRef(null);
   const { isAdmin } = useAuth();
 
+  // Use our custom hook for optimized image loading
+  const {
+    previewUrl,
+    fullSizeUrl,
+    isLoading,
+    isError,
+    highQualityLoaded,
+    getSrcSet,
+  } = useOptimizedImage(artwork.cloudinary_public_id, {
+    lazy: !priority, // Don't lazy load priority images
+    width: 600,
+    quality: 80,
+  });
+
+  // Intersection Observer for lazy loading - only if not priority
+  useEffect(() => {
+    // Skip if this is a priority image
+    if (priority) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "200px", // Start loading when within 200px of viewport
+      }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => {
+      if (cardRef.current) {
+        observer.disconnect();
+      }
+    };
+  }, [priority]);
+
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+
   const handleImageError = (e) => {
-    console.error("Image failed to load:", e);
-    if (artwork.public_id && e.target.src !== artwork.url) {
+    // Try fallback to original URL if available
+    if (artwork.url && e.target.src !== artwork.url) {
       e.target.src = artwork.url;
     } else {
       setImageError(true);
     }
   };
 
+  // Update imageError state if our hook reports an error
+  useEffect(() => {
+    if (isError) {
+      setImageError(true);
+    }
+  }, [isError]);
+
   return (
     <motion.div
+      ref={cardRef}
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -47,23 +112,57 @@ export default function ArtworkCard({ artwork, onDelete, onQuickView }) {
       </div>
 
       {/* Image Container */}
-      <div className="relative h-[320px] rounded-t-2xl overflow-hidden bg-white flex-shrink-0">
+      <div
+        ref={imageRef}
+        className="relative h-[320px] rounded-t-2xl overflow-hidden bg-white flex-shrink-0"
+      >
         {imageError ? (
           <div className="flex items-center justify-center h-full">
             <PhotoIcon className="h-12 w-12 text-gray-400" />
           </div>
         ) : (
           <>
-            <img
-              src={
-                artwork.public_id
-                  ? getOptimizedImageUrl(artwork.public_id)
-                  : artwork.url
-              }
-              alt={artwork.title}
-              className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
-              onError={handleImageError}
-            />
+            {/* Loading placeholder */}
+            {!imageLoaded && (
+              <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
+                <PhotoIcon className="h-12 w-12 text-gray-300" />
+              </div>
+            )}
+
+            {/* Only load image when in viewport */}
+            {isVisible && (
+              <picture>
+                {/* WebP format for browsers that support it */}
+                <source
+                  type="image/webp"
+                  srcSet={getSrcSet([300, 600, 900])}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+
+                {/* Low quality image placeholder while loading */}
+                {!highQualityLoaded && previewUrl && (
+                  <img
+                    src={previewUrl}
+                    alt={artwork.title}
+                    className="absolute inset-0 h-full w-full object-cover blur-sm transition-opacity duration-300"
+                    style={{ opacity: highQualityLoaded ? 0 : 0.8 }}
+                  />
+                )}
+
+                {/* Main image */}
+                <img
+                  ref={imageRef}
+                  src={fullSizeUrl || artwork.url}
+                  alt={artwork.title}
+                  className={`w-full h-full object-cover transform transition-all duration-700 group-hover:scale-110 ${
+                    imageLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                  onError={handleImageError}
+                  onLoad={handleImageLoad}
+                  loading={priority ? "eager" : "lazy"}
+                />
+              </picture>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
           </>
         )}

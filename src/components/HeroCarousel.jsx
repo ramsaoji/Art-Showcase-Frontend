@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getOptimizedImageUrl } from "../config/cloudinary";
+import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Loader from "./ui/Loader";
@@ -8,6 +8,9 @@ import { trpc } from "../utils/trpc"; // Adjust import path as needed
 
 export default function HeroCarousel() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imagesLoaded, setImagesLoaded] = useState({});
+  const [nextImagePreloaded, setNextImagePreloaded] = useState(false);
+  const timerRef = useRef(null);
 
   // Use tRPC query to fetch artworks
   const {
@@ -16,17 +19,38 @@ export default function HeroCarousel() {
     error,
   } = trpc.getArtworksForHeroCarousel.useQuery();
 
+  // Preload next image when current image changes
   useEffect(() => {
     if (images.length > 0) {
-      const timer = setInterval(() => {
+      // Preload next image
+      const nextIndex =
+        currentImageIndex === images.length - 1 ? 0 : currentImageIndex + 1;
+      const nextPublicId = images[nextIndex].cloudinary_public_id;
+
+      if (nextPublicId && !imagesLoaded[nextIndex]) {
+        const img = new Image();
+        img.src = getPreviewUrl(nextPublicId);
+        img.onload = () => {
+          setNextImagePreloaded(true);
+          setImagesLoaded((prev) => ({ ...prev, [nextIndex]: true }));
+        };
+      }
+
+      // Set timer for carousel
+      timerRef.current = setTimeout(() => {
         setCurrentImageIndex((prevIndex) =>
           prevIndex === images.length - 1 ? 0 : prevIndex + 1
         );
+        setNextImagePreloaded(false);
       }, 5000);
 
-      return () => clearInterval(timer);
+      return () => {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
+      };
     }
-  }, [images.length]);
+  }, [currentImageIndex, images, imagesLoaded]);
 
   // Handle error state
   if (error) {
@@ -121,17 +145,33 @@ export default function HeroCarousel() {
             transition={{ duration: 0.5 }}
             className="absolute inset-0"
           >
-            <img
-              src={
-                images[currentImageIndex].cloudinary_public_id
-                  ? getOptimizedImageUrl(
-                      images[currentImageIndex].cloudinary_public_id
-                    )
-                  : images[currentImageIndex].url
-              }
-              alt={images[currentImageIndex].title}
-              className="w-full h-full object-cover"
-            />
+            {/* Progressive image loading */}
+            <picture>
+              {/* WebP format for browsers that support it */}
+              <source
+                type="image/webp"
+                srcSet={
+                  images[currentImageIndex].cloudinary_public_id
+                    ? `${getPreviewUrl(
+                        images[currentImageIndex].cloudinary_public_id
+                      )}&f=webp`
+                    : images[currentImageIndex].url
+                }
+              />
+              {/* Fallback image */}
+              <img
+                src={
+                  images[currentImageIndex].cloudinary_public_id
+                    ? getPreviewUrl(
+                        images[currentImageIndex].cloudinary_public_id
+                      )
+                    : images[currentImageIndex].url
+                }
+                alt={images[currentImageIndex].title}
+                className="w-full h-full object-cover"
+                loading={currentImageIndex === 0 ? "eager" : "lazy"}
+              />
+            </picture>
           </motion.div>
         </AnimatePresence>
 

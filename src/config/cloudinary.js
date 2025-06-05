@@ -111,13 +111,40 @@ export const deleteImage = async (publicId) => {
   }
 };
 
-// Helper function to get optimized image URL
-export const getOptimizedImageUrl = (publicId) => {
-  return cld
+// Helper function to get optimized image URL with improved settings
+export const getOptimizedImageUrl = (publicId, options = {}) => {
+  const { width, height, quality: qualityValue, format: formatValue } = options;
+
+  let imageTransformation = cld
     .image(publicId)
-    .delivery(quality("auto:best"))
-    .delivery(format("auto"))
-    .toURL();
+    .delivery(quality(qualityValue || "auto:good"))
+    .delivery(format(formatValue || "auto"));
+
+  // Apply responsive sizing if provided
+  if (width) {
+    imageTransformation = imageTransformation.resize(`w_${width}`);
+  }
+
+  if (height) {
+    imageTransformation = imageTransformation.resize(`h_${height}`);
+  }
+
+  return imageTransformation.toURL();
+};
+
+// Helper function to get thumbnail URL (smaller, optimized for lists)
+export const getThumbnailUrl = (publicId) => {
+  return getOptimizedImageUrl(publicId, { width: 400, quality: "auto:eco" });
+};
+
+// Helper function to get preview URL (medium size, good quality)
+export const getPreviewUrl = (publicId) => {
+  return getOptimizedImageUrl(publicId, { width: 800, quality: "auto:good" });
+};
+
+// Helper function to get full size URL (high quality)
+export const getFullSizeUrl = (publicId) => {
+  return getOptimizedImageUrl(publicId, { quality: "auto:best" });
 };
 
 export { AdvancedImage };
