@@ -17,7 +17,7 @@ export default function HeroCarousel() {
     data: images = [],
     isLoading,
     error,
-  } = trpc.getArtworksForHeroCarousel.useQuery();
+  } = trpc.artwork.getArtworksForHeroCarousel.useQuery();
 
   // Preload next image when current image changes
   useEffect(() => {

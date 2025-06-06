@@ -1,29 +1,41 @@
-import { httpLink } from "@trpc/client"; // Changed from httpBatchLink
+import { httpLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
-import superjson from "superjson";
 
 export const trpc = createTRPCReact();
 
 export const trpcClient = trpc.createClient({
-  transformer: superjson,
   links: [
     httpLink({
-      // Changed from httpBatchLink
       url: "http://localhost:3001/trpc",
-      // Add fetch implementation with error handling
+      // Remove the custom headers - let tRPC handle Content-Type
       fetch(url, options) {
-        return fetch(url, options).catch((err) => {
-          console.error("tRPC fetch error:", err);
-          // Return a resolved promise with a response-like object to prevent app from crashing
-          return Promise.resolve({
-            ok: false,
-            status: 500,
-            json: () =>
-              Promise.resolve({
-                error: { message: "Failed to connect to tRPC server" },
-              }),
+        // Enhanced logging for debugging
+        console.log("=== tRPC Request Debug ===");
+        console.log("URL:", url);
+        console.log("Method:", options?.method);
+        console.log("Headers:", options?.headers);
+        console.log("Body (raw):", options?.body);
+
+        // Try to parse and log the body if it's a string
+        if (options?.body && typeof options.body === "string") {
+          try {
+            const parsedBody = JSON.parse(options.body);
+            console.log("Body (parsed):", parsedBody);
+          } catch (e) {
+            console.log("Body (unparseable):", options.body);
+          }
+        }
+
+        return fetch(url, options)
+          .then((response) => {
+            console.log("Response status:", response.status);
+            console.log("Response ok:", response.ok);
+            return response;
+          })
+          .catch((error) => {
+            console.error("Fetch error:", error);
+            throw error;
           });
-        });
       },
     }),
   ],

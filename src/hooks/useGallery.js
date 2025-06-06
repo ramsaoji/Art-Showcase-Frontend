@@ -115,7 +115,7 @@ export default function useGallery() {
     isError,
     error,
     refetch,
-  } = trpc.getAllArtworks.useQuery(queryInput, {
+  } = trpc.artwork.getAllArtworks.useQuery(queryInput, {
     retry: 2,
     retryDelay: 1000,
     refetchOnWindowFocus: false,

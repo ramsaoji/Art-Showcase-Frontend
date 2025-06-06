@@ -36,7 +36,8 @@ export default function Home() {
     isLoading,
     refetch,
     error,
-  } = trpc.getFeaturedArtworks.useQuery();
+  } = trpc.artwork.getFeaturedArtworks.useQuery();
+  console.log("Featured Artworks Data:", featuredArtworks);
 
   const handleDelete = useCallback(
     (deletedId) => {

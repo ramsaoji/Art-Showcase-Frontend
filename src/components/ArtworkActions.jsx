@@ -20,7 +20,7 @@ export default function ArtworkActions({ artworkId, onDelete }) {
   const utils = trpc.useContext();
 
   // Get artwork data for Cloudinary cleanup
-  const { data: artwork } = trpc.getArtworkById.useQuery(
+  const { data: artwork } = trpc.artwork.getArtworkById.useQuery(
     { id: artworkId },
     {
       enabled: false, // Only fetch when needed for deletion
@@ -28,7 +28,7 @@ export default function ArtworkActions({ artworkId, onDelete }) {
   );
 
   // Delete mutation
-  const deleteArtworkMutation = trpc.deleteArtwork.useMutation({
+  const deleteArtworkMutation = trpc.artwork.deleteArtwork.useMutation({
     onSuccess: (data) => {
       console.log("Artwork deleted successfully:", data.deletedId);
 
@@ -38,8 +38,8 @@ export default function ArtworkActions({ artworkId, onDelete }) {
       }
 
       // Invalidate relevant queries to refresh the UI
-      utils.getAllArtworks.invalidate();
-      utils.getFeaturedArtworks.invalidate();
+      utils.artwork.getAllArtworks.invalidate();
+      utils.artwork.getFeaturedArtworks.invalidate();
 
       setShowDeleteDialog(false);
       setError(null);
@@ -71,7 +71,9 @@ export default function ArtworkActions({ artworkId, onDelete }) {
     try {
       let artworkData = artwork;
       if (!artworkData) {
-        artworkData = await utils.getArtworkById.fetch({ id: artworkId });
+        artworkData = await utils.artwork.getArtworkById.fetch({
+          id: artworkId,
+        });
       }
 
       if (!artworkData) {

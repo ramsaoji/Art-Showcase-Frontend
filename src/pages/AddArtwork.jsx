@@ -1,12 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  getDoc,
-} from "firebase/firestore";
-import { db } from "../firebase/config";
 import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 import { motion } from "framer-motion";
@@ -20,13 +13,13 @@ export default function AddArtwork() {
   const utils = trpc.useContext();
 
   // Add tRPC mutation
-  const createArtworkMutation = trpc.createArtwork.useMutation({
+  const createArtworkMutation = trpc.artwork.createArtwork.useMutation({
     onSuccess: () => {
       console.log("Artwork created successfully");
 
       // Invalidate relevant queries to refresh the UI
-      utils.getAllArtworks.invalidate();
-      utils.getFeaturedArtworks.invalidate();
+      utils.artwork.getAllArtworks.invalidate();
+      utils.artwork.getFeaturedArtworks.invalidate();
 
       navigate("/gallery");
     },

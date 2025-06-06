@@ -20,7 +20,7 @@ export default function ArtworkDetail() {
     data: artwork,
     isLoading,
     error,
-  } = trpc.getArtworkById.useQuery({ id }, { enabled: !!id });
+  } = trpc.artwork.getArtworkById.useQuery({ id }, { enabled: !!id });
 
   useEffect(() => {
     if (artwork) {

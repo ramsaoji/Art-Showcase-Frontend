@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation } from "react-router-dom";
-import { useEffect, lazy, Suspense } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
@@ -39,40 +39,87 @@ const PageLoader = () => (
   </div>
 );
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI.
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // You can also log the error to an error reporting service
+    console.error("Uncaught error:", error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 text-red-800 p-4">
+          <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
+          <p className="text-center mb-4">
+            We're sorry, but an unexpected error occurred. Please try refreshing the page.
+          </p>
+          {this.state.error && (
+            <details className="text-sm text-red-600 bg-red-100 p-2 rounded w-full max-w-md overflow-auto">
+              <summary>Error Details</summary>
+              <pre className="whitespace-pre-wrap break-all">
+                {this.state.error.toString()}
+                <br />
+                {this.state.errorInfo?.componentStack}
+              </pre>
+            </details>
+          )}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
     // Removed duplicate AuthProvider and Router
     <>
       <ScrollToTop />
       <AnalyticsWrapper>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/gallery" element={<Gallery />} />
-              <Route path="/artwork/:id" element={<ArtworkDetail />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/add-artwork"
-                element={
-                  <ProtectedRoute>
-                    <AddArtwork />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/edit-artwork/:id"
-                element={
-                  <ProtectedRoute>
-                    <EditArtwork />
-                  </ProtectedRoute>
-                }
-              />
-            </Route>
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/gallery" element={<Gallery />} />
+                <Route path="/artwork/:id" element={<ArtworkDetail />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/add-artwork"
+                  element={
+                    <ProtectedRoute>
+                      <AddArtwork />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/edit-artwork/:id"
+                  element={
+                    <ProtectedRoute>
+                      <EditArtwork />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </AnalyticsWrapper>
     </>
   );

@@ -10,6 +10,8 @@ export default function EditArtwork() {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
 
+  console.log("Route ID from useParams:", id, "Type:", typeof id);
+
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
 
@@ -19,7 +21,7 @@ export default function EditArtwork() {
     isLoading,
     error: fetchError,
     refetch,
-  } = trpc.getArtworkById.useQuery(
+  } = trpc.artwork.getArtworkById.useQuery(
     { id: id },
     {
       enabled: !!id, // Only run query if ID exists
@@ -30,13 +32,13 @@ export default function EditArtwork() {
     }
   );
 
-  const updateArtworkMutation = trpc.updateArtwork.useMutation({
+  const updateArtworkMutation = trpc.artwork.updateArtwork.useMutation({
     onSuccess: () => {
       console.log("Artwork updated successfully");
       // Invalidate relevant queries to refresh the UI
-      utils.getAllArtworks.invalidate();
-      utils.getFeaturedArtworks.invalidate();
-      utils.getArtworkById.invalidate({ id: id });
+      utils.artwork.getAllArtworks.invalidate();
+      utils.artwork.getFeaturedArtworks.invalidate();
+      utils.artwork.getArtworkById.invalidate({ id: id });
 
       navigate("/gallery");
     },
@@ -93,6 +95,8 @@ export default function EditArtwork() {
         cloudinary_public_id: publicId,
       };
 
+      console.log("Artwork ID before update:", artwork.id);
+      console.log("Update data ID before update:", updateData.id);
       // Update artwork using tRPC mutation
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (error) {

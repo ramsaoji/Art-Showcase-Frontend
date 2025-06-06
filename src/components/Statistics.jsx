@@ -72,7 +72,7 @@ const SkeletonCard = ({ delay }) => (
 StatCard.displayName = "StatCard";
 
 export default function Statistics() {
-  const { data, isLoading, error } = trpc.getArtworkStats.useQuery();
+  const { data, isLoading, error } = trpc.artwork.getArtworkStats.useQuery();
   const {
     totalArtworksCount = 0,
     featuredArtworksCount = 0,
