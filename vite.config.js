@@ -14,19 +14,23 @@ export default defineConfig({
     // Optimize chunks
     rollupOptions: {
       output: {
-        manualChunks: {
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "ui-vendor": [
-            "framer-motion",
-            "@headlessui/react",
-            "@heroicons/react",
-          ],
-          "firebase-vendor": ["firebase", "react-firebase-hooks"],
-          "query-vendor": [
-            "@tanstack/react-query",
-            "@trpc/client",
-            "@trpc/react-query",
-          ],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("firebase")) return "firebase-vendor";
+            if (id.includes("react")) return "react-vendor";
+            if (
+              id.includes("@headlessui") ||
+              id.includes("@heroicons") ||
+              id.includes("framer-motion")
+            )
+              return "ui-vendor";
+            if (
+              id.includes("@tanstack/react-query") ||
+              id.includes("@trpc/client") ||
+              id.includes("@trpc/react-query")
+            )
+              return "query-vendor";
+          }
         },
       },
     },
