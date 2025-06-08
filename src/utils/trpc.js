@@ -6,7 +6,7 @@ export const trpc = createTRPCReact();
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: "http://localhost:3001/trpc",
+      url: import.meta.env.VITE_API_URL || "http://localhost:3001/trpc",
       // Remove the custom headers - let tRPC handle Content-Type
       fetch(url, options) {
         // Enhanced logging for debugging
