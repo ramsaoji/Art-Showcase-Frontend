@@ -92,7 +92,9 @@ export default function ArtworkCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="group relative bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:shadow-[0_0_25px_rgba(67,56,202,0.15)] transition-all duration-300 min-h-[600px] flex flex-col"
+      className={`group relative bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:shadow-[0_0_25px_rgba(67,56,202,0.15)] transition-all duration-300 
+        min-h-[650px] ${isAdmin ? "min-h-[720px]" : ""} 
+        flex flex-col justify-between`}
     >
       {/* Status Indicators */}
       <div className="absolute top-4 left-4 z-[5] flex gap-2">
@@ -193,8 +195,8 @@ export default function ArtworkCard({
 
       {/* Content */}
       <div
-        className={`relative p-6 flex-grow bg-white ${
-          !isAdmin && "rounded-b-2xl overflow-hidden"
+        className={`relative p-6 flex-grow bg-white overflow-y-auto ${
+          !isAdmin && "rounded-b-2xl"
         }`}
       >
         <div
@@ -229,7 +231,7 @@ export default function ArtworkCard({
           </div>
 
           {artwork.description && (
-            <p className="mt-4 font-sans text-base text-gray-600 leading-relaxed line-clamp-2">
+            <p className="mt-4 font-sans text-base text-gray-600 leading-relaxed line-clamp-3">
               {artwork.description}
             </p>
           )}
