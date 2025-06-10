@@ -8,6 +8,7 @@ import {
   StarIcon,
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { formatPrice } from "../utils/formatters";
 import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { trackArtworkInteraction } from "../services/analytics";
@@ -305,6 +306,16 @@ export default function ImageModal({
                             </h3>
                             <p className="text-base font-sans text-gray-700">
                               {image?.year}
+                            </p>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                              Added
+                            </h3>
+                            <p className="text-base font-sans text-gray-700">
+                              {image?.createdAt
+                                ? format(new Date(image.createdAt), "PPP")
+                                : "N/A"}
                             </p>
                           </div>
                         </div>

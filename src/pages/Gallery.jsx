@@ -13,6 +13,7 @@ export default function Gallery() {
     searchQuery,
     isSearching,
     materials,
+    artists,
     selectedImage,
     isMobileFiltersOpen,
     allArtworks,
@@ -82,6 +83,7 @@ export default function Gallery() {
           filters={filters}
           sortBy={sortBy}
           materials={materials}
+          artists={artists}
           handleFilterChange={handleFilterChange}
           handleSortChange={handleSortChange}
           handleResetAllFilters={handleResetAllFilters}

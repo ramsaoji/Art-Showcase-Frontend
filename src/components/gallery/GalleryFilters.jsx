@@ -10,6 +10,7 @@ export default function GalleryFilters({
   filters,
   sortBy,
   materials,
+  artists, // Add artists prop
   handleFilterChange,
   handleSortChange,
   handleResetAllFilters,
@@ -95,6 +96,8 @@ export default function GalleryFilters({
                           value: "year-old",
                           label: "Year: Oldest to Newest",
                         },
+                        { value: "artist-az", label: "Artist: A to Z" },
+                        { value: "artist-za", label: "Artist: Z to A" },
                       ].map((option) => (
                         <button
                           key={option.value}
@@ -134,6 +137,38 @@ export default function GalleryFilters({
                           }`}
                         >
                           {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Artist Filter */}
+                  <div className="mb-8">
+                    <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
+                      Artist
+                    </h3>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => handleFilterChange("artist", "all")}
+                        className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                          filters.artist === "all"
+                            ? "bg-indigo-50 text-indigo-600 font-medium"
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        All Artists
+                      </button>
+                      {artists.map((artist) => (
+                        <button
+                          key={artist}
+                          onClick={() => handleFilterChange("artist", artist)}
+                          className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                            filters.artist === artist
+                              ? "bg-indigo-50 text-indigo-600 font-medium"
+                              : "text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {artist}
                         </button>
                       ))}
                     </div>
@@ -203,6 +238,7 @@ export default function GalleryFilters({
 
                   {/* Reset Filters */}
                   {(filters.material !== "all" ||
+                    filters.artist !== "all" ||
                     filters.availability !== "all" ||
                     filters.featured !== "all") && (
                     <div className="mb-4">
@@ -239,6 +275,7 @@ export default function GalleryFilters({
             <FunnelIcon className="h-5 w-5 mr-2" />
             <span className="font-medium">Filters</span>
             {(filters.material !== "all" ||
+              filters.artist !== "all" ||
               filters.availability !== "all" ||
               filters.featured !== "all") && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
@@ -281,6 +318,68 @@ export default function GalleryFilters({
                       <div className="flex items-center">
                         <span className="flex-grow">{option.label}</span>
                         {filters.featured === option.value && (
+                          <svg
+                            className="h-5 w-5 text-indigo-600"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Artist Filter Section */}
+              <div className="p-4">
+                <h3 className="text-sm font-sans font-semibold text-gray-900 mb-3">
+                  Artist
+                </h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleFilterChange("artist", "all")}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
+                      filters.artist === "all"
+                        ? "bg-indigo-50 text-indigo-600 font-medium"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <span className="flex-grow">All Artists</span>
+                      {filters.artist === "all" && (
+                        <svg
+                          className="h-5 w-5 text-indigo-600"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                  {artists.map((artist) => (
+                    <button
+                      key={artist}
+                      onClick={() => handleFilterChange("artist", artist)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
+                        filters.artist === artist
+                          ? "bg-indigo-50 text-indigo-600 font-medium"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <span className="flex-grow">{artist}</span>
+                        {filters.artist === artist && (
                           <svg
                             className="h-5 w-5 text-indigo-600"
                             viewBox="0 0 20 20"
@@ -406,6 +505,7 @@ export default function GalleryFilters({
 
               {/* Reset Filters */}
               {(filters.material !== "all" ||
+                filters.artist !== "all" ||
                 filters.availability !== "all" ||
                 filters.featured !== "all") && (
                 <div className="p-4">
@@ -449,6 +549,8 @@ export default function GalleryFilters({
                   { value: "price-low", label: "Price: Low to High" },
                   { value: "year-new", label: "Year: Newest to Oldest" },
                   { value: "year-old", label: "Year: Oldest to Newest" },
+                  { value: "artist-az", label: "Artist: A to Z" },
+                  { value: "artist-za", label: "Artist: Z to A" },
                 ].map((option) => (
                   <Menu.Item key={option.value}>
                     {({ active }) => (
@@ -475,6 +577,7 @@ export default function GalleryFilters({
 
       {/* Active Filters Display */}
       {(filters.material !== "all" ||
+        filters.artist !== "all" ||
         filters.availability !== "all" ||
         filters.featured !== "all") && (
         <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -488,6 +591,18 @@ export default function GalleryFilters({
               </span>
               <button
                 onClick={() => handleFilterChange("featured", "all")}
+                className="ml-2 hover:text-indigo-900"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {filters.artist !== "all" && (
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
+              <span className="mr-1">Artist:</span>{" "}
+              <span className="font-semibold">{filters.artist}</span>
+              <button
+                onClick={() => handleFilterChange("artist", "all")}
                 className="ml-2 hover:text-indigo-900"
               >
                 ×

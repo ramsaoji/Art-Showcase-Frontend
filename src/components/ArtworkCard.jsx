@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
+import { format } from "date-fns";
 import { formatPrice } from "../utils/formatters";
 import { getThumbnailUrl } from "../config/cloudinary";
 import useOptimizedImage from "../hooks/useOptimizedImage";
@@ -222,6 +223,7 @@ export default function ArtworkCard({
                 <span className="mx-2 text-gray-300">•</span>
                 <span className="text-gray-600">{artwork.year}</span>
               </div>
+
             </div>
             <div className="flex-shrink-0">
               <p className="font-artistic text-2xl font-bold text-indigo-600 tracking-wide">
@@ -246,6 +248,11 @@ export default function ArtworkCard({
             <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
               {artwork.dimensions}
             </span>
+            {artwork.createdAt && (
+              <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
+                Added: {format(new Date(artwork.createdAt), "PPP")}
+              </span>
+            )}
           </div>
         </div>
       </div>

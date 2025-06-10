@@ -21,6 +21,7 @@ export default function useGallery() {
     const params = new URLSearchParams(location.search);
     return {
       material: params.get("material") || "all",
+      artist: params.get("artist") || "all", // Added artist filter
       availability: params.get("availability") || "all",
       featured: params.get("featured") || "all",
     };
@@ -39,6 +40,7 @@ export default function useGallery() {
   const [isSearching, setIsSearching] = useState(false);
 
   const [materials, setMaterials] = useState([]);
+  const [artists, setArtists] = useState([]); // Added artists state
   const [selectedImage, setSelectedImage] = useState(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
@@ -86,6 +88,7 @@ export default function useGallery() {
     const key = {
       searchQuery: searchQuery.trim(),
       material: filters.material,
+      artist: filters.artist, // Added artist to query key
       availability: filters.availability,
       featured: filters.featured,
       sortBy,
@@ -98,6 +101,7 @@ export default function useGallery() {
     () => ({
       searchQuery: searchQuery.trim(),
       material: filters.material,
+      artist: filters.artist, // Added artist to query input
       availability: filters.availability,
       featured: filters.featured,
       sortBy,
@@ -177,6 +181,8 @@ export default function useGallery() {
           params.set("searchQuery", searchQuery);
         if (filters.material && filters.material !== "all")
           params.set("material", filters.material);
+        if (filters.artist && filters.artist !== "all")
+          params.set("artist", filters.artist); // Added artist to URL params
         if (filters.availability && filters.availability !== "all")
           params.set("availability", filters.availability);
         if (filters.featured && filters.featured !== "all")
@@ -197,9 +203,10 @@ export default function useGallery() {
     updateURL(searchQuery, filters, sortBy);
   }, [searchQuery, filters, sortBy, updateURL]);
 
-  // Extract materials from all fetched artworks more efficiently
+  // Extract materials and artists from all fetched artworks more efficiently
   useEffect(() => {
     if (allArtworks && Array.isArray(allArtworks)) {
+      // Extract unique materials
       const uniqueMaterials = [
         ...new Set(
           allArtworks
@@ -211,6 +218,22 @@ export default function useGallery() {
         // Only update if materials have actually changed
         if (JSON.stringify(prev) !== JSON.stringify(uniqueMaterials)) {
           return uniqueMaterials;
+        }
+        return prev;
+      });
+
+      // Extract unique artists
+      const uniqueArtists = [
+        ...new Set(
+          allArtworks
+            .map((art) => art.artist)
+            .filter((artist) => artist && artist.trim())
+        ),
+      ];
+      setArtists((prev) => {
+        // Only update if artists have actually changed
+        if (JSON.stringify(prev) !== JSON.stringify(uniqueArtists)) {
+          return uniqueArtists;
         }
         return prev;
       });
@@ -281,6 +304,7 @@ export default function useGallery() {
     setSortBy("newest");
     setFilters({
       material: "all",
+      artist: "all", // Added artist reset
       availability: "all",
       featured: "all",
     });
@@ -303,6 +327,84 @@ export default function useGallery() {
     refetch();
   }, [refetch]);
 
+  // Helper function to get active filters for display
+  const getActiveFilters = useCallback(() => {
+    const active = [];
+
+    if (searchQuery && searchQuery.trim()) {
+      active.push({
+        type: "search",
+        label: `Search: "${searchQuery}"`,
+        value: searchQuery,
+        onRemove: () => clearSearch(),
+      });
+    }
+
+    if (filters.material && filters.material !== "all") {
+      active.push({
+        type: "material",
+        label: `Material: ${filters.material}`,
+        value: filters.material,
+        onRemove: () => handleFilterChange("material", "all"),
+      });
+    }
+
+    if (filters.artist && filters.artist !== "all") {
+      active.push({
+        type: "artist",
+        label: `Artist: ${filters.artist}`,
+        value: filters.artist,
+        onRemove: () => handleFilterChange("artist", "all"),
+      });
+    }
+
+    if (filters.availability && filters.availability !== "all") {
+      active.push({
+        type: "availability",
+        label: `Availability: ${filters.availability}`,
+        value: filters.availability,
+        onRemove: () => handleFilterChange("availability", "all"),
+      });
+    }
+
+    if (filters.featured && filters.featured !== "all") {
+      active.push({
+        type: "featured",
+        label: `Featured: ${filters.featured === "featured" ? "Yes" : "No"}`,
+        value: filters.featured,
+        onRemove: () => handleFilterChange("featured", "all"),
+      });
+    }
+
+    if (sortBy && sortBy !== "newest") {
+      const sortLabels = {
+        oldest: "Oldest First",
+        "price-high": "Price: High to Low",
+        "price-low": "Price: Low to High",
+        "year-new": "Year: Newest First",
+        "year-old": "Year: Oldest First",
+        "artist-az": "Artist: A-Z",
+        "artist-za": "Artist: Z-A",
+      };
+
+      active.push({
+        type: "sort",
+        label: `Sort: ${sortLabels[sortBy] || sortBy}`,
+        value: sortBy,
+        onRemove: () => handleSortChange("newest"),
+      });
+    }
+
+    return active;
+  }, [
+    searchQuery,
+    filters,
+    sortBy,
+    clearSearch,
+    handleFilterChange,
+    handleSortChange,
+  ]);
+
   return {
     // State
     sortBy,
@@ -311,6 +413,7 @@ export default function useGallery() {
     searchQuery,
     isSearching,
     materials,
+    artists, // Added artists to return
     selectedImage,
     isMobileFiltersOpen,
     allArtworks,
@@ -333,5 +436,6 @@ export default function useGallery() {
     clearSearch,
     handleManualRefetch,
     loadMore,
+    getActiveFilters, // Added helper function
   };
 }

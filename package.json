@@ -20,6 +20,7 @@
     "@trpc/client": "^11.2.0",
     "@trpc/react-query": "^11.2.0",
     "crypto-js": "^4.2.0",
+    "date-fns": "^4.1.0",
     "firebase": "^11.9.0",
     "framer-motion": "^12.15.0",
     "gsap": "^3.13.0",

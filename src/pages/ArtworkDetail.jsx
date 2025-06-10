@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { trpc } from "../utils/trpc";
 import { ShareIcon, PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
+import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getOptimizedImageUrl } from "../config/cloudinary";
 import { formatPrice } from "../utils/formatters";
@@ -196,6 +197,16 @@ export default function ArtworkDetail() {
                     </h3>
                     <p className="text-lg font-sans text-gray-900">
                       {artwork.year}
+                    </p>
+                  </div>
+                  <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
+                    <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                      Added
+                    </h3>
+                    <p className="text-lg font-sans text-gray-900">
+                      {artwork.createdAt
+                        ? format(new Date(artwork.createdAt), "PPP")
+                        : "N/A"}
                     </p>
                   </div>
                   <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
