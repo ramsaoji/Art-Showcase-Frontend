@@ -145,7 +145,7 @@ export default function GalleryGrid({
           scrollThreshold={0.8}
           style={{ overflow: "visible" }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-8 sm:gap-12">
             {allArtworks.map((image) => (
               <ArtworkCard
                 key={image.id}

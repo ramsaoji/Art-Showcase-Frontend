@@ -7,6 +7,8 @@ import Loader from "./ui/Loader";
 import { trpc } from "../utils/trpc"; // Adjust import path as needed
 
 export default function HeroCarousel() {
+  const imageRef = useRef(null);
+  const [isTallImage, setIsTallImage] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imagesLoaded, setImagesLoaded] = useState({});
   const [nextImagePreloaded, setNextImagePreloaded] = useState(false);
@@ -18,6 +20,13 @@ export default function HeroCarousel() {
     isLoading,
     error,
   } = trpc.artwork.getArtworksForHeroCarousel.useQuery();
+
+  const handleImageLoad = () => {
+    if (imageRef.current) {
+      const { naturalWidth, naturalHeight } = imageRef.current;
+      setIsTallImage(naturalHeight / naturalWidth > 1.25); // tweak ratio as needed
+    }
+  };
 
   // Preload next image when current image changes
   useEffect(() => {
@@ -145,9 +154,22 @@ export default function HeroCarousel() {
             transition={{ duration: 0.5 }}
             className="absolute inset-0"
           >
-            {/* Progressive image loading */}
-            <picture>
-              {/* WebP format for browsers that support it */}
+            {/* Blurred Background */}
+            <img
+              src={
+                images[currentImageIndex].cloudinary_public_id
+                  ? getPreviewUrl(
+                      images[currentImageIndex].cloudinary_public_id
+                    )
+                  : images[currentImageIndex].url
+              }
+              alt="blurred backdrop"
+              className="absolute inset-0 w-full h-full object-cover blur-sm scale-110 opacity-90"
+              aria-hidden="true"
+            />
+
+            {/* Foreground Image */}
+            <picture className="relative z-10 flex items-center justify-center w-full h-full">
               <source
                 type="image/webp"
                 srcSet={
@@ -158,8 +180,9 @@ export default function HeroCarousel() {
                     : images[currentImageIndex].url
                 }
               />
-              {/* Fallback image */}
               <img
+                ref={imageRef}
+                onLoad={handleImageLoad}
                 src={
                   images[currentImageIndex].cloudinary_public_id
                     ? getPreviewUrl(
@@ -168,7 +191,9 @@ export default function HeroCarousel() {
                     : images[currentImageIndex].url
                 }
                 alt={images[currentImageIndex].title}
-                className="w-full h-full object-cover"
+                className={`max-h-full max-w-full z-10 drop-shadow-xl ${
+                  isTallImage ? "object-contain" : "object-cover"
+                }`}
                 loading={currentImageIndex === 0 ? "eager" : "lazy"}
               />
             </picture>
@@ -176,7 +201,48 @@ export default function HeroCarousel() {
         </AnimatePresence>
 
         {/* Hero Content */}
-        <div className="absolute inset-0 z-20 flex flex-col justify-center sm:justify-center md:justify-center px-4 sm:px-6">
+        {/* Gradient overlay for better text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10" />
+
+        {/* Centered Hero Text */}
+        <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-4 sm:px-6">
+          <div className="relative max-w-7xl mx-auto">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="font-artistic text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-xl mb-4 sm:mb-8 leading-tight tracking-wide"
+            >
+              Welcome to{" "}
+              <span className="italic block sm:inline">Art Showcase</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="font-sans text-base sm:text-xl md:text-2xl text-white/90 drop-shadow-md mb-6 sm:mb-10 max-w-2xl mx-auto leading-relaxed tracking-wide"
+            >
+              Discover unique artworks from talented artists around the world
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
+              <Link
+                to="/gallery"
+                className="inline-flex items-center px-6 sm:px-8 py-2.5 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
+              >
+                Explore Gallery
+                <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
+              </Link>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* <div className="absolute inset-0 z-20 flex flex-col justify-center sm:justify-center md:justify-center px-4 sm:px-6">
           <div className="relative mx-auto max-w-7xl -mt-16 sm:mt-0">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -209,7 +275,7 @@ export default function HeroCarousel() {
               </Link>
             </motion.div>
           </div>
-        </div>
+        </div> */}
 
         {/* Navigation dots */}
         <div className="absolute bottom-14 sm:bottom-24 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">

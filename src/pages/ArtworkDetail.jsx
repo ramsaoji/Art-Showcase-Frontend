@@ -93,23 +93,22 @@ export default function ArtworkDetail() {
         </div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden"
         >
-          <div className="md:flex">
-            <div className="md:flex-1">
+          <div className="flex flex-col lg:flex-row">
+            {/* Image Section */}
+            <div className="relative flex-1 flex items-center justify-center bg-gray-50/50 min-h-[50vh] lg:min-h-[70vh]">
               {imageError ? (
-                <div className="w-full h-[300px] md:h-[600px] bg-gray-50/50 flex flex-col items-center justify-center">
-                  <PhotoIcon className="h-16 w-16 text-gray-400" />
-                  <p className="mt-2 text-sm font-sans text-gray-500">
-                    Image not available
-                  </p>
+                <div className="flex flex-col items-center justify-center text-gray-400 p-8">
+                  <PhotoIcon className="h-16 w-16 mb-4" />
+                  <p className="text-lg font-sans">Image not available</p>
                 </div>
               ) : (
-                <div className="relative">
+                <div className="relative w-full h-full flex items-center justify-center p-4">
                   <img
                     src={
                       artwork.public_id
@@ -117,7 +116,7 @@ export default function ArtworkDetail() {
                         : artwork.url
                     }
                     alt={artwork.title}
-                    className={`w-full h-[300px] md:h-[600px] object-contain bg-gray-50/50 ${
+                    className={`max-w-full max-h-full object-contain ${
                       artwork.sold ? "opacity-90" : ""
                     }`}
                     onError={(e) => {
@@ -129,30 +128,35 @@ export default function ArtworkDetail() {
                       }
                     }}
                   />
-                  <div className="absolute top-4 right-4 z-30 flex gap-2">
-                    {artwork.featured && (
-                      <Badge type="featured" variant="overlay">
-                        <span className="inline-flex items-center">
-                          <StarIcon className="h-4 w-4 mr-1" />
-                          Featured
-                        </span>
-                      </Badge>
-                    )}
-                    {artwork.sold && (
-                      <Badge type="sold" variant="overlay">
-                        Sold
-                      </Badge>
-                    )}
-                  </div>
                 </div>
               )}
+
+              {/* Badges overlay */}
+              <div className="absolute top-4 right-4 z-30 flex gap-2">
+                {artwork.featured && (
+                  <Badge type="featured" variant="overlay">
+                    <span className="inline-flex items-center">
+                      <StarIcon className="h-4 w-4 mr-1" />
+                      Featured
+                    </span>
+                  </Badge>
+                )}
+                {artwork.sold && (
+                  <Badge type="sold" variant="overlay">
+                    Sold
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div className="p-6 md:p-8 md:flex-1">
-              <div className="flex items-center justify-between mb-6">
+
+            {/* Details Section */}
+            <div className="flex-shrink-0 w-full lg:w-96 xl:w-[32rem] bg-white/95 p-6 sm:p-8 flex flex-col">
+              {/* Header with title and share button */}
+              <div className="flex items-start justify-between mb-6">
                 <motion.h1
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="font-artistic text-4xl sm:text-5xl font-bold text-gray-900 tracking-wide"
+                  className="font-artistic text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 tracking-wide pr-4"
                 >
                   {artwork.title}
                 </motion.h1>
@@ -162,12 +166,14 @@ export default function ArtworkDetail() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleShare}
-                  className="p-2 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-gray-100 transition-colors"
+                  className="flex-shrink-0 p-2 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-gray-100 transition-colors"
                   title="Share artwork"
                 >
                   <ShareIcon className="h-6 w-6" />
                 </motion.button>
               </div>
+
+              {/* Artist */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -175,80 +181,113 @@ export default function ArtworkDetail() {
                 className="mb-6"
               >
                 <div className="relative group inline-block">
-                  <span className="font-artistic text-2xl text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                  <span className="font-artistic text-xl sm:text-2xl text-indigo-600 group-hover:text-indigo-700 transition-colors">
                     {artwork.artist}
                   </span>
                   <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
                 </div>
               </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="space-y-8"
-              >
-                <p className="font-sans text-lg text-gray-700 leading-relaxed">
-                  {artwork.description}
-                </p>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
-                    <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
-                      Year
-                    </h3>
-                    <p className="text-lg font-sans text-gray-900">
-                      {artwork.year}
-                    </p>
-                  </div>
-                  <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
-                    <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
-                      Added
-                    </h3>
-                    <p className="text-lg font-sans text-gray-900">
-                      {artwork.createdAt
-                        ? format(new Date(artwork.createdAt), "PPP")
-                        : "N/A"}
-                    </p>
-                  </div>
-                  <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
-                    <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
-                      Style
-                    </h3>
-                    <p className="text-lg font-sans text-gray-900">
-                      {artwork.style}
-                    </p>
-                  </div>
-                  <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
-                    <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
-                      Dimensions
-                    </h3>
-                    <p className="text-lg font-sans text-gray-900">
-                      {artwork.dimensions}
-                    </p>
-                  </div>
-                  <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
-                    <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
-                      Material
-                    </h3>
-                    <p className="text-lg font-sans text-gray-900">
-                      {artwork.material}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-4">
-                  {artwork.price && (
+
+              {/* Price */}
+              {artwork.price && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="mb-6"
+                >
+                  <p className="font-artistic text-2xl sm:text-3xl font-bold text-indigo-600 tracking-wide">
+                    {formatPrice(artwork.price)}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-8"
+                >
+                  {/* Description */}
+                  {artwork.description && (
                     <div>
-                      <p className="font-artistic text-3xl font-bold text-indigo-600 tracking-wide">
-                        {formatPrice(artwork.price)}
+                      <h3 className="text-sm font-sans font-medium text-gray-500 mb-2">
+                        Description
+                      </h3>
+                      <p className="font-sans text-base sm:text-lg text-gray-700 leading-relaxed">
+                        {artwork.description}
                       </p>
                     </div>
                   )}
-                </div>
-              </motion.div>
+
+                  {/* Details grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {artwork.year && (
+                      <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
+                        <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                          Year
+                        </h3>
+                        <p className="text-base sm:text-lg font-sans text-gray-900">
+                          {artwork.year}
+                        </p>
+                      </div>
+                    )}
+
+                    {artwork.style && (
+                      <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
+                        <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                          Style
+                        </h3>
+                        <p className="text-base sm:text-lg font-sans text-gray-900">
+                          {artwork.style}
+                        </p>
+                      </div>
+                    )}
+
+                    {artwork.material && (
+                      <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
+                        <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                          Material
+                        </h3>
+                        <p className="text-base sm:text-lg font-sans text-gray-900">
+                          {artwork.material}
+                        </p>
+                      </div>
+                    )}
+
+                    {artwork.dimensions && (
+                      <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100">
+                        <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                          Dimensions
+                        </h3>
+                        <p className="text-base sm:text-lg font-sans text-gray-900">
+                          {artwork.dimensions}
+                        </p>
+                      </div>
+                    )}
+
+                    {artwork.createdAt && (
+                      <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-gray-100 sm:col-span-2">
+                        <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
+                          Added
+                        </h3>
+                        <p className="text-base sm:text-lg font-sans text-gray-900">
+                          {format(new Date(artwork.createdAt), "PPP")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Back to gallery link */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="mt-8"
+                className="mt-8 pt-6 border-t border-gray-200"
               >
                 <Link
                   to="/gallery"
@@ -280,7 +319,7 @@ export default function ArtworkDetail() {
         <Alert
           type="success"
           message="Link copied to clipboard!"
-          className="fixed bottom-4 left-1/2 transform -translate-x-1/2 shadow-lg"
+          className="fixed bottom-4 left-1/2 transform -translate-x-1/2 shadow-lg z-50"
           animate={true}
         />
       )}

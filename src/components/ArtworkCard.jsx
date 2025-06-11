@@ -18,9 +18,11 @@ export default function ArtworkCard({
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isVisible, setIsVisible] = useState(priority); // If priority is true, consider it visible immediately
+  const [isVisible, setIsVisible] = useState(priority);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const cardRef = useRef(null);
   const imageRef = useRef(null);
+  const descriptionRef = useRef(null);
   const { isAdmin } = useAuth();
 
   // Use our custom hook for optimized image loading
@@ -32,14 +34,24 @@ export default function ArtworkCard({
     highQualityLoaded,
     getSrcSet,
   } = useOptimizedImage(artwork.cloudinary_public_id, {
-    lazy: !priority, // Don't lazy load priority images
+    lazy: !priority,
     width: 600,
     quality: 80,
   });
 
+  // Check if text is truncated
+  const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
+
+  useEffect(() => {
+    // Check if description is truncated
+    if (descriptionRef.current) {
+      const element = descriptionRef.current;
+      setIsDescriptionTruncated(element.scrollHeight > element.clientHeight);
+    }
+  }, [artwork.title, artwork.description]);
+
   // Intersection Observer for lazy loading - only if not priority
   useEffect(() => {
-    // Skip if this is a priority image
     if (priority) return;
 
     const observer = new IntersectionObserver(
@@ -51,7 +63,7 @@ export default function ArtworkCard({
       },
       {
         threshold: 0.1,
-        rootMargin: "200px", // Start loading when within 200px of viewport
+        rootMargin: "200px",
       }
     );
 
@@ -71,7 +83,6 @@ export default function ArtworkCard({
   };
 
   const handleImageError = (e) => {
-    // Try fallback to original URL if available
     if (artwork.url && e.target.src !== artwork.url) {
       e.target.src = artwork.url;
     } else {
@@ -79,12 +90,24 @@ export default function ArtworkCard({
     }
   };
 
-  // Update imageError state if our hook reports an error
   useEffect(() => {
     if (isError) {
       setImageError(true);
     }
   }, [isError]);
+
+  // Safe fallbacks for missing data
+  const safeArtwork = {
+    title: artwork.title || "Untitled",
+    artist: artwork.artist || "Unknown Artist",
+    year: artwork.year || "Year Unknown",
+    price: artwork.price || 0,
+    description: artwork.description || "",
+    style: artwork.style || "Style Unknown",
+    material: artwork.material || "Material Unknown",
+    dimensions: artwork.dimensions || "Dimensions Unknown",
+    ...artwork,
+  };
 
   return (
     <motion.div
@@ -94,21 +117,21 @@ export default function ArtworkCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       className={`group relative bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:shadow-[0_0_25px_rgba(67,56,202,0.15)] transition-all duration-300 
-        h-[680px] flex flex-col justify-between`}
+        h-[680px] flex flex-col justify-between overflow-hidden`}
     >
       {/* Status Indicators */}
-      <div className="absolute top-4 left-4 z-[5] flex gap-2">
-        {artwork.featured && (
+      <div className="absolute top-4 left-4 z-[5] flex gap-2 flex-wrap max-w-[calc(100%-2rem)]">
+        {safeArtwork.featured && (
           <Badge type="featured" animate withPing>
             <span className="inline-flex items-center">
-              <StarIcon className="h-4 w-4 mr-1" />
-              Featured
+              <StarIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Featured</span>
             </span>
           </Badge>
         )}
-        {artwork.sold && (
+        {safeArtwork.sold && (
           <Badge type="sold" animate withPing>
-            Sold
+            <span className="truncate">Sold</span>
           </Badge>
         )}
       </div>
@@ -120,7 +143,10 @@ export default function ArtworkCard({
       >
         {imageError ? (
           <div className="flex items-center justify-center h-full">
-            <PhotoIcon className="h-12 w-12 text-gray-400" />
+            <div className="text-center">
+              <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Image not available</p>
+            </div>
           </div>
         ) : (
           <>
@@ -145,7 +171,7 @@ export default function ArtworkCard({
                 {!highQualityLoaded && previewUrl && (
                   <img
                     src={previewUrl}
-                    alt={artwork.title}
+                    alt={safeArtwork.title}
                     className="absolute inset-0 h-full w-full object-cover blur-sm transition-opacity duration-300"
                     style={{ opacity: highQualityLoaded ? 0 : 0.8 }}
                   />
@@ -154,8 +180,8 @@ export default function ArtworkCard({
                 {/* Main image */}
                 <img
                   ref={imageRef}
-                  src={fullSizeUrl || artwork.url}
-                  alt={artwork.title}
+                  src={fullSizeUrl || safeArtwork.url}
+                  alt={safeArtwork.title}
                   className={`w-full h-full object-cover transform transition-all duration-700 group-hover:scale-110 ${
                     imageLoaded ? "opacity-100" : "opacity-0"
                   }`}
@@ -171,21 +197,21 @@ export default function ArtworkCard({
 
         {/* Overlay Content */}
         <div className="absolute inset-0 p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-2 justify-center flex-wrap">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={(e) => {
                 e.preventDefault();
-                onQuickView?.(artwork);
+                onQuickView?.(safeArtwork);
               }}
-              className="flex-1 px-4 py-2 text-sm font-sans font-medium text-white bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/20 transition-colors max-w-[140px] shadow-lg"
+              className="flex-1 min-w-[120px] max-w-[140px] px-4 py-2 text-sm font-sans font-medium text-white bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/20 transition-colors shadow-lg"
             >
               Quick View
             </motion.button>
             <Link
-              to={`/artwork/${artwork.id}`}
-              className="flex-1 px-4 py-2 text-sm font-sans font-medium text-white bg-indigo-500/80 backdrop-blur-sm rounded-lg hover:bg-indigo-600/80 transition-colors text-center max-w-[140px] shadow-lg"
+              to={`/artwork/${safeArtwork.id}`}
+              className="flex-1 min-w-[120px] max-w-[140px] px-4 py-2 text-sm font-sans font-medium text-white bg-indigo-500/80 backdrop-blur-sm rounded-lg hover:bg-indigo-600/80 transition-colors text-center shadow-lg"
             >
               View Details
             </Link>
@@ -195,7 +221,7 @@ export default function ArtworkCard({
 
       {/* Content */}
       <div
-        className={`relative p-6 flex-grow bg-white overflow-y-auto ${
+        className={`relative p-6 flex-grow bg-white overflow-auto ${
           !isAdmin && "rounded-b-2xl"
         }`}
       >
@@ -204,51 +230,91 @@ export default function ArtworkCard({
             !isAdmin && "rounded-b-2xl"
           }`}
         />
-        <div className="relative">
-          <div className="flex items-start justify-between gap-4">
+        <div className="relative h-full flex flex-col">
+          <div className="flex items-start justify-between gap-4 mb-4">
             <div className="flex-1 min-w-0">
-              <Link to={`/artwork/${artwork.id}`} className="block group/title">
-                <h3 className="font-artistic text-2xl font-bold text-gray-900 tracking-wide group-hover/title:text-indigo-600 transition-colors">
-                  {artwork.title}
+              <Link
+                to={`/artwork/${safeArtwork.id}`}
+                className="block group/title"
+              >
+                <h3
+                  className="font-artistic text-2xl font-bold text-gray-900 tracking-wide group-hover/title:text-indigo-600 transition-colors leading-tight truncate whitespace-nowrap overflow-hidden"
+                  title={safeArtwork.title}
+                >
+                  {safeArtwork.title}
                 </h3>
               </Link>
-              <div className="mt-2 flex items-center text-base font-sans">
+              <div className="mt-2 flex items-center text-base font-sans flex-wrap gap-1">
                 <div className="relative group">
-                  <span className="font-artistic text-lg text-indigo-600 group-hover:text-indigo-700 transition-colors">
-                    {artwork.artist}
+                  <span className="font-artistic text-lg text-indigo-600 group-hover:text-indigo-700 transition-colors break-words">
+                    {safeArtwork.artist}
                   </span>
                   <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
                 </div>
-                <span className="mx-2 text-gray-300">•</span>
-                <span className="text-gray-600">{artwork.year}</span>
+                <span className="mx-2 text-gray-300 flex-shrink-0">•</span>
+                <span className="text-gray-600 flex-shrink-0">
+                  {safeArtwork.year}
+                </span>
               </div>
             </div>
             <div className="flex-shrink-0">
-              <p className="font-artistic text-2xl font-bold text-indigo-600 tracking-wide">
-                {formatPrice(artwork.price)}
+              <p className="font-artistic text-2xl font-bold text-indigo-600 tracking-wide text-right">
+                {formatPrice(safeArtwork.price)}
               </p>
             </div>
           </div>
 
-          {artwork.description && (
-            <p className="mt-4 font-sans text-base text-gray-600 leading-relaxed line-clamp-3">
-              {artwork.description}
-            </p>
+          {safeArtwork.description && (
+            <div className="mb-4">
+              <p
+                ref={descriptionRef}
+                className={`font-sans text-base text-gray-600 leading-relaxed ${
+                  showFullDescription ? "" : "line-clamp-3"
+                }`}
+              >
+                {safeArtwork.description}
+              </p>
+              {isDescriptionTruncated && !showFullDescription && (
+                <button
+                  onClick={() => setShowFullDescription(true)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 mt-1 font-sans"
+                >
+                  Read more
+                </button>
+              )}
+              {showFullDescription && isDescriptionTruncated && (
+                <button
+                  onClick={() => setShowFullDescription(false)}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 mt-1 font-sans"
+                >
+                  Read less
+                </button>
+              )}
+            </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 mt-5">
-            <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
-              {artwork.style}
+          <div className="flex flex-wrap items-center gap-2 pb-4 mt-auto">
+            <span
+              className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100"
+              title={safeArtwork.style}
+            >
+              {safeArtwork.style}
             </span>
-            <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
-              {artwork.material}
+            <span
+              className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100"
+              title={safeArtwork.material}
+            >
+              {safeArtwork.material}
             </span>
-            <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
-              {artwork.dimensions}
+            <span
+              className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100"
+              title={safeArtwork.dimensions}
+            >
+              {safeArtwork.dimensions}
             </span>
-            {artwork.createdAt && (
+            {safeArtwork.createdAt && (
               <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
-                Added: {format(new Date(artwork.createdAt), "PPP")}
+                Added: {format(new Date(safeArtwork.createdAt), "MMM d, yyyy")}
               </span>
             )}
           </div>
@@ -259,7 +325,7 @@ export default function ArtworkCard({
       {isAdmin && (
         <div className="p-6 border-t border-gray-100 flex-shrink-0 bg-white rounded-b-2xl">
           <div className="flex justify-end">
-            <ArtworkActions artworkId={artwork.id} onDelete={onDelete} />
+            <ArtworkActions artworkId={safeArtwork.id} onDelete={onDelete} />
           </div>
         </div>
       )}
