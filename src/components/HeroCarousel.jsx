@@ -77,54 +77,46 @@ export default function HeroCarousel() {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Background gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30 backdrop-blur-[2px]" />
+        {/* Hero Content */}
+        {/* Gradient overlay for better text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10" />
 
-        {/* Content */}
-        <div className="relative h-full flex flex-col items-center justify-center px-4 sm:px-6 text-center z-20">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8"
-          >
-            <div className="w-24 h-24 mx-auto bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20">
-              <PhotoIcon className="w-12 h-12 text-white" />
-            </div>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="font-artistic text-[3rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-8 leading-tight tracking-wide"
-          >
-            Welcome to{" "}
-            <span className="italic block sm:inline">Art Showcase</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="font-sans text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-10 max-w-2xl leading-relaxed tracking-wide"
-          >
-            Discover unique artworks from talented artists around the world
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-          >
-            <Link
-              to="/gallery"
-              className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
+        {/* Centered Hero Text */}
+        <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-4 sm:px-6">
+          <div className="relative max-w-7xl mx-auto">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="font-artistic text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-xl mb-4 sm:mb-8 leading-tight tracking-wide"
             >
-              Explore Gallery
-              <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
-            </Link>
-          </motion.div>
+              Welcome to{" "}
+              <span className="italic block sm:inline">Art Showcase</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="font-sans text-base sm:text-xl md:text-2xl text-white/90 drop-shadow-md mb-6 sm:mb-10 max-w-2xl mx-auto leading-relaxed tracking-wide"
+            >
+              Discover unique artworks from talented artists around the world
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
+              <Link
+                to="/gallery"
+                className="inline-flex items-center px-6 sm:px-8 py-2.5 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
+              >
+                Explore Gallery
+                <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </div>
     );
@@ -191,9 +183,11 @@ export default function HeroCarousel() {
                     : images[currentImageIndex].url
                 }
                 alt={images[currentImageIndex].title}
-                className={`max-h-full max-w-full z-10 drop-shadow-xl ${
-                  isTallImage ? "object-contain" : "object-cover"
-                }`}
+                className={`z-10 drop-shadow-xl 
+      w-screen h-screen object-cover 
+      xl:max-h-full xl:max-w-full xl:w-auto xl:h-auto 
+      ${isTallImage ? "object-contain" : "object-cover"}
+    `}
                 loading={currentImageIndex === 0 ? "eager" : "lazy"}
               />
             </picture>
