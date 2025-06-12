@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
+import { deleteImage } from "../config/cloudinary"; // Add this import
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -39,13 +40,71 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     sold: initialData?.sold || false,
   });
 
+  // Separate state for dimension inputs
+  const [dimensionInputs, setDimensionInputs] = useState(() => {
+    if (initialData?.dimensions) {
+      // Parse existing dimensions like "24cm × 36cm"
+      const match = initialData.dimensions.match(
+        /(\d+(?:\.\d+)?)\s*cm\s*×\s*(\d+(?:\.\d+)?)\s*cm/
+      );
+      if (match) {
+        return { width: match[1], height: match[2] };
+      }
+    }
+    return { width: "", height: "" };
+  });
+
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(initialData?.url || null);
+  const [imageRemoved, setImageRemoved] = useState(false); // Track if image was intentionally removed
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savingProgress, setSavingProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(null);
   const [imageError, setImageError] = useState("");
+
+  // Predefined options for materials and styles
+  const materialOptions = [
+    "Oil on Canvas",
+    "Acrylic on Canvas",
+    "Watercolor on Paper",
+    "Mixed Media",
+    "Digital Art",
+    "Charcoal on Paper",
+    "Pencil on Paper",
+    "Ink on Paper",
+    "Pastel on Paper",
+    "Gouache on Paper",
+    "Tempera on Canvas",
+    "Collage",
+    "Photography",
+    "Sculpture - Bronze",
+    "Sculpture - Marble",
+    "Sculpture - Wood",
+    "Sculpture - Clay",
+    "Other",
+  ];
+
+  const styleOptions = [
+    "Abstract",
+    "Contemporary",
+    "Modern",
+    "Impressionist",
+    "Expressionist",
+    "Surrealist",
+    "Minimalist",
+    "Pop Art",
+    "Cubist",
+    "Realist",
+    "Portrait",
+    "Landscape",
+    "Still Life",
+    "Street Art",
+    "Folk Art",
+    "Traditional",
+    "Conceptual",
+    "Other",
+  ];
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -57,11 +116,26 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     }));
   };
 
+  // Handle dimension inputs separately
+  const handleDimensionChange = (field, value) => {
+    const newDimensions = { ...dimensionInputs, [field]: value };
+    setDimensionInputs(newDimensions);
+
+    // Update the main form data with formatted dimensions
+    if (newDimensions.width && newDimensions.height) {
+      const formattedDimensions = `${newDimensions.width}cm × ${newDimensions.height}cm`;
+      setFormData((prev) => ({ ...prev, dimensions: formattedDimensions }));
+    } else {
+      setFormData((prev) => ({ ...prev, dimensions: "" }));
+    }
+  };
+
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setImageError("");
+    setImageRemoved(false); // Reset removed state when new image is selected
 
     if (file) {
       // Check file type
@@ -87,18 +161,71 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     }
   };
 
+  const handleImageRemove = (e) => {
+    e.preventDefault();
+    setImageFile(null);
+    setImagePreview(null);
+    setImageRemoved(true);
+
+    // Reset file input
+    const fileInput = document.getElementById("file-upload");
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate image requirement
+    const hasImage = imageFile || (initialData?.url && !imageRemoved);
+    if (!hasImage) {
+      setImageError("Please select an image for the artwork");
+      return;
+    }
+
+    // Validate dimensions
+    if (!dimensionInputs.width || !dimensionInputs.height) {
+      setImageError("Please enter both width and height dimensions");
+      return;
+    }
+
     setIsSubmitting(true);
     setCurrentStep("uploading");
     setUploadProgress(0);
     setSavingProgress(0);
 
     try {
+      // Handle Cloudinary cleanup for edit mode
+      if (
+        initialData &&
+        (imageFile || imageRemoved) &&
+        initialData.cloudinary_public_id
+      ) {
+        setCurrentStep("cleaning");
+        try {
+          await deleteImage(initialData.cloudinary_public_id);
+          console.log("Old image deleted from Cloudinary successfully");
+        } catch (cloudinaryError) {
+          console.error(
+            "Error deleting old image from Cloudinary:",
+            cloudinaryError
+          );
+          // Continue with the update even if old image deletion fails
+        }
+      }
+
+      setCurrentStep("uploading");
+
       // Create FormData object to handle file upload
       const submitData = new FormData();
       if (imageFile) {
         submitData.append("image", imageFile);
+      }
+
+      // Add a flag to indicate if image was removed (for backend handling)
+      if (imageRemoved) {
+        submitData.append("imageRemoved", "true");
       }
 
       // Log form data before submission
@@ -148,7 +275,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
       clearInterval(savingInterval);
       setSavingProgress(100);
 
-      // Reset form after successful submission
+      // Reset form after successful submission (only for new artwork)
       if (!initialData) {
         setFormData({
           title: "",
@@ -162,8 +289,10 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           featured: false,
           sold: false,
         });
+        setDimensionInputs({ width: "", height: "" });
         setImageFile(null);
         setImagePreview(null);
+        setImageRemoved(false);
       }
     } catch (error) {
       console.error("Error submitting artwork:", error);
@@ -176,6 +305,23 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
       }, 1000);
     }
   };
+
+  // Get the current step label for display
+  const getStepLabel = () => {
+    switch (currentStep) {
+      case "cleaning":
+        return "Removing old image...";
+      case "uploading":
+        return imageFile ? "Uploading new image..." : "Processing...";
+      case "saving":
+        return initialData ? "Updating artwork..." : "Saving artwork...";
+      default:
+        return "Processing...";
+    }
+  };
+
+  // Check if we should show the image preview
+  const shouldShowPreview = imagePreview && !imageRemoved;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -190,7 +336,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
         >
           <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
-            {imagePreview ? (
+            {shouldShowPreview ? (
               <div className="relative w-full flex justify-center">
                 <img
                   src={imagePreview}
@@ -199,12 +345,9 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
                 />
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setImageFile(null);
-                    setImagePreview(null);
-                  }}
+                  onClick={handleImageRemove}
                   className="absolute top-2 right-2 p-1.5 bg-red-500/80 backdrop-blur-sm text-white rounded-full hover:bg-red-600/80 transition-colors"
+                  title="Remove image"
                 >
                   <svg
                     className="w-5 h-5"
@@ -220,6 +363,11 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
                     />
                   </svg>
                 </button>
+                {imageFile && (
+                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/80 backdrop-blur-sm text-white text-xs rounded-full">
+                    New image selected
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -234,12 +382,16 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
                       className="sr-only"
                       onChange={handleImageChange}
                       accept="image/*"
-                      required={!initialData?.url}
                     />
                   </label>
                   <p className="mt-1 text-sm text-gray-500">
                     PNG, JPG up to 5MB
                   </p>
+                  {imageRemoved && (
+                    <p className="mt-2 text-xs text-red-500">
+                      Image removed - please select a new image
+                    </p>
+                  )}
                 </div>
               </>
             )}
@@ -336,68 +488,147 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           />
         </div>
 
-        {/* Dimensions */}
-        <div>
-          <label
-            htmlFor="dimensions"
-            className="block text-sm font-medium text-gray-700 font-sans mb-1"
-          >
+        {/* Dimensions - Split into Width and Height */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
             Dimensions <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            name="dimensions"
-            id="dimensions"
-            required
-            value={formData.dimensions}
-            onChange={handleInputChange}
-            placeholder="e.g., 24cm × 36cm"
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="width"
+                className="block text-xs text-gray-500 mb-1 font-sans"
+              >
+                Width (cm)
+              </label>
+              <input
+                type="number"
+                id="width"
+                required
+                value={dimensionInputs.width}
+                onChange={(e) => handleDimensionChange("width", e.target.value)}
+                placeholder="24"
+                min="0.1"
+                step="0.1"
+                className="block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="height"
+                className="block text-xs text-gray-500 mb-1 font-sans"
+              >
+                Height (cm)
+              </label>
+              <input
+                type="number"
+                id="height"
+                required
+                value={dimensionInputs.height}
+                onChange={(e) =>
+                  handleDimensionChange("height", e.target.value)
+                }
+                placeholder="36"
+                min="0.1"
+                step="0.1"
+                className="block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+              />
+            </div>
+          </div>
+          {formData.dimensions && (
+            <p className="mt-2 text-sm text-gray-600 font-sans">
+              Preview:{" "}
+              <span className="font-medium">{formData.dimensions}</span>
+            </p>
+          )}
         </div>
 
-        {/* Material */}
-        <div>
+        {/* Material - Dropdown */}
+        <div className="col-span-2 sm:col-span-1">
           <label
             htmlFor="material"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
             Material <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            name="material"
-            id="material"
-            required
-            value={formData.material}
-            onChange={handleInputChange}
-            placeholder="e.g., Oil on Canvas, Acrylic, Mixed Media"
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
-          />
+          <div className="relative">
+            <select
+              name="material"
+              id="material"
+              required
+              value={formData.material}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
+            >
+              <option value="">Select material</option>
+              {materialOptions.map((material) => (
+                <option key={material} value={material}>
+                  {material}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
 
-        {/* Style */}
-        <div>
+        {/* Style - Dropdown */}
+        <div className="col-span-2 sm:col-span-1">
           <label
             htmlFor="style"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
           >
             Style <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            name="style"
-            id="style"
-            required
-            value={formData.style}
-            onChange={handleInputChange}
-            placeholder="e.g., Abstract, Contemporary, Impressionist"
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
-          />
+          <div className="relative">
+            <select
+              name="style"
+              id="style"
+              required
+              value={formData.style}
+              onChange={handleInputChange}
+              className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
+            >
+              <option value="">Select style</option>
+              {styleOptions.map((style) => (
+                <option key={style} value={style}>
+                  {style}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* Year */}
-        <div>
+        <div className="col-span-2">
           <label
             htmlFor="year"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
@@ -459,8 +690,10 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           {isSubmitting ? (
             <div className="flex items-center">
               <Loader size="small" className="mr-2" />
-              {currentStep === "uploading" ? "Uploading..." : "Saving..."}
+              {getStepLabel()}
             </div>
+          ) : initialData ? (
+            "Update Artwork"
           ) : (
             "Save Artwork"
           )}
@@ -470,11 +703,20 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
       {/* Progress Indicators */}
       {isSubmitting && (
         <div className="space-y-4 pt-4">
+          {currentStep === "cleaning" && (
+            <ProgressBar progress={30} label="Removing old image..." />
+          )}
           {currentStep === "uploading" && (
-            <ProgressBar progress={uploadProgress} label="Uploading image..." />
+            <ProgressBar
+              progress={uploadProgress}
+              label={imageFile ? "Uploading new image..." : "Processing..."}
+            />
           )}
           {currentStep === "saving" && (
-            <ProgressBar progress={savingProgress} label="Saving artwork..." />
+            <ProgressBar
+              progress={savingProgress}
+              label={initialData ? "Updating artwork..." : "Saving artwork..."}
+            />
           )}
         </div>
       )}
