@@ -121,7 +121,7 @@ export default function ImageModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="relative w-full max-w-7xl max-h-[85vh] sm:max-h-[90vh] lg:max-h-[95vh] flex flex-col lg:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
+              className="relative w-full max-w-7xl max-h-[85vh] sm:h-[85vh] flex flex-col lg:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
             >
               {/* Image Section */}
               <div className="relative flex-1 flex items-center justify-center bg-gray-50/50 min-h-[35vh] max-h-[50vh] sm:min-h-[40vh] sm:max-h-[55vh] lg:min-h-[70vh] lg:max-h-none">

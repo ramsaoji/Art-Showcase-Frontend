@@ -427,7 +427,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         </div>
 
         {/* Artist */}
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <label
             htmlFor="artist"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
@@ -447,7 +447,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         </div>
 
         {/* Price */}
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <label
             htmlFor="price"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
