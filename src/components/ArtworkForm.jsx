@@ -163,6 +163,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
 
   const handleImageRemove = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
     setImageRemoved(true);
@@ -330,27 +331,68 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
           Artwork Image <span className="text-red-500">*</span>
         </label>
-        <label
-          className={`block cursor-pointer ${
-            imageError ? "border-red-300" : "border-gray-200"
-          } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
-        >
-          <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
-            {shouldShowPreview ? (
-              <div className="relative w-full flex justify-center">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="h-64 w-auto object-contain rounded-lg"
-                />
-                <button
-                  type="button"
-                  onClick={handleImageRemove}
-                  className="absolute top-2 right-2 p-1.5 bg-red-500/80 backdrop-blur-sm text-white rounded-full hover:bg-red-600/80 transition-colors"
-                  title="Remove image"
-                >
+
+        {shouldShowPreview ? (
+          // Show preview with properly positioned controls
+          <div className="border-2 border-gray-200 border-dashed rounded-xl p-6 bg-gray-50/30">
+            <div className="relative">
+              {/* Image container */}
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-64 w-auto object-contain rounded-lg shadow-md"
+                  />
+                  {/* Close button positioned at top-right of image */}
+                  <button
+                    type="button"
+                    onClick={handleImageRemove}
+                    className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg z-10"
+                    title="Remove image"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status message */}
+              {/* {imageFile && (
+                <div className="flex justify-center mb-4">
+                  <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm font-sans rounded-full">
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    New Image Selected
+                  </div>
+                </div>
+              )} */}
+
+              {/* Change image button */}
+              <div className="flex justify-center">
+                <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm font-sans font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
                   <svg
-                    className="w-5 h-5"
+                    className="w-4 h-4 mr-2"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -359,48 +401,63 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                     />
                   </svg>
-                </button>
-                {imageFile && (
-                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500/80 backdrop-blur-sm text-white text-xs rounded-full">
-                    New image selected
-                  </div>
+                  Change Image
+                  <input
+                    id="file-upload"
+                    name="file-upload"
+                    type="file"
+                    className="sr-only"
+                    onChange={handleImageChange}
+                    accept="image/*"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Show upload dropzone when no image
+          <label
+            className={`block cursor-pointer ${
+              imageError ? "border-red-300" : "border-gray-200"
+            } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
+          >
+            <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
+              <PhotoIcon className="h-12 w-12 text-gray-400" />
+              <div className="mt-4 flex flex-col items-center text-sm text-gray-600 font-sans">
+                <span className="relative cursor-pointer rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500">
+                  Upload a file
+                </span>
+                <p className="mt-1 text-sm text-gray-500 font-sans">
+                  PNG, JPG up to 5MB
+                </p>
+                {imageRemoved && (
+                  <p className="mt-2 text-xs text-red-500 font-sans">
+                    Image removed - Please select a new image
+                  </p>
                 )}
               </div>
-            ) : (
-              <>
-                <PhotoIcon className="h-12 w-12 text-gray-400" />
-                <div className="mt-4 flex flex-col items-center text-sm text-gray-600 font-sans">
-                  <label className="relative cursor-pointer rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500">
-                    <span>Upload a file</span>
-                    <input
-                      id="file-upload"
-                      name="file-upload"
-                      type="file"
-                      className="sr-only"
-                      onChange={handleImageChange}
-                      accept="image/*"
-                    />
-                  </label>
-                  <p className="mt-1 text-sm text-gray-500">
-                    PNG, JPG up to 5MB
-                  </p>
-                  {imageRemoved && (
-                    <p className="mt-2 text-xs text-red-500">
-                      Image removed - please select a new image
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          {/* Decorative gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-50/30 to-gray-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        </label>
+            </div>
+            <input
+              id="file-upload"
+              name="file-upload"
+              type="file"
+              className="sr-only"
+              onChange={handleImageChange}
+              accept="image/*"
+            />
+            {/* Decorative gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-50/30 to-gray-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+          </label>
+        )}
+
         {imageError && (
-          <Alert type="error" message={imageError} className="mt-2" />
+          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-700 font-sans">{imageError}</p>
+          </div>
         )}
       </div>
 
