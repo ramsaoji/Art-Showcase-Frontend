@@ -95,7 +95,7 @@ export default function ImageModal({
   return (
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="fixed inset-0 z-50" onClose={onClose}>
-        <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4">
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -121,10 +121,10 @@ export default function ImageModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="relative w-full max-w-7xl max-h-[95vh] flex flex-col lg:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
+              className="relative w-full max-w-7xl max-h-[85vh] sm:max-h-[90vh] lg:max-h-[95vh] flex flex-col lg:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
             >
               {/* Image Section */}
-              <div className="relative flex-1 flex items-center justify-center bg-gray-50/50 min-h-[40vh] lg:min-h-[70vh]">
+              <div className="relative flex-1 flex items-center justify-center bg-gray-50/50 min-h-[35vh] max-h-[50vh] sm:min-h-[40vh] sm:max-h-[55vh] lg:min-h-[70vh] lg:max-h-none">
                 {isLoading && !hasError && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader size="large" />
@@ -210,7 +210,7 @@ export default function ImageModal({
               </div>
 
               {/* Details Section */}
-              <div className="relative flex-shrink-0 w-full lg:w-96 xl:w-[28rem] bg-white/95 flex flex-col max-h-[55vh] lg:max-h-full">
+              <div className="relative flex-shrink-0 w-full lg:w-96 xl:w-[28rem] bg-white/95 flex flex-col max-h-[45vh] sm:max-h-[50vh] lg:max-h-full">
                 {/* Close button */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -222,7 +222,7 @@ export default function ImageModal({
                 </motion.button>
 
                 {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto p-6 pr-16">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 pr-12 sm:pr-16 overscroll-contain bg-white">
                   <motion.h2
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
