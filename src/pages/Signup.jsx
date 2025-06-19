@@ -64,8 +64,16 @@ export default function Signup() {
         >
           Sign Up as Artist
         </motion.h2>
-        {error && <Alert type="error" message={error} className="mb-4" />}
-        {success && <Alert type="success" message={success} className="mb-4" />}
+        {error && (
+          <Alert type="error" message={error} className="mb-4 items-center" />
+        )}
+        {success && (
+          <Alert
+            type="success"
+            message={success}
+            className="mb-4 items-center"
+          />
+        )}
         <form onSubmit={handleSubmit} className="space-y-4 font-sans">
           <div>
             <label className="block text-sm font-sans font-medium text-gray-700 mb-1">
