@@ -304,7 +304,7 @@ export default function HeroCarousel() {
                   {images[currentImageIndex].title}
                 </h3>
                 <p className="text-sm sm:text-lg font-sans text-white/90 mt-1">
-                  By {images[currentImageIndex].artist}
+                  By {images[currentImageIndex].artistName}
                 </p>
               </div>
             </motion.div>
