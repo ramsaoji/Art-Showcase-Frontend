@@ -23,7 +23,7 @@ export default function ArtworkCard({
   const cardRef = useRef(null);
   const imageRef = useRef(null);
   const descriptionRef = useRef(null);
-  const { isAdmin } = useAuth();
+  const { isSuperAdmin, isArtist } = useAuth();
 
   // Use our custom hook for optimized image loading
   const {
@@ -109,6 +109,8 @@ export default function ArtworkCard({
     ...artwork,
   };
 
+  const isPrivileged = isSuperAdmin || isArtist;
+
   return (
     <motion.div
       ref={cardRef}
@@ -135,6 +137,29 @@ export default function ArtworkCard({
           </Badge>
         )}
       </div>
+
+      {/* Add status badge */}
+      {artwork.status && (
+        <div className="absolute top-4 right-4 z-10">
+          {(artwork.status !== "ACTIVE" || isPrivileged) && (
+            <Badge
+              type={
+                artwork.status === "ACTIVE"
+                  ? "active"
+                  : artwork.status === "INACTIVE"
+                  ? "inactive"
+                  : artwork.status === "EXPIRED"
+                  ? "expired"
+                  : "default"
+              }
+              animate
+              withPing
+            >
+              {artwork.status.charAt(0) + artwork.status.slice(1).toLowerCase()}
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Image Container */}
       <div
@@ -222,12 +247,12 @@ export default function ArtworkCard({
       {/* Content */}
       <div
         className={`relative p-6 flex-grow bg-white overflow-auto ${
-          !isAdmin && "rounded-b-2xl"
+          !isPrivileged && "rounded-b-2xl"
         }`}
       >
         <div
           className={`absolute inset-0 bg-gradient-to-b from-indigo-50/50 via-white to-white pointer-events-none ${
-            !isAdmin && "rounded-b-2xl"
+            !isPrivileged && "rounded-b-2xl"
           }`}
         />
         <div className="relative h-full flex flex-col">
@@ -247,12 +272,20 @@ export default function ArtworkCard({
               <div className="mt-2 flex items-center text-base font-sans flex-wrap gap-1">
                 <div className="relative group">
                   <span className="font-artistic text-lg text-indigo-600 group-hover:text-indigo-700 transition-colors break-words">
-                    {safeArtwork.artist}
+                    {safeArtwork.artistName ||
+                      safeArtwork.artist ||
+                      safeArtwork.artistEmail ||
+                      "Unknown Artist"}
+                    {safeArtwork.artistEmail && (
+                      <span className="text-gray-500 text-sm font-sans ml-2">
+                        ({safeArtwork.artistEmail})
+                      </span>
+                    )}
                   </span>
                   <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
                 </div>
                 <span className="mx-2 text-gray-300 flex-shrink-0">•</span>
-                <span className="text-gray-600 flex-shrink-0">
+                <span className="text-gray-600 flex-shrink-0 font-sans">
                   {safeArtwork.year}
                 </span>
               </div>
@@ -322,10 +355,14 @@ export default function ArtworkCard({
       </div>
 
       {/* Action Buttons - Fixed position at bottom */}
-      {isAdmin && (
-        <div className="p-6 border-t border-gray-100 flex-shrink-0 bg-white rounded-b-2xl">
-          <div className="flex justify-end">
-            <ArtworkActions artworkId={safeArtwork.id} onDelete={onDelete} />
+      {isPrivileged && (
+        <div className="p-4 sm:p-6 border-t border-gray-100 flex-shrink-0 bg-white rounded-b-2xl">
+          <div className="flex justify-center sm:justify-end">
+            <ArtworkActions
+              artworkId={safeArtwork.id}
+              onDelete={onDelete}
+              artwork={safeArtwork}
+            />
           </div>
         </div>
       )}

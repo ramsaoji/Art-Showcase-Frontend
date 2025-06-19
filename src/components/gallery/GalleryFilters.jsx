@@ -5,6 +5,7 @@ import {
   ArrowsUpDownIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function GalleryFilters({
   filters,
@@ -17,6 +18,8 @@ export default function GalleryFilters({
   isMobileFiltersOpen,
   setIsMobileFiltersOpen,
 }) {
+  const { isSuperAdmin, isArtist } = useAuth();
+
   return (
     <div className="mb-12">
       {/* Mobile Filter Button */}
@@ -142,6 +145,37 @@ export default function GalleryFilters({
                     </div>
                   </div>
 
+                  {/* Active Status Filter */}
+                  {(isSuperAdmin || isArtist) && (
+                    <div className="mb-8">
+                      <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
+                        Active Status
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          { value: "all", label: "All Statuses" },
+                          { value: "ACTIVE", label: "Active" },
+                          { value: "INACTIVE", label: "Inactive" },
+                          { value: "EXPIRED", label: "Expired" },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() =>
+                              handleFilterChange("status", option.value)
+                            }
+                            className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
+                              filters.status === option.value
+                                ? "bg-indigo-50 text-indigo-600 font-medium"
+                                : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Artist Filter */}
                   <div className="mb-8">
                     <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">
@@ -160,15 +194,17 @@ export default function GalleryFilters({
                       </button>
                       {artists.map((artist) => (
                         <button
-                          key={artist}
-                          onClick={() => handleFilterChange("artist", artist)}
+                          key={artist.id}
+                          onClick={() =>
+                            handleFilterChange("artist", artist.id)
+                          }
                           className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm ${
-                            filters.artist === artist
+                            filters.artist === artist.id
                               ? "bg-indigo-50 text-indigo-600 font-medium"
                               : "text-gray-600 hover:bg-gray-50"
                           }`}
                         >
-                          {artist}
+                          {artist.label}
                         </button>
                       ))}
                     </div>
@@ -240,7 +276,8 @@ export default function GalleryFilters({
                   {(filters.material !== "all" ||
                     filters.artist !== "all" ||
                     filters.availability !== "all" ||
-                    filters.featured !== "all") && (
+                    filters.featured !== "all" ||
+                    filters.status !== "all") && (
                     <div className="mb-4">
                       <button
                         onClick={handleResetAllFilters}
@@ -277,7 +314,8 @@ export default function GalleryFilters({
             {(filters.material !== "all" ||
               filters.artist !== "all" ||
               filters.availability !== "all" ||
-              filters.featured !== "all") && (
+              filters.featured !== "all" ||
+              filters.status !== "all") && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
                 {Object.values(filters).filter((f) => f !== "all").length}
               </span>
@@ -336,6 +374,52 @@ export default function GalleryFilters({
                 </div>
               </div>
 
+              {/* Active Status Filter Section */}
+              {(isSuperAdmin || isArtist) && (
+                <div className="p-4">
+                  <h3 className="text-sm font-sans font-semibold text-gray-900 mb-3">
+                    Active Status
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      { value: "all", label: "All Statuses" },
+                      { value: "ACTIVE", label: "Active" },
+                      { value: "INACTIVE", label: "Inactive" },
+                      { value: "EXPIRED", label: "Expired" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() =>
+                          handleFilterChange("status", option.value)
+                        }
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
+                          filters.status === option.value
+                            ? "bg-indigo-50 text-indigo-600 font-medium"
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <span className="flex-grow">{option.label}</span>
+                          {filters.status === option.value && (
+                            <svg
+                              className="h-5 w-5 text-indigo-600"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Artist Filter Section */}
               <div className="p-4">
                 <h3 className="text-sm font-sans font-semibold text-gray-900 mb-3">
@@ -369,17 +453,17 @@ export default function GalleryFilters({
                   </button>
                   {artists.map((artist) => (
                     <button
-                      key={artist}
-                      onClick={() => handleFilterChange("artist", artist)}
+                      key={artist.id}
+                      onClick={() => handleFilterChange("artist", artist.id)}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans ${
-                        filters.artist === artist
+                        filters.artist === artist.id
                           ? "bg-indigo-50 text-indigo-600 font-medium"
                           : "text-gray-600 hover:bg-gray-50"
                       }`}
                     >
                       <div className="flex items-center">
-                        <span className="flex-grow">{artist}</span>
-                        {filters.artist === artist && (
+                        <span className="flex-grow">{artist.label}</span>
+                        {filters.artist === artist.id && (
                           <svg
                             className="h-5 w-5 text-indigo-600"
                             viewBox="0 0 20 20"
@@ -507,7 +591,8 @@ export default function GalleryFilters({
               {(filters.material !== "all" ||
                 filters.artist !== "all" ||
                 filters.availability !== "all" ||
-                filters.featured !== "all") && (
+                filters.featured !== "all" ||
+                filters.status !== "all") && (
                 <div className="p-4">
                   <button
                     onClick={handleResetAllFilters}
@@ -579,7 +664,8 @@ export default function GalleryFilters({
       {(filters.material !== "all" ||
         filters.artist !== "all" ||
         filters.availability !== "all" ||
-        filters.featured !== "all") && (
+        filters.featured !== "all" ||
+        filters.status !== "all") && (
         <div className="flex flex-wrap items-center gap-2 mt-4">
           {filters.featured !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
@@ -600,7 +686,11 @@ export default function GalleryFilters({
           {filters.artist !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Artist:</span>{" "}
-              <span className="font-semibold">{filters.artist}</span>
+              <span className="font-semibold">
+                {(Array.isArray(artists) &&
+                  artists.find((a) => a.id === filters.artist)?.label) ||
+                  filters.artist}
+              </span>
               <button
                 onClick={() => handleFilterChange("artist", "all")}
                 className="ml-2 hover:text-indigo-900"
@@ -629,6 +719,26 @@ export default function GalleryFilters({
               </span>
               <button
                 onClick={() => handleFilterChange("availability", "all")}
+                className="ml-2 hover:text-indigo-900"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          {filters.status !== "all" && (
+            <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
+              <span className="mr-1">Status:</span>{" "}
+              <span className="font-semibold">
+                {filters.status === "ACTIVE"
+                  ? "Active"
+                  : filters.status === "INACTIVE"
+                  ? "Inactive"
+                  : filters.status === "EXPIRED"
+                  ? "Expired"
+                  : filters.status}
+              </span>
+              <button
+                onClick={() => handleFilterChange("status", "all")}
                 className="ml-2 hover:text-indigo-900"
               >
                 ×

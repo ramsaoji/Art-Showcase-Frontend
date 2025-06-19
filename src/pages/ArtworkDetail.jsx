@@ -158,7 +158,36 @@ export default function ArtworkDetail() {
                   animate={{ opacity: 1, y: 0 }}
                   className="font-artistic text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 tracking-wide pr-4"
                 >
-                  {artwork.title}
+                  {/* Title and status */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {artwork.title}
+                    </h1>
+                    {artwork.status && (
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold
+                        ${
+                          artwork.status === "ACTIVE"
+                            ? "bg-green-100 text-green-700"
+                            : ""
+                        }
+                        ${
+                          artwork.status === "INACTIVE"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : ""
+                        }
+                        ${
+                          artwork.status === "EXPIRED"
+                            ? "bg-red-100 text-red-700"
+                            : ""
+                        }
+                      `}
+                      >
+                        {artwork.status.charAt(0) +
+                          artwork.status.slice(1).toLowerCase()}
+                      </span>
+                    )}
+                  </div>
                 </motion.h1>
                 <motion.button
                   initial={{ opacity: 0, scale: 0.9 }}

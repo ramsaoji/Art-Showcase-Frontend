@@ -24,6 +24,7 @@ export default function useGallery() {
       artist: params.get("artist") || "all", // Added artist filter
       availability: params.get("availability") || "all",
       featured: params.get("featured") || "all",
+      status: params.get("status") || "all", // Add status filter
     };
   });
 
@@ -40,7 +41,7 @@ export default function useGallery() {
   const [isSearching, setIsSearching] = useState(false);
 
   const [materials, setMaterials] = useState([]);
-  const [artists, setArtists] = useState([]); // Added artists state
+  const [artists, setArtists] = useState([]); // Will be set from backend
   const [selectedImage, setSelectedImage] = useState(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
@@ -104,6 +105,7 @@ export default function useGallery() {
       artist: filters.artist, // Added artist to query input
       availability: filters.availability,
       featured: filters.featured,
+      status: filters.status, // Ensure status is sent to backend
       sortBy,
       page: currentPage,
       limit: ITEMS_PER_PAGE,
@@ -223,20 +225,17 @@ export default function useGallery() {
       });
 
       // Extract unique artists
-      const uniqueArtists = [
-        ...new Set(
-          allArtworks
-            .map((art) => art.artist)
-            .filter((artist) => artist && artist.trim())
-        ),
-      ];
-      setArtists((prev) => {
-        // Only update if artists have actually changed
-        if (JSON.stringify(prev) !== JSON.stringify(uniqueArtists)) {
-          return uniqueArtists;
-        }
-        return prev;
-      });
+      const backendArtists = allArtworks
+        .map((art) => art.artistName)
+        .filter(Boolean);
+      const artworkArtists = allArtworks
+        .map((art) => art.artistName || art.artist)
+        .filter(Boolean);
+      // Merge and deduplicate by artist name
+      const uniqueArtists = Array.from(
+        new Set([...backendArtists, ...artworkArtists])
+      );
+      setArtists(uniqueArtists);
     }
   }, [allArtworks]);
 
@@ -298,6 +297,10 @@ export default function useGallery() {
   }, []);
 
   const handleResetAllFilters = useCallback(() => {
+    debouncedSearch.cancel(); // Cancel any pending search first
+    setCurrentPage(1); // Reset page before clearing artworks
+    setAllArtworks([]);
+    setHasMore(true);
     setSearchInput("");
     setSearchQuery("");
     setIsSearching(false);
@@ -307,11 +310,8 @@ export default function useGallery() {
       artist: "all", // Added artist reset
       availability: "all",
       featured: "all",
+      status: "all", // Reset status
     });
-    setCurrentPage(1);
-    setAllArtworks([]);
-    setHasMore(true);
-    debouncedSearch.cancel();
   }, [debouncedSearch]);
 
   const clearSearch = useCallback(() => {
@@ -350,9 +350,12 @@ export default function useGallery() {
     }
 
     if (filters.artist && filters.artist !== "all") {
+      const selectedArtist = artists.find((a) => a.id === filters.artist);
       active.push({
         type: "artist",
-        label: `Artist: ${filters.artist}`,
+        label: `Artist: ${
+          selectedArtist ? selectedArtist.label : filters.artist
+        }`,
         value: filters.artist,
         onRemove: () => handleFilterChange("artist", "all"),
       });
@@ -373,6 +376,23 @@ export default function useGallery() {
         label: `Featured: ${filters.featured === "featured" ? "Yes" : "No"}`,
         value: filters.featured,
         onRemove: () => handleFilterChange("featured", "all"),
+      });
+    }
+
+    if (filters.status && filters.status !== "all") {
+      active.push({
+        type: "status",
+        label: `Status: ${
+          filters.status === "ACTIVE"
+            ? "Active"
+            : filters.status === "INACTIVE"
+            ? "Inactive"
+            : filters.status === "EXPIRED"
+            ? "Expired"
+            : filters.status
+        }`,
+        value: filters.status,
+        onRemove: () => handleFilterChange("status", "all"),
       });
     }
 
@@ -403,7 +423,49 @@ export default function useGallery() {
     clearSearch,
     handleFilterChange,
     handleSortChange,
+    artists,
   ]);
+
+  // Fetch all artists from backend for filter dropdown
+  const { data: allArtists = [] } = trpc.user.listArtistsPublic.useQuery(
+    undefined,
+    {
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
+    }
+  );
+  useEffect(() => {
+    // Artists from backend (user table)
+    const backendArtists = allArtists
+      .map((artist) => ({
+        id: artist.id,
+        artistName: artist.artistName?.trim() || "",
+        email: artist.email?.trim() || "",
+      }))
+      .filter((a) => a.id && a.artistName && a.email);
+    const artworkArtists = allArtworks
+      .map((art) => ({
+        id: art.userId,
+        artistName: art.artistName?.trim() || art.artist?.trim() || "",
+        email: art.artistEmail?.trim() || art.email?.trim() || "",
+      }))
+      .filter((a) => a.id && a.artistName && a.email);
+    // Merge and deduplicate by id
+    const seen = new Set();
+    const uniqueArtists = [...backendArtists, ...artworkArtists].filter((a) => {
+      if (seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+    // Sort alphabetically by artistName
+    uniqueArtists.sort((a, b) => a.artistName.localeCompare(b.artistName));
+    setArtists(
+      uniqueArtists.map((a) => ({
+        id: a.id,
+        label: `${a.artistName} (${a.email})`,
+      }))
+    );
+  }, [allArtists, allArtworks]);
 
   return {
     // State

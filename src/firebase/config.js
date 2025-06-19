@@ -1,6 +1,4 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
@@ -19,8 +17,6 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 
 // Get Firebase services
-export const db = getFirestore(app);
-export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 // Initialize Analytics
@@ -32,10 +28,3 @@ export const analytics = (async () => {
     return null;
   }
 })();
-
-// Admin email for authorization
-export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-// Validate admin email
-if (!ADMIN_EMAIL) {
-  console.error("[Firebase] Admin email is not set in environment variables");
-}

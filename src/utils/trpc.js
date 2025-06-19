@@ -7,36 +7,20 @@ export const trpcClient = trpc.createClient({
   links: [
     httpLink({
       url: import.meta.env.VITE_API_URL || "http://localhost:3001/trpc",
-      // Remove the custom headers - let tRPC handle Content-Type
-      fetch(url, options) {
-        // Enhanced logging for debugging
-        console.log("=== tRPC Request Debug ===");
-        console.log("URL:", url);
-        console.log("Method:", options?.method);
-        console.log("Headers:", options?.headers);
-        console.log("Body (raw):", options?.body);
-
-        // Try to parse and log the body if it's a string
-        if (options?.body && typeof options.body === "string") {
-          try {
-            const parsedBody = JSON.parse(options.body);
-            console.log("Body (parsed):", parsedBody);
-          } catch (e) {
-            console.log("Body (unparseable):", options.body);
-          }
+      fetch(url, options = {}) {
+        // Inject JWT token from localStorage
+        const token = localStorage.getItem("token");
+        const headers = new Headers(options.headers || {});
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
         }
-
-        return fetch(url, options)
-          .then((response) => {
-            console.log("Response status:", response.status);
-            console.log("Response ok:", response.ok);
-            return response;
-          })
-          .catch((error) => {
-            console.error("Fetch error:", error);
-            throw error;
-          });
+        return fetch(url, { ...options, headers });
       },
     }),
   ],
 });
+
+// Helper for monthly upload count
+export function useMonthlyUploadCount() {
+  return trpc.useQuery(["artwork.getMonthlyUploadCount"]);
+}

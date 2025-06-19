@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
@@ -14,27 +14,39 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAdmin } = useAuth();
+  const {
+    login,
+    isSuperAdmin,
+    isArtist,
+    user,
+    loading: authLoading,
+    error: authError,
+  } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (isAdmin) {
-      const from = location.state?.from?.pathname || "/add-artwork";
-      navigate(from, { replace: true });
+    if (user) {
+      if (isSuperAdmin) {
+        const from = location.state?.from?.pathname || "/add-artwork";
+        navigate(from, { replace: true });
+      } else if (isArtist) {
+        const from = location.state?.from?.pathname || "/gallery";
+        navigate(from, { replace: true });
+      }
     }
-  }, [isAdmin, navigate, location]);
+  }, [user, isSuperAdmin, isArtist, navigate, location]);
 
   async function handleSubmit(e) {
     e.preventDefault();
-
+    setError("");
+    setLoading(true);
     try {
-      setError("");
-      setLoading(true);
       await login(email, password);
       // Navigation will be handled by the useEffect above
-    } catch (error) {
-      setError("Failed to sign in. Please check your credentials.");
-      console.error("Login error:", error);
+    } catch (err) {
+      setError(
+        err.message || "Failed to sign in. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }
@@ -80,7 +92,9 @@ export default function Login() {
             </div>
 
             {/* Error Message */}
-            {error && <Alert type="error" message={error} />}
+            {(error || authError) && (
+              <Alert type="error" message={error || authError} />
+            )}
 
             <motion.form
               initial={{ opacity: 0, y: 20 }}
@@ -146,7 +160,7 @@ export default function Login() {
               <div>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || authLoading}
                   className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
                 >
                   {loading ? (
@@ -160,6 +174,18 @@ export default function Login() {
                 </button>
               </div>
             </motion.form>
+
+            <div className="mt-6 text-center">
+              <span className="text-gray-600 text-sm font-sans">
+                Don't have an account?{" "}
+              </span>
+              <Link
+                to="/signup"
+                className="text-indigo-600 font-medium hover:underline font-sans"
+              >
+                Sign up as Artist
+              </Link>
+            </div>
           </div>
         </motion.div>
       </div>

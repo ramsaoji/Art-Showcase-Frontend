@@ -4,11 +4,14 @@ import { trpc } from "../utils/trpc";
 import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 import Loader from "../components/ui/Loader";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function EditArtwork() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
+  const { isSuperAdmin, user } = useAuth();
+  const [artistId, setArtistId] = useState(null);
 
   console.log("Route ID from useParams:", id, "Type:", typeof id);
 
@@ -47,6 +50,13 @@ export default function EditArtwork() {
       setError(`Failed to update artwork: ${error.message}`);
     },
   });
+
+  // Fetch all artists for admin (for super admin to edit monthly limit)
+  const { data: artists = [], isLoading: loadingArtists } =
+    trpc.user.listUsers.useQuery(undefined, {
+      enabled: isSuperAdmin,
+      select: (users) => users.filter((u) => u.role === "ARTIST"),
+    });
 
   // Handle case where artwork is not found
   useEffect(() => {
@@ -93,7 +103,16 @@ export default function EditArtwork() {
         sold: formData.get("sold") === "true",
         url: imageUrl,
         cloudinary_public_id: publicId,
+        status: formData.get("status"),
       };
+
+      // For super admin, include monthlyUploadLimit if set
+      if (isSuperAdmin) {
+        const limit = formData.get("monthlyUploadLimit");
+        if (limit !== null && limit !== undefined && limit !== "") {
+          updateData.monthlyUploadLimit = Number(limit);
+        }
+      }
 
       console.log("Artwork ID before update:", artwork.id);
       console.log("Update data ID before update:", updateData.id);
@@ -152,6 +171,12 @@ export default function EditArtwork() {
     );
   }
 
+  // Find the artist for this artwork (for super admin)
+  const selectedArtist =
+    isSuperAdmin && artwork.userId
+      ? artists.find((a) => a.id === artwork.userId)
+      : null;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
@@ -161,6 +186,12 @@ export default function EditArtwork() {
           onSubmit={handleSubmit}
           isLoading={updateArtworkMutation.isLoading}
           submitLabel="Update Artwork"
+          isSuperAdmin={isSuperAdmin}
+          artists={artists}
+          loadingArtists={loadingArtists}
+          artistId={artwork.userId}
+          setArtistId={setArtistId}
+          selectedArtist={selectedArtist}
         />
       </div>
     </div>

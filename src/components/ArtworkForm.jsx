@@ -3,6 +3,9 @@ import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
 import { deleteImage } from "../config/cloudinary"; // Add this import
+import { useAuth } from "../contexts/AuthContext";
+import { trpc } from "../utils/trpc";
+import { useMonthlyUploadCount } from "../utils/trpc";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -26,7 +29,25 @@ function ProgressBar({ progress, label }) {
   );
 }
 
-export default function ArtworkForm({ onSubmit, initialData = null }) {
+export default function ArtworkForm({
+  onSubmit,
+  initialData = null,
+  isSuperAdmin = false,
+  artists = [],
+  loadingArtists = false,
+  artistId = "",
+  setArtistId = () => {},
+  selectedArtist = null,
+}) {
+  const { isSuperAdmin: authIsSuperAdmin, isArtist, user } = useAuth();
+  // Fetch monthly upload count for the current artist
+  const {
+    data: monthlyUploadData,
+    isLoading: loadingMonthlyUpload,
+    error: monthlyUploadError,
+  } = useMonthlyUploadCount();
+  const monthlyUploadCount = monthlyUploadData?.count ?? 0;
+  const monthlyUploadLimit = monthlyUploadData?.limit ?? 10;
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
     artist: initialData?.artist || "",
@@ -38,6 +59,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     year: initialData?.year || new Date().getFullYear(),
     featured: initialData?.featured || false,
     sold: initialData?.sold || false,
+    monthlyUploadLimit: selectedArtist?.monthlyUploadLimit ?? 10,
   });
 
   // Separate state for dimension inputs
@@ -62,6 +84,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
   const [savingProgress, setSavingProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(null);
   const [imageError, setImageError] = useState("");
+  const [status, setStatus] = useState(initialData?.status || "ACTIVE");
 
   // Predefined options for materials and styles
   const materialOptions = [
@@ -175,6 +198,15 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
     }
   };
 
+  // Handle monthly upload limit change (for super admin)
+  const handleMonthlyLimitChange = (e) => {
+    const value =
+      e.target.value === ""
+        ? ""
+        : Math.max(1, Math.min(1000, Number(e.target.value)));
+    setFormData((prev) => ({ ...prev, monthlyUploadLimit: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -242,6 +274,16 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
         );
       });
 
+      // For super admin, include monthlyUploadLimit if set
+      if (isSuperAdmin && selectedArtist) {
+        submitData.set("monthlyUploadLimit", formData.monthlyUploadLimit);
+      }
+
+      // Pass status if admin
+      if (isSuperAdmin && initialData) {
+        submitData.set("status", status);
+      }
+
       // Simulate upload progress
       const uploadInterval = setInterval(() => {
         setUploadProgress((prev) => {
@@ -289,6 +331,7 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           year: new Date().getFullYear(),
           featured: false,
           sold: false,
+          monthlyUploadLimit: 10,
         });
         setDimensionInputs({ width: "", height: "" });
         setImageFile(null);
@@ -325,7 +368,49 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
   const shouldShowPreview = imagePreview && !imageRemoved;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6 font-sans">
+      {/* Monthly upload limit info for artists */}
+      {isArtist && (
+        <div className="mb-4">
+          {loadingMonthlyUpload ? (
+            <div className="text-sm text-gray-500">
+              Checking your monthly upload limit...
+            </div>
+          ) : monthlyUploadError ? (
+            <div className="text-sm text-red-500">
+              Could not load your monthly upload count.
+            </div>
+          ) : (
+            <div
+              className={`text-sm font-sans ${
+                monthlyUploadCount >= monthlyUploadLimit
+                  ? "text-red-600"
+                  : "text-gray-700"
+              }`}
+            >
+              {monthlyUploadCount >= monthlyUploadLimit ? (
+                <>
+                  <span className="font-bold">
+                    You have reached your monthly upload limit (
+                    {monthlyUploadLimit} artworks).
+                  </span>
+                  <br />
+                  <span>You cannot add more artworks this month.</span>
+                </>
+              ) : (
+                <>
+                  <span>You have uploaded </span>
+                  <span className="font-bold">{monthlyUploadCount}</span>
+                  <span> out of </span>
+                  <span className="font-bold">{monthlyUploadLimit}</span>
+                  <span> artworks allowed this month.</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Image Upload Section */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
@@ -463,6 +548,63 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
 
       {/* Form Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Artist Selection - Only for Super Admin */}
+        {isSuperAdmin && (
+          <div className="col-span-2">
+            <label
+              htmlFor="artistSelect"
+              className="block text-sm font-medium text-gray-700 font-sans mb-1"
+            >
+              Select Artist <span className="text-red-500">*</span>
+            </label>
+            {loadingArtists ? (
+              <div className="flex items-center space-x-2 text-gray-500 text-sm font-sans mt-2">
+                <div className="animate-spin h-4 w-4 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
+                <span>Loading artists...</span>
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  id="artistSelect"
+                  className="block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
+                  value={artistId}
+                  onChange={(e) => setArtistId(e.target.value)}
+                >
+                  <option value="" className="font-sans">
+                    Select an artist
+                  </option>
+                  {artists &&
+                    artists.map((artist) => (
+                      <option
+                        key={artist.id}
+                        value={artist.id}
+                        className="font-sans"
+                      >
+                        {artist.artistName || artist.email} ({artist.email})
+                      </option>
+                    ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 9l4 4 4-4"
+                    />
+                  </svg>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Title */}
         <div className="col-span-2">
           <label
@@ -483,28 +625,10 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           />
         </div>
 
-        {/* Artist */}
-        <div className="col-span-2 sm:col-span-1">
-          <label
-            htmlFor="artist"
-            className="block text-sm font-medium text-gray-700 font-sans mb-1"
-          >
-            Artist <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="artist"
-            id="artist"
-            required
-            value={formData.artist}
-            onChange={handleInputChange}
-            placeholder="Enter artist's name"
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
-          />
-        </div>
+        {/* Artist input field removed as requested */}
 
         {/* Price */}
-        <div className="col-span-2 sm:col-span-1">
+        <div className="col-span-2">
           <label
             htmlFor="price"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
@@ -706,21 +830,91 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
           />
         </div>
 
+        {/* Super Admin: Status - Dropdown */}
+        {isSuperAdmin && (
+          <div className="col-span-2 sm:col-span-1">
+            <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
+              Status
+            </label>
+            <div className="relative">
+              <select
+                name="status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
+              >
+                <option value="ACTIVE" className="font-sans">
+                  Active
+                </option>
+                <option value="INACTIVE" className="font-sans">
+                  Inactive
+                </option>
+                <option value="EXPIRED" className="font-sans">
+                  Expired
+                </option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 9l4 4 4-4"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Super Admin: Set monthly upload limit for selected artist */}
+        {isSuperAdmin && selectedArtist && (
+          <div className="mb-4 col-span-2 sm:col-span-1">
+            <label
+              htmlFor="monthlyUploadLimit"
+              className="block text-sm font-medium text-gray-700 font-sans mb-1"
+            >
+              Monthly Upload Limit for Artist
+            </label>
+            <input
+              type="number"
+              id="monthlyUploadLimit"
+              name="monthlyUploadLimit"
+              min={1}
+              max={1000}
+              value={formData.monthlyUploadLimit}
+              onChange={handleMonthlyLimitChange}
+              className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Default is 10. Leave blank or set to 10 for standard limit.
+            </p>
+          </div>
+        )}
+
         {/* Checkboxes */}
         <div className="col-span-2 flex flex-wrap gap-6">
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              name="featured"
-              checked={formData.featured}
-              onChange={handleInputChange}
-              className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-            />
-            <span className="text-sm font-medium text-gray-700 font-sans">
-              Featured Artwork
-            </span>
-          </label>
-          {initialData && (
+          {isSuperAdmin && (
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="featured"
+                checked={formData.featured}
+                onChange={handleInputChange}
+                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <span className="text-sm font-medium text-gray-700 font-sans">
+                Featured Artwork
+              </span>
+            </label>
+          )}
+          {isSuperAdmin && (
             <label className="flex items-center space-x-3">
               <input
                 type="checkbox"
@@ -741,7 +935,10 @@ export default function ArtworkForm({ onSubmit, initialData = null }) {
       <div className="pt-4">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={
+            isSubmitting ||
+            (isArtist && monthlyUploadCount >= monthlyUploadLimit)
+          }
           className="w-full inline-flex justify-center items-center px-6 py-3.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
         >
           {isSubmitting ? (

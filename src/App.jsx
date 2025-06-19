@@ -15,6 +15,7 @@ const AddArtwork = lazy(() => import("./pages/AddArtwork"));
 const EditArtwork = lazy(() => import("./pages/EditArtwork"));
 const Login = lazy(() => import("./pages/Login"));
 const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
+const Signup = lazy(() => import("./pages/Signup"));
 
 // Analytics wrapper component
 function AnalyticsWrapper({ children }) {
@@ -64,7 +65,8 @@ class ErrorBoundary extends React.Component {
         <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 text-red-800 p-4">
           <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
           <p className="text-center mb-4">
-            We're sorry, but an unexpected error occurred. Please try refreshing the page.
+            We're sorry, but an unexpected error occurred. Please try refreshing
+            the page.
           </p>
           {this.state.error && (
             <details className="text-sm text-red-600 bg-red-100 p-2 rounded w-full max-w-md overflow-auto">
@@ -100,6 +102,7 @@ function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route
                   path="/add-artwork"
                   element={

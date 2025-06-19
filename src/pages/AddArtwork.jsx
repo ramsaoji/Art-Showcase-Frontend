@@ -4,10 +4,24 @@ import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 import { motion } from "framer-motion";
 import { trpc } from "../utils/trpc";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function AddArtwork() {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
   const [error, setError] = useState(null);
+  const [artistId, setArtistId] = useState("");
+
+  // Fetch all artists for admin
+  const { data: artists = [], isLoading: loadingArtists } =
+    trpc.user.listUsers.useQuery(undefined, {
+      enabled: isSuperAdmin,
+      select: (users) => users.filter((u) => u.role === "ARTIST"),
+    });
+
+  // Find the selected artist object (for super admin)
+  const selectedArtist =
+    isSuperAdmin && artistId ? artists.find((a) => a.id === artistId) : null;
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
@@ -66,6 +80,14 @@ export default function AddArtwork() {
         url: imageUrl,
         cloudinary_public_id: publicId,
       };
+      if (isSuperAdmin && artistId) {
+        artworkData.artistId = artistId;
+        // Add monthlyUploadLimit if present
+        const limit = formData.get("monthlyUploadLimit");
+        if (limit !== null && limit !== undefined && limit !== "") {
+          artworkData.monthlyUploadLimit = Number(limit);
+        }
+      }
 
       console.log("Submitting artwork data:", artworkData);
 
@@ -127,7 +149,15 @@ export default function AddArtwork() {
           className="bg-white/50 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
         >
           <div className="p-6 sm:p-8">
-            <ArtworkForm onSubmit={handleSubmit} />
+            <ArtworkForm
+              onSubmit={handleSubmit}
+              isSuperAdmin={isSuperAdmin}
+              artists={artists}
+              loadingArtists={loadingArtists}
+              artistId={artistId}
+              setArtistId={setArtistId}
+              selectedArtist={selectedArtist}
+            />
           </div>
         </motion.div>
       </div>

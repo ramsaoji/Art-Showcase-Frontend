@@ -2,6 +2,7 @@ import { memo } from "react";
 import { motion } from "framer-motion";
 import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { trpc } from "../utils/trpc";
+import { useAuth } from "../contexts/AuthContext";
 // import Loader from "./ui/Loader";
 
 // Custom INR Icon component
@@ -73,8 +74,12 @@ StatCard.displayName = "StatCard";
 
 export default function Statistics() {
   const { data, isLoading, error } = trpc.artwork.getArtworkStats.useQuery();
+  const { isSuperAdmin, isArtist } = useAuth();
   const {
     totalArtworksCount = 0,
+    activeCount = 0,
+    inactiveCount = 0,
+    expiredCount = 0,
     featuredArtworksCount = 0,
     soldArtworksCount = 0,
   } = data ?? {};
@@ -84,20 +89,53 @@ export default function Statistics() {
     featuredArtworksCount === 0 &&
     soldArtworksCount === 0;
 
+  // Build cards array based on role
   const cards = [
     {
       icon: PhotoIcon,
-      label: "Total Artworks",
-      value: totalArtworksCount,
-      subtext: "Unique pieces in our gallery",
+      label: isSuperAdmin || isArtist ? "Total Artworks" : "Active Artworks",
+      value: isSuperAdmin || isArtist ? totalArtworksCount : activeCount,
+      subtext:
+        isSuperAdmin || isArtist
+          ? "All artworks in the system"
+          : "Currently available to the public",
       delay: 0.1,
     },
+  ];
+
+  if (isSuperAdmin || isArtist) {
+    cards.push(
+      {
+        icon: PhotoIcon,
+        label: "Active",
+        value: activeCount,
+        subtext: "Active artworks",
+        delay: 0.15,
+      },
+      {
+        icon: PhotoIcon,
+        label: "Inactive",
+        value: inactiveCount,
+        subtext: "Inactive artworks",
+        delay: 0.18,
+      },
+      {
+        icon: PhotoIcon,
+        label: "Expired",
+        value: expiredCount,
+        subtext: "Expired artworks",
+        delay: 0.21,
+      }
+    );
+  }
+
+  cards.push(
     {
       icon: StarIcon,
       label: "Featured Works",
       value: featuredArtworksCount,
       subtext: "Curated Selection",
-      delay: 0.2,
+      delay: 0.25,
     },
     {
       icon: INRIcon,
@@ -105,8 +143,8 @@ export default function Statistics() {
       value: soldArtworksCount,
       subtext: "Finding new homes",
       delay: 0.3,
-    },
-  ];
+    }
+  );
 
   // if (isLoading) {
   //   return (
@@ -198,14 +236,7 @@ export default function Statistics() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
           {cards.map((card) => (
-            <StatCard
-              key={card.label}
-              icon={card.icon}
-              label={card.label}
-              value={card.value}
-              subtext={card.subtext}
-              delay={card.delay}
-            />
+            <StatCard key={card.label} {...card} />
           ))}
         </div>
       </div>

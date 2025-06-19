@@ -8,49 +8,56 @@ import { deleteImage } from "../config/cloudinary";
 import { motion } from "framer-motion";
 import Alert from "./Alert";
 
-export default function ArtworkActions({ artworkId, onDelete }) {
-  const { isAdmin } = useAuth();
+export default function ArtworkActions({ artworkId, onDelete, artwork }) {
+  const { isSuperAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const [status, setStatus] = useState(artwork?.status || "ACTIVE");
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [error, setError] = useState(null);
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
 
   // Get artwork data for Cloudinary cleanup
-  const { data: artwork } = trpc.artwork.getArtworkById.useQuery(
+  const { data: artworkData } = trpc.artwork.getArtworkById.useQuery(
     { id: artworkId },
     {
       enabled: false, // Only fetch when needed for deletion
     }
   );
 
+  // Only show edit for artists if they own the artwork
+  const isOwner = user && artwork && artwork.userId === user.id;
+  if (!isSuperAdmin && !isOwner) return null;
+
   // Delete mutation
   const deleteArtworkMutation = trpc.artwork.deleteArtwork.useMutation({
     onSuccess: (data) => {
-      console.log("Artwork deleted successfully:", data.deletedId);
-
-      // Call parent callback if provided
-      if (onDelete) {
-        onDelete(artworkId);
-      }
-
-      // Invalidate relevant queries to refresh the UI
+      if (onDelete) onDelete(artworkId);
       utils.artwork.getAllArtworks.invalidate();
       utils.artwork.getFeaturedArtworks.invalidate();
-
       setShowDeleteDialog(false);
       setError(null);
     },
     onError: (error) => {
-      console.error("Error deleting artwork:", error);
       setError("Failed to delete artwork. Please try again.");
     },
   });
 
-  if (!isAdmin) return null;
+  // Status update mutation
+  const updateArtworkMutation = trpc.artwork.updateArtwork.useMutation({
+    onSuccess: () => {
+      utils.artwork.getAllArtworks.invalidate();
+      utils.artwork.getFeaturedArtworks.invalidate();
+      setIsStatusUpdating(false);
+    },
+    onError: (error) => {
+      setError("Failed to update status. Please try again.");
+      setIsStatusUpdating(false);
+    },
+  });
 
   const handleEdit = (e) => {
     e.stopPropagation();
@@ -66,73 +73,120 @@ export default function ArtworkActions({ artworkId, onDelete }) {
 
   const handleDelete = async () => {
     setError(null);
-    setIsDeleting(true); // Start loading
-
+    setIsDeleting(true);
     try {
-      let artworkData = artwork;
-      if (!artworkData) {
-        artworkData = await utils.artwork.getArtworkById.fetch({
+      let artworkDataToDelete = artworkData;
+      if (!artworkDataToDelete) {
+        artworkDataToDelete = await utils.artwork.getArtworkById.fetch({
           id: artworkId,
         });
       }
-
-      if (!artworkData) {
-        throw new Error("Artwork not found");
-      }
-
-      const { cloudinary_public_id } = artworkData;
-
+      if (!artworkDataToDelete) throw new Error("Artwork not found");
+      const { cloudinary_public_id } = artworkDataToDelete;
       if (cloudinary_public_id) {
         try {
           await deleteImage(cloudinary_public_id);
-          console.log("Image deleted from Cloudinary successfully");
-        } catch (cloudinaryError) {
-          console.error(
-            "Error deleting image from Cloudinary:",
-            cloudinaryError
-          );
-        }
+        } catch {}
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Optional delay
-
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await deleteArtworkMutation.mutateAsync({ id: artworkId });
     } catch (error) {
-      console.error("Error in handleDelete:", error);
       setError(
         error instanceof Error
           ? error.message
           : "Failed to delete artwork. Please try again."
       );
     } finally {
-      setIsDeleting(false); // End loading
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle status change
+  const handleStatusChange = async (e) => {
+    const newStatus = e.target.value;
+    setStatus(newStatus);
+    setIsStatusUpdating(true);
+    setError(null);
+    try {
+      await updateArtworkMutation.mutateAsync({
+        id: artworkId,
+        status: newStatus,
+      });
+    } catch (err) {
+      setError("Failed to update status. Please try again.");
+    } finally {
+      setIsStatusUpdating(false);
     }
   };
 
   return (
     <>
-      <div className="flex items-center space-x-3">
-        <motion.button
-          onClick={handleEdit}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="inline-flex items-center px-4 py-2 text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
-          title="Edit artwork"
-        >
-          <PencilSquareIcon className="h-4 w-4 mr-1.5" />
-          Edit
-        </motion.button>
-        <motion.button
-          onClick={handleDeleteClick}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          disabled={isDeleting}
-          className="inline-flex items-center px-4 py-2 text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Delete artwork"
-        >
-          <TrashIcon className="h-4 w-4 mr-1.5" />
-          {isDeleting ? "Deleting..." : "Delete"}
-        </motion.button>
+      <div className="flex items-center  flex-wrap gap-2">
+        {/* Edit button: super admin or artist owner */}
+        {(isSuperAdmin || isOwner) && (
+          <motion.button
+            onClick={handleEdit}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
+            title="Edit artwork"
+          >
+            <PencilSquareIcon className="h-4 w-4 mr-1.5" />
+            Edit
+          </motion.button>
+        )}
+        {/* Status dropdown: super admin only */}
+        {isSuperAdmin && (
+          <div className="relative inline-flex items-center">
+            <select
+              value={status}
+              onChange={handleStatusChange}
+              disabled={isStatusUpdating}
+              className="appearance-none w-full inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-10 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
+              title="Change artwork status"
+            >
+              <option value="ACTIVE" className="font-sans text-sm">
+                Active
+              </option>
+              <option value="INACTIVE" className="font-sans text-sm">
+                Inactive
+              </option>
+              <option value="EXPIRED" className="font-sans text-sm">
+                Expired
+              </option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center justify-center pr-3 pointer-events-none text-yellow-700">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M8 9l4 4 4-4"
+                />
+              </svg>
+            </div>
+          </div>
+        )}
+        {/* Delete button: super admin only */}
+        {isSuperAdmin && (
+          <motion.button
+            onClick={handleDeleteClick}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            disabled={isDeleting}
+            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Delete artwork"
+          >
+            <TrashIcon className="h-4 w-4 mr-1.5" />
+            {isDeleting ? "Deleting..." : "Delete"}
+          </motion.button>
+        )}
       </div>
 
       <DeleteConfirmationDialog

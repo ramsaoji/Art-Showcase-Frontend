@@ -102,6 +102,7 @@ export default function Gallery() {
           handleDelete={handleDelete}
           handleResetAllFilters={handleResetAllFilters}
           searchQuery={searchQuery}
+          filters={filters}
         />
       </div>
 

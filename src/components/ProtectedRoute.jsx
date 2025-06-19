@@ -3,8 +3,8 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Loader from "./ui/Loader";
 
-export default function ProtectedRoute({ children }) {
-  const { user, isAdmin, loading } = useAuth();
+export default function ProtectedRoute({ children, requireRole }) {
+  const { user, role, isSuperAdmin, isArtist, loading } = useAuth();
 
   // Show loading state while checking authentication
   if (loading) {
@@ -15,10 +15,14 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  // If not authenticated or not admin, redirect to login
-  if (!user || !isAdmin) {
-    // Save the attempted URL to redirect back after login
+  // If not authenticated, redirect to login
+  if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // If a specific role is required, check it
+  if (requireRole && role !== requireRole) {
+    return <Navigate to="/" replace />;
   }
 
   return children;
