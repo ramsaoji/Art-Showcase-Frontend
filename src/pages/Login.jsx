@@ -77,9 +77,9 @@ export default function Login() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="font-artistic text-4xl sm:text-5xl font-bold text-gray-900 tracking-wide"
+                className="font-artistic text-3xl sm:text-4xl font-bold text-gray-900 tracking-wide"
               >
-                Admin Login
+                Admin/Artist Login
               </motion.h2>
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
