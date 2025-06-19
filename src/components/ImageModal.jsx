@@ -14,6 +14,7 @@ import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { trackArtworkInteraction } from "../services/analytics";
 import Badge from "./Badge";
 import Loader from "./ui/Loader";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ImageModal({
   isOpen,
@@ -26,6 +27,7 @@ export default function ImageModal({
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const { isSuperAdmin, isArtist, user } = useAuth();
 
   // Reset loading and error states when image changes
   useEffect(() => {
@@ -169,7 +171,7 @@ export default function ImageModal({
                 )}
 
                 {/* Badges overlay */}
-                <div className="absolute top-4 right-4 z-30 flex gap-2">
+                <div className="absolute top-4 right-6 z-30 flex gap-2 flex-row items-center">
                   {image?.featured && (
                     <Badge type="featured" variant="overlay">
                       <span className="inline-flex items-center">
@@ -182,6 +184,31 @@ export default function ImageModal({
                     <Badge type="sold" variant="overlay">
                       Sold
                     </Badge>
+                  )}
+                  {/* Status badge: only for logged in artist or super admin */}
+                  {image?.status && (isSuperAdmin || isArtist) && user && (
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold font-sans
+                        ${
+                          image.status === "ACTIVE"
+                            ? "bg-green-100 text-green-700"
+                            : ""
+                        }
+                        ${
+                          image.status === "INACTIVE"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : ""
+                        }
+                        ${
+                          image.status === "EXPIRED"
+                            ? "bg-red-100 text-red-700"
+                            : ""
+                        }
+                      `}
+                    >
+                      {image.status.charAt(0) +
+                        image.status.slice(1).toLowerCase()}
+                    </span>
                   )}
                 </div>
 
@@ -254,7 +281,7 @@ export default function ImageModal({
                       </h3>
                       <div className="relative group inline-block">
                         <p className="font-artistic text-lg text-indigo-600 group-hover:text-indigo-700 transition-colors">
-                          {image?.artist}
+                          {image?.artistName}
                         </p>
                         <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
                       </div>

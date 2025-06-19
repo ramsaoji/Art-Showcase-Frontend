@@ -174,6 +174,16 @@ export default function useGallery() {
     }
   }, [pageData, currentPage]);
 
+  // Memoize navigate and location.search using refs for use inside debounce
+  const navigateRef = useRef(navigate);
+  const locationSearchRef = useRef(location.search);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+  useEffect(() => {
+    locationSearchRef.current = location.search;
+  }, [location.search]);
+
   // Update URL parameters with debouncing to prevent excessive navigation
   const updateURL = useMemo(
     () =>
@@ -192,13 +202,13 @@ export default function useGallery() {
         if (sortBy && sortBy !== "newest") params.set("sortBy", sortBy);
 
         const newSearch = params.toString();
-        const currentSearch = location.search.slice(1);
+        const currentSearch = locationSearchRef.current.slice(1);
 
         if (newSearch !== currentSearch) {
-          navigate(`?${newSearch}`, { replace: true });
+          navigateRef.current(`?${newSearch}`, { replace: true });
         }
       }, 300),
-    [navigate, location.search]
+    [] // Only create once
   );
 
   useEffect(() => {
@@ -459,12 +469,21 @@ export default function useGallery() {
     });
     // Sort alphabetically by artistName
     uniqueArtists.sort((a, b) => a.artistName.localeCompare(b.artistName));
-    setArtists(
-      uniqueArtists.map((a) => ({
-        id: a.id,
-        label: `${a.artistName} (${a.email})`,
-      }))
-    );
+    const newArtists = uniqueArtists.map((a) => ({
+      id: a.id,
+      label: `${a.artistName} (${a.email})`,
+    }));
+    setArtists((prev) => {
+      if (
+        prev.length !== newArtists.length ||
+        prev.some(
+          (a, i) => a.id !== newArtists[i].id || a.label !== newArtists[i].label
+        )
+      ) {
+        return newArtists;
+      }
+      return prev;
+    });
   }, [allArtists, allArtworks]);
 
   return {

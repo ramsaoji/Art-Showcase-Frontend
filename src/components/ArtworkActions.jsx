@@ -137,7 +137,11 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         )}
         {/* Status dropdown: super admin only */}
         {isSuperAdmin && (
-          <div className="relative inline-flex items-center">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative inline-flex items-center"
+          >
             <select
               value={status}
               onChange={handleStatusChange}
@@ -171,7 +175,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
                 />
               </svg>
             </div>
-          </div>
+          </motion.div>
         )}
         {/* Delete button: super admin only */}
         {isSuperAdmin && (

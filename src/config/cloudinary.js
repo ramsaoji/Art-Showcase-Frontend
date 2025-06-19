@@ -113,12 +113,12 @@ export const deleteImage = async (publicId) => {
 
 // Helper function to get optimized image URL with improved settings
 export const getOptimizedImageUrl = (publicId, options = {}) => {
-  const { width, height, quality: qualityValue, format: formatValue } = options;
+  const { width, height, quality: qualityValue } = options;
 
   let imageTransformation = cld
     .image(publicId)
-    .delivery(quality(qualityValue || "auto:good"))
-    .delivery(format(formatValue || "auto"));
+    .delivery(quality(qualityValue || "auto"))
+    .delivery(format("auto"));
 
   // Apply responsive sizing if provided
   if (width) {
@@ -139,7 +139,11 @@ export const getThumbnailUrl = (publicId) => {
 
 // Helper function to get preview URL (medium size, good quality)
 export const getPreviewUrl = (publicId) => {
-  return getOptimizedImageUrl(publicId, { width: 800, quality: "auto:good" });
+  return getOptimizedImageUrl(publicId, {
+    width: 800,
+    quality: "auto:good",
+    format: "jpg",
+  });
 };
 
 // Helper function to get full size URL (high quality)

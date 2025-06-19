@@ -10,11 +10,13 @@ import Alert from "../components/Alert";
 import Badge from "../components/Badge";
 import Loader from "../components/ui/Loader";
 import { trackArtworkView, trackShare } from "../services/analytics";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
   const [showShareToast, setShowShareToast] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const { isSuperAdmin, isArtist, user } = useAuth();
 
   // Use tRPC query to fetch artworks
   const {
@@ -111,8 +113,8 @@ export default function ArtworkDetail() {
                 <div className="relative w-full h-full flex items-center justify-center p-4">
                   <img
                     src={
-                      artwork.public_id
-                        ? getOptimizedImageUrl(artwork.public_id)
+                      artwork.cloudinary_public_id
+                        ? getOptimizedImageUrl(artwork.cloudinary_public_id)
                         : artwork.url
                     }
                     alt={artwork.title}
@@ -121,7 +123,10 @@ export default function ArtworkDetail() {
                     }`}
                     onError={(e) => {
                       console.error("Image failed to load:", e);
-                      if (artwork.public_id && e.target.src !== artwork.url) {
+                      if (
+                        artwork.cloudinary_public_id &&
+                        e.target.src !== artwork.url
+                      ) {
                         e.target.src = artwork.url;
                       } else {
                         setImageError(true);
@@ -132,7 +137,7 @@ export default function ArtworkDetail() {
               )}
 
               {/* Badges overlay */}
-              <div className="absolute top-4 right-4 z-30 flex gap-2">
+              <div className="absolute top-6 right-6 z-30 flex gap-2 flex-row items-center">
                 {artwork.featured && (
                   <Badge type="featured" variant="overlay">
                     <span className="inline-flex items-center">
@@ -145,6 +150,31 @@ export default function ArtworkDetail() {
                   <Badge type="sold" variant="overlay">
                     Sold
                   </Badge>
+                )}
+                {/* Status badge: only for logged in artist or super admin */}
+                {artwork.status && (isSuperAdmin || isArtist) && user && (
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold font-sans
+                      ${
+                        artwork.status === "ACTIVE"
+                          ? "bg-green-100 text-green-700"
+                          : ""
+                      }
+                      ${
+                        artwork.status === "INACTIVE"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : ""
+                      }
+                      ${
+                        artwork.status === "EXPIRED"
+                          ? "bg-red-100 text-red-700"
+                          : ""
+                      }
+                    `}
+                  >
+                    {artwork.status.charAt(0) +
+                      artwork.status.slice(1).toLowerCase()}
+                  </span>
                 )}
               </div>
             </div>
@@ -163,30 +193,6 @@ export default function ArtworkDetail() {
                     <h1 className="text-3xl font-bold text-gray-900">
                       {artwork.title}
                     </h1>
-                    {artwork.status && (
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold
-                        ${
-                          artwork.status === "ACTIVE"
-                            ? "bg-green-100 text-green-700"
-                            : ""
-                        }
-                        ${
-                          artwork.status === "INACTIVE"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : ""
-                        }
-                        ${
-                          artwork.status === "EXPIRED"
-                            ? "bg-red-100 text-red-700"
-                            : ""
-                        }
-                      `}
-                      >
-                        {artwork.status.charAt(0) +
-                          artwork.status.slice(1).toLowerCase()}
-                      </span>
-                    )}
                   </div>
                 </motion.h1>
                 <motion.button
@@ -211,7 +217,7 @@ export default function ArtworkDetail() {
               >
                 <div className="relative group inline-block">
                   <span className="font-artistic text-xl sm:text-2xl text-indigo-600 group-hover:text-indigo-700 transition-colors">
-                    {artwork.artist}
+                    {artwork.artistName}
                   </span>
                   <div className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" />
                 </div>

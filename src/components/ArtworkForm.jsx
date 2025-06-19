@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
-import { deleteImage } from "../config/cloudinary"; // Add this import
+import { deleteImage, getPreviewUrl } from "../config/cloudinary"; // Add this import
 import { useAuth } from "../contexts/AuthContext";
 import { trpc } from "../utils/trpc";
 import { useMonthlyUploadCount } from "../utils/trpc";
@@ -76,8 +76,16 @@ export default function ArtworkForm({
     return { width: "", height: "" };
   });
 
+  // Set up image preview: always use Cloudinary preview if public_id exists, else fallback to url
+  const getInitialImagePreview = () => {
+    if (initialData?.cloudinary_public_id)
+      return getPreviewUrl(initialData.cloudinary_public_id);
+    if (initialData?.url) return initialData.url;
+    return null;
+  };
+
   const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(initialData?.url || null);
+  const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
   const [imageRemoved, setImageRemoved] = useState(false); // Track if image was intentionally removed
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -85,6 +93,13 @@ export default function ArtworkForm({
   const [currentStep, setCurrentStep] = useState(null);
   const [imageError, setImageError] = useState("");
   const [status, setStatus] = useState(initialData?.status || "ACTIVE");
+
+  // Debug: Log initialData and imagePreview
+  useEffect(() => {
+    console.log("ArtworkForm initialData:", initialData);
+    console.log("ArtworkForm imagePreview:", getInitialImagePreview());
+    console.log("ArtworkForm imagePreview state:", imagePreview);
+  }, [initialData]);
 
   // Predefined options for materials and styles
   const materialOptions = [
