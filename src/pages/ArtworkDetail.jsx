@@ -17,7 +17,7 @@ export default function ArtworkDetail() {
   const [showShareToast, setShowShareToast] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { isSuperAdmin, isArtist, user } = useAuth();
-  const [imageLoading, setImageLoading] = useState(true);
+  // const [imageLoading, setImageLoading] = useState(true);
   const [highQualityLoaded, setHighQualityLoaded] = useState(false);
 
   // Use tRPC query to fetch artworks
@@ -123,11 +123,11 @@ export default function ArtworkDetail() {
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center p-4">
                   {/* Loader overlay while loading */}
-                  {imageLoading && (
+                  {/* {imageLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
                       <Loader size="large" />
                     </div>
-                  )}
+                  )} */}
                   {/* Blurred preview image */}
                   {artwork.cloudinary_public_id &&
                     !highQualityLoaded &&
@@ -154,7 +154,7 @@ export default function ArtworkDetail() {
                     } ${highQualityLoaded ? "opacity-100" : "opacity-0"}`}
                     onLoad={() => {
                       setHighQualityLoaded(true);
-                      setImageLoading(false);
+                      // setImageLoading(false);
                     }}
                     onError={(e) => {
                       console.error("Image failed to load:", e);
@@ -165,7 +165,7 @@ export default function ArtworkDetail() {
                         e.target.src = artwork.url;
                       } else {
                         setImageError(true);
-                        setImageLoading(false);
+                        // setImageLoading(false);
                       }
                     }}
                     style={{
