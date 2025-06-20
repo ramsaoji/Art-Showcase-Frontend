@@ -19,7 +19,7 @@ export default function Signup() {
 
   const registerMutation = trpc.user.register.useMutation({
     onSuccess: () => {
-      setSuccess("Registration successful! You can now log in.");
+      setSuccess("Registration successful! Log in now.");
       setTimeout(() => navigate("/login"), 1500);
     },
     onError: (err) => {

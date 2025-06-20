@@ -22,6 +22,22 @@ export default function Gallery() {
     isCardsLoading,
     isError,
     error,
+    styles,
+    isArtistsLoading,
+    isMaterialsLoading,
+    isStylesLoading,
+    hasMoreArtists,
+    hasMoreMaterials,
+    hasMoreStyles,
+    handleArtistSearch,
+    handleMaterialSearch,
+    handleStyleSearch,
+    loadMoreArtists,
+    loadMoreMaterials,
+    loadMoreStyles,
+    artistSearch,
+    materialSearch,
+    styleSearch,
 
     // Handlers
     setSelectedImage,
@@ -84,11 +100,27 @@ export default function Gallery() {
           sortBy={sortBy}
           materials={materials}
           artists={artists}
+          styles={styles}
           handleFilterChange={handleFilterChange}
           handleSortChange={handleSortChange}
           handleResetAllFilters={handleResetAllFilters}
           isMobileFiltersOpen={isMobileFiltersOpen}
           setIsMobileFiltersOpen={setIsMobileFiltersOpen}
+          isArtistsLoading={isArtistsLoading}
+          isMaterialsLoading={isMaterialsLoading}
+          isStylesLoading={isStylesLoading}
+          hasMoreArtists={hasMoreArtists}
+          hasMoreMaterials={hasMoreMaterials}
+          hasMoreStyles={hasMoreStyles}
+          handleArtistSearch={handleArtistSearch}
+          handleMaterialSearch={handleMaterialSearch}
+          handleStyleSearch={handleStyleSearch}
+          loadMoreArtists={loadMoreArtists}
+          loadMoreMaterials={loadMoreMaterials}
+          loadMoreStyles={loadMoreStyles}
+          artistSearch={artistSearch}
+          materialSearch={materialSearch}
+          styleSearch={styleSearch}
         />
 
         {/* Gallery Grid with Artworks */}

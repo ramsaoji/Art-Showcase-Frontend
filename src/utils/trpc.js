@@ -24,3 +24,18 @@ export const trpcClient = trpc.createClient({
 export function useMonthlyUploadCount() {
   return trpc.useQuery(["artwork.getMonthlyUploadCount"]);
 }
+
+// Artists search (infinite scroll, search)
+export function useArtistsSearch(params) {
+  return trpc.user.listArtistsPublic.useQuery(params);
+}
+
+// Materials search (infinite scroll, search)
+export function useMaterialsSearch(params) {
+  return trpc.artwork.getMaterials.useQuery(params);
+}
+
+// Styles search (infinite scroll, search)
+export function useStylesSearch(params) {
+  return trpc.artwork.getStyles.useQuery(params);
+}

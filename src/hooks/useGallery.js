@@ -7,6 +7,11 @@ import {
   trackUserAction,
 } from "../services/analytics";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  useArtistsSearch,
+  useMaterialsSearch,
+  useStylesSearch,
+} from "../utils/trpc";
 
 export default function useGallery() {
   const location = useLocation();
@@ -23,10 +28,11 @@ export default function useGallery() {
     const params = new URLSearchParams(location.search);
     return {
       material: params.get("material") || "all",
-      artist: params.get("artist") || "all", // Added artist filter
+      artist: params.get("artist") || "all",
       availability: params.get("availability") || "all",
       featured: params.get("featured") || "all",
-      status: params.get("status") || "all", // Add status filter
+      status: params.get("status") || "all",
+      style: params.get("style") || "all", // Ensure style is always present
     };
   });
 
@@ -108,6 +114,7 @@ export default function useGallery() {
       availability: filters.availability,
       featured: filters.featured,
       status: filters.status, // Ensure status is sent to backend
+      style: filters.style, // <-- add style to query input
       sortBy,
       page: currentPage,
       limit: ITEMS_PER_PAGE,
@@ -319,10 +326,11 @@ export default function useGallery() {
     setSortBy("newest");
     setFilters({
       material: "all",
-      artist: "all", // Added artist reset
+      artist: "all",
       availability: "all",
       featured: "all",
-      status: "all", // Reset status
+      status: "all",
+      style: "all", // Reset style as well
     });
   }, [debouncedSearch]);
 
@@ -438,56 +446,6 @@ export default function useGallery() {
     artists,
   ]);
 
-  // Fetch all artists from backend for filter dropdown
-  const { data: allArtists = [] } = trpc.user.listArtistsPublic.useQuery(
-    undefined,
-    {
-      staleTime: 60000,
-      refetchOnWindowFocus: false,
-    }
-  );
-  useEffect(() => {
-    // Artists from backend (user table)
-    const backendArtists = allArtists
-      .map((artist) => ({
-        id: artist.id,
-        artistName: artist.artistName?.trim() || "",
-        email: artist.email?.trim() || "",
-      }))
-      .filter((a) => a.id && a.artistName && a.email);
-    const artworkArtists = allArtworks
-      .map((art) => ({
-        id: art.userId,
-        artistName: art.artistName?.trim() || art.artist?.trim() || "",
-        email: art.artistEmail?.trim() || art.email?.trim() || "",
-      }))
-      .filter((a) => a.id && a.artistName && a.email);
-    // Merge and deduplicate by id
-    const seen = new Set();
-    const uniqueArtists = [...backendArtists, ...artworkArtists].filter((a) => {
-      if (seen.has(a.id)) return false;
-      seen.add(a.id);
-      return true;
-    });
-    // Sort alphabetically by artistName
-    uniqueArtists.sort((a, b) => a.artistName.localeCompare(b.artistName));
-    const newArtists = uniqueArtists.map((a) => ({
-      id: a.id,
-      label: `${a.artistName} (${a.email})`,
-    }));
-    setArtists((prev) => {
-      if (
-        prev.length !== newArtists.length ||
-        prev.some(
-          (a, i) => a.id !== newArtists[i].id || a.label !== newArtists[i].label
-        )
-      ) {
-        return newArtists;
-      }
-      return prev;
-    });
-  }, [allArtists, allArtworks]);
-
   // Auto-apply artist filter for logged-in artists only once
   const didAutoApplyArtistFilter = useRef(false);
   useEffect(() => {
@@ -505,6 +463,152 @@ export default function useGallery() {
       didAutoApplyArtistFilter.current = false;
     }
   }, [isArtist, user, filters.artist]);
+
+  // --- Artists Filter State ---
+  const [artistSearch, setArtistSearch] = useState("");
+  const [artistPage, setArtistPage] = useState(1);
+  const [artistResults, setArtistResults] = useState([]);
+  const prevArtistSearch = useRef("");
+  // Clear results only when search string changes
+  useEffect(() => {
+    if (prevArtistSearch.current !== artistSearch) {
+      setArtistResults([]);
+      setArtistPage(1);
+      prevArtistSearch.current = artistSearch;
+    }
+    // eslint-disable-next-line
+  }, [artistSearch]);
+  // Append new items or replace only on first page
+  const {
+    data: artistData,
+    isLoading: isArtistsLoading,
+    isFetching: isArtistsFetching,
+  } = useArtistsSearch({ search: artistSearch, limit: 12, page: artistPage });
+  useEffect(() => {
+    if (artistData) {
+      const newArtists = artistData.artists.map((a) => ({
+        id: a.id,
+        label: `${a.artistName} (${a.email})`,
+      }));
+      setArtistResults((prev) => {
+        if (artistPage === 1) return newArtists;
+        const existingIds = new Set(prev.map((a) => a.id));
+        const uniqueNew = newArtists.filter((a) => !existingIds.has(a.id));
+        return [...prev, ...uniqueNew];
+      });
+    }
+    // eslint-disable-next-line
+  }, [artistData, artistPage]);
+  const hasMoreArtists = artistData?.hasMore;
+  const handleArtistSearch = (q) => {
+    if (q !== artistSearch) {
+      setArtistSearch(q);
+      setArtistPage(1);
+    }
+  };
+  const loadMoreArtists = () => {
+    if (hasMoreArtists && !isArtistsFetching) setArtistPage((p) => p + 1);
+  };
+
+  // --- Materials Filter State ---
+  const [materialSearch, setMaterialSearch] = useState("");
+  const [materialPage, setMaterialPage] = useState(1);
+  const [materialResults, setMaterialResults] = useState([]);
+  const prevMaterialSearch = useRef("");
+  // Clear results only when search string changes
+  useEffect(() => {
+    if (prevMaterialSearch.current !== materialSearch) {
+      setMaterialResults([]);
+      setMaterialPage(1);
+      prevMaterialSearch.current = materialSearch;
+    }
+    // eslint-disable-next-line
+  }, [materialSearch]);
+  // Append new items or replace only on first page
+  const {
+    data: materialData,
+    isLoading: isMaterialsLoading,
+    isFetching: isMaterialsFetching,
+  } = useMaterialsSearch({
+    search: materialSearch,
+    limit: 12,
+    page: materialPage,
+  });
+  useEffect(() => {
+    if (materialData) {
+      const newMaterials = materialData.items.map((m) => ({
+        id: m,
+        label: m,
+      }));
+      setMaterialResults((prev) => {
+        if (materialPage === 1) return newMaterials;
+        const existingIds = new Set(prev.map((m) => m.id));
+        const uniqueNew = newMaterials.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...uniqueNew];
+      });
+    }
+    // eslint-disable-next-line
+  }, [materialData, materialPage]);
+  const hasMoreMaterials = materialData?.hasMore;
+  const handleMaterialSearch = (q) => {
+    if (q !== materialSearch) {
+      setMaterialSearch(q);
+      setMaterialPage(1);
+    }
+  };
+  const loadMoreMaterials = () => {
+    if (hasMoreMaterials && !isMaterialsFetching) {
+      setMaterialPage((p) => p + 1);
+    }
+  };
+
+  // --- Styles Filter State ---
+  const [styleSearch, setStyleSearch] = useState("");
+  const [stylePage, setStylePage] = useState(1);
+  const [styleResults, setStyleResults] = useState([]);
+  const prevStyleSearch = useRef("");
+  // Clear results only when search string changes
+  useEffect(() => {
+    if (prevStyleSearch.current !== styleSearch) {
+      setStyleResults([]);
+      setStylePage(1);
+      prevStyleSearch.current = styleSearch;
+    }
+    // eslint-disable-next-line
+  }, [styleSearch]);
+  // Append new items or replace only on first page
+  const {
+    data: styleData,
+    isLoading: isStylesLoading,
+    isFetching: isStylesFetching,
+  } = useStylesSearch({ search: styleSearch, limit: 12, page: stylePage });
+  useEffect(() => {
+    if (styleData) {
+      const newStyles = styleData.items.map((s) => ({
+        id: s,
+        label: s,
+      }));
+      setStyleResults((prev) => {
+        if (stylePage === 1) return newStyles;
+        const existingIds = new Set(prev.map((s) => s.id));
+        const uniqueNew = newStyles.filter((s) => !existingIds.has(s.id));
+        return [...prev, ...uniqueNew];
+      });
+    }
+    // eslint-disable-next-line
+  }, [styleData, stylePage]);
+  const hasMoreStyles = styleData?.hasMore;
+  const handleStyleSearch = (q) => {
+    if (q !== styleSearch) {
+      setStyleSearch(q);
+      setStylePage(1);
+    }
+  };
+  const loadMoreStyles = () => {
+    if (hasMoreStyles && !isStylesFetching) {
+      setStylePage((p) => p + 1);
+    }
+  };
 
   return {
     // State
@@ -538,5 +642,22 @@ export default function useGallery() {
     handleManualRefetch,
     loadMore,
     getActiveFilters, // Added helper function
+
+    // Replace materials/artists with new paginated/searchable state
+    artists: Array.isArray(artistResults) ? artistResults : [],
+    materials: Array.isArray(materialResults) ? materialResults : [],
+    styles: Array.isArray(styleResults) ? styleResults : [],
+    isArtistsLoading,
+    isMaterialsLoading,
+    isStylesLoading,
+    hasMoreArtists,
+    hasMoreMaterials,
+    hasMoreStyles,
+    handleArtistSearch,
+    handleMaterialSearch,
+    handleStyleSearch,
+    loadMoreArtists,
+    loadMoreMaterials,
+    loadMoreStyles,
   };
 }

@@ -140,40 +140,42 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative inline-flex items-center"
+            className="relative inline-flex items-center align-middle"
           >
-            <select
-              value={status}
-              onChange={handleStatusChange}
-              disabled={isStatusUpdating}
-              className="appearance-none w-full inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-10 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
-              title="Change artwork status"
-            >
-              <option value="ACTIVE" className="font-sans text-sm">
-                Active
-              </option>
-              <option value="INACTIVE" className="font-sans text-sm">
-                Inactive
-              </option>
-              <option value="EXPIRED" className="font-sans text-sm">
-                Expired
-              </option>
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center justify-center pr-3 pointer-events-none text-yellow-700">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+            <div className="relative flex items-center">
+              <select
+                value={status}
+                onChange={handleStatusChange}
+                disabled={isStatusUpdating}
+                className="appearance-none h-10 flex items-center px-4 pr-10 text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
+                title="Change artwork status"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 9l4 4 4-4"
-                />
-              </svg>
+                <option value="ACTIVE" className="font-sans text-sm">
+                  Active
+                </option>
+                <option value="INACTIVE" className="font-sans text-sm">
+                  Inactive
+                </option>
+                <option value="EXPIRED" className="font-sans text-sm">
+                  Expired
+                </option>
+              </select>
+              <span className="pointer-events-none absolute right-3 top-[55%] -translate-y-1/2 flex items-center text-yellow-700">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 9l4 4 4-4"
+                  />
+                </svg>
+              </span>
             </div>
           </motion.div>
         )}
