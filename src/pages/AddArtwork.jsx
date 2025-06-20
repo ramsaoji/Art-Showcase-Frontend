@@ -18,7 +18,9 @@ export default function AddArtwork() {
     { enabled: isSuperAdmin }
   );
 
-  const artists = data?.users?.filter((u) => u.role === "ARTIST") || [];
+  const artists = (
+    data?.users?.filter((u) => u.role === "ARTIST") || []
+  ).filter((a) => a.approved && a.active);
 
   // Find the selected artist object (for super admin)
   const selectedArtist =
@@ -47,6 +49,12 @@ export default function AddArtwork() {
   const handleSubmit = async (formData) => {
     try {
       setError(null); // Clear previous errors
+
+      // Validate artistId before uploading image
+      if (isSuperAdmin && !artistId) {
+        setError("Artist is required when adding on behalf of an artist.");
+        return;
+      }
 
       // Handle image upload (keep this on client side)
       const imageFile = formData.get("image");

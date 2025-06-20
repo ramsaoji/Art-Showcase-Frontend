@@ -147,7 +147,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
                 value={status}
                 onChange={handleStatusChange}
                 disabled={isStatusUpdating}
-                className="appearance-none h-10 flex items-center px-4 pr-10 text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
+                className="appearance-none inline-flex min-w-[90px] items-center px-3 sm:px-4 py-1.5 sm:py-2 pr-6 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
                 title="Change artwork status"
               >
                 <option value="ACTIVE" className="font-sans text-sm">
@@ -160,19 +160,18 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
                   Expired
                 </option>
               </select>
-              <span className="pointer-events-none absolute right-3 top-[55%] -translate-y-1/2 flex items-center text-yellow-700">
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-yellow-700">
                 <svg
-                  className="w-6 h-6"
+                  className="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
+                  strokeWidth="2"
                   viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 9l4 4 4-4"
+                    d="M19 9l-7 7-7-7"
                   />
                 </svg>
               </span>

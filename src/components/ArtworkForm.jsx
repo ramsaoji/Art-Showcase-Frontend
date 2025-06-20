@@ -308,8 +308,19 @@ export default function ArtworkForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate artistId for super admin (add mode only)
+    if (isSuperAdmin && !initialData && !artistId) {
+      setImageError("Please select an artist before saving.");
+      return;
+    }
+
     // Validate image requirement
     const hasImage = imageFile || (initialData?.url && !imageRemoved);
+    // If imagePreview is a DataURL and imageFile is null, block submission
+    if (!hasImage && imagePreview && !imageFile) {
+      setImageError("Please re-upload the image before saving.");
+      return;
+    }
     if (!hasImage) {
       setImageError("Please select an image for the artwork");
       return;
@@ -648,8 +659,8 @@ export default function ArtworkForm({
 
       {/* Form Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {/* Artist Selection - Only for Super Admin */}
-        {isSuperAdmin && (
+        {/* Artist Selection - Only for Super Admin and only in Add mode */}
+        {isSuperAdmin && !initialData && (
           <div className="col-span-2">
             <label
               htmlFor="artistSelect"
@@ -674,15 +685,17 @@ export default function ArtworkForm({
                     Select an artist
                   </option>
                   {artists &&
-                    artists.map((artist) => (
-                      <option
-                        key={artist.id}
-                        value={artist.id}
-                        className="font-sans"
-                      >
-                        {artist.artistName || artist.email} ({artist.email})
-                      </option>
-                    ))}
+                    artists
+                      .filter((artist) => artist.approved && artist.active)
+                      .map((artist) => (
+                        <option
+                          key={artist.id}
+                          value={artist.id}
+                          className="font-sans"
+                        >
+                          {artist.artistName || artist.email} ({artist.email})
+                        </option>
+                      ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   <svg

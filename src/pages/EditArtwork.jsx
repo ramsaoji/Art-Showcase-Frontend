@@ -52,11 +52,12 @@ export default function EditArtwork() {
   });
 
   // Fetch all artists for admin (for super admin to edit monthly limit)
-  const { data: artists = [], isLoading: loadingArtists } =
+  const { data: artistsRaw = [], isLoading: loadingArtists } =
     trpc.user.listUsers.useQuery(undefined, {
       enabled: isSuperAdmin,
       select: (users) => users.filter((u) => u.role === "ARTIST"),
     });
+  const artists = artistsRaw.filter((a) => a.approved && a.active);
 
   // Handle case where artwork is not found
   useEffect(() => {

@@ -22,6 +22,10 @@ export default function Signup() {
       setSuccess(
         "Registration successful! Your account is pending approval by a admin."
       );
+      setArtistName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
     },
     onError: (err) => {
       setError(err.message || "Registration failed");
