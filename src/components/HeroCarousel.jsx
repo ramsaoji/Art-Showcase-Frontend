@@ -124,7 +124,7 @@ export default function HeroCarousel() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
+      <div className="min-h-[80vh] sm:min-h-[calc(100vh-5rem)] flex items-center justify-center">
         <Loader size="large" />
       </div>
     );

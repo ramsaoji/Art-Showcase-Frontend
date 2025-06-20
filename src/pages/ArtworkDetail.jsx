@@ -4,7 +4,7 @@ import { trpc } from "../utils/trpc";
 import { ShareIcon, PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { getOptimizedImageUrl } from "../config/cloudinary";
+import { getOptimizedImageUrl, getPreviewUrl } from "../config/cloudinary";
 import { formatPrice } from "../utils/formatters";
 import Alert from "../components/Alert";
 import Badge from "../components/Badge";
@@ -17,6 +17,8 @@ export default function ArtworkDetail() {
   const [showShareToast, setShowShareToast] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { isSuperAdmin, isArtist, user } = useAuth();
+  const [imageLoading, setImageLoading] = useState(true);
+  const [highQualityLoaded, setHighQualityLoaded] = useState(false);
 
   // Use tRPC query to fetch artworks
   const {
@@ -120,6 +122,26 @@ export default function ArtworkDetail() {
                 </div>
               ) : (
                 <div className="relative w-full h-full flex items-center justify-center p-4">
+                  {/* Loader overlay while loading */}
+                  {imageLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
+                      <Loader size="large" />
+                    </div>
+                  )}
+                  {/* Blurred preview image */}
+                  {artwork.cloudinary_public_id &&
+                    !highQualityLoaded &&
+                    !imageError && (
+                      <img
+                        src={getPreviewUrl(artwork.cloudinary_public_id)}
+                        alt={artwork.title}
+                        className={`max-w-full max-h-full object-contain blur-md transition-opacity duration-300 absolute inset-0 w-full h-full ${
+                          highQualityLoaded ? "opacity-0" : "opacity-80"
+                        }`}
+                        style={{ zIndex: 1 }}
+                      />
+                    )}
+                  {/* High quality image */}
                   <img
                     src={
                       artwork.cloudinary_public_id
@@ -127,9 +149,13 @@ export default function ArtworkDetail() {
                         : artwork.url
                     }
                     alt={artwork.title}
-                    className={`max-w-full max-h-full object-contain ${
+                    className={`max-w-full max-h-full object-contain transition-opacity duration-500 ${
                       artwork.sold ? "opacity-90" : ""
-                    }`}
+                    } ${highQualityLoaded ? "opacity-100" : "opacity-0"}`}
+                    onLoad={() => {
+                      setHighQualityLoaded(true);
+                      setImageLoading(false);
+                    }}
                     onError={(e) => {
                       console.error("Image failed to load:", e);
                       if (
@@ -139,7 +165,12 @@ export default function ArtworkDetail() {
                         e.target.src = artwork.url;
                       } else {
                         setImageError(true);
+                        setImageLoading(false);
                       }
+                    }}
+                    style={{
+                      zIndex: 2,
+                      display: imageError ? "none" : "block",
                     }}
                   />
                 </div>
