@@ -27,7 +27,7 @@ export default function Login() {
   useEffect(() => {
     if (user) {
       if (isSuperAdmin) {
-        const from = location.state?.from?.pathname || "/add-artwork";
+        const from = location.state?.from?.pathname || "/gallery";
         navigate(from, { replace: true });
       } else if (isArtist) {
         const from = location.state?.from?.pathname || "/gallery";

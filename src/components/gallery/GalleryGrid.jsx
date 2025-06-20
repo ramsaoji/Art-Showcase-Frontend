@@ -25,13 +25,16 @@ export default function GalleryGrid({
     : isArtist && user
     ? allArtworks.filter(
         (art) =>
-          art.status === "ACTIVE" ||
-          (art.userId === user.id && art.status !== "DELETED")
+          // For own artworks, apply status filter if set
+          (art.userId === user.id &&
+            (filters.status === "all" || art.status === filters.status)) ||
+          // For others' artworks, only show ACTIVE
+          (art.userId !== user.id && art.status === "ACTIVE")
       )
     : allArtworks.filter((art) => art.status === "ACTIVE");
 
-  // Apply status filter if not 'all'
-  if (filters.status && filters.status !== "all") {
+  // For super admin, apply status filter if not 'all'
+  if (isSuperAdmin && filters.status && filters.status !== "all") {
     filteredArtworks = filteredArtworks.filter(
       (art) => art.status === filters.status
     );

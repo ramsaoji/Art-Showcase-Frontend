@@ -826,7 +826,7 @@ export default function ArtworkForm({
         </div>
 
         {/* Year */}
-        <div className="col-span-2 sm:col-span-1">
+        <div className="col-span-2">
           <label
             htmlFor="year"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
@@ -891,7 +891,7 @@ export default function ArtworkForm({
         )}
 
         {/* Super Admin: Set monthly upload limit for selected artist */}
-        {isSuperAdmin && selectedArtist && (
+        {isSuperAdmin && (
           <div className="mb-4 col-span-2 sm:col-span-1">
             <label
               htmlFor="monthlyUploadLimit"
@@ -903,15 +903,16 @@ export default function ArtworkForm({
               type="number"
               id="monthlyUploadLimit"
               name="monthlyUploadLimit"
+              placeholder="Default is 10. Leave blank or set to 10 for standard limit."
               min={1}
               max={1000}
               value={formData.monthlyUploadLimit}
               onChange={handleMonthlyLimitChange}
               className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            {/* <p className="text-xs text-gray-500 mt-1">
               Default is 10. Leave blank or set to 10 for standard limit.
-            </p>
+            </p> */}
           </div>
         )}
 

@@ -23,7 +23,7 @@ export default function ArtworkCard({
   const cardRef = useRef(null);
   const imageRef = useRef(null);
   const descriptionRef = useRef(null);
-  const { isSuperAdmin, isArtist } = useAuth();
+  const { isSuperAdmin, isArtist, user } = useAuth();
 
   // Use our custom hook for optimized image loading
   const {
@@ -109,7 +109,14 @@ export default function ArtworkCard({
     ...artwork,
   };
 
-  const isPrivileged = isSuperAdmin || isArtist;
+  // Determine if the current user is the owner (artist) of this artwork
+  const isOwner = user && artwork.userId && user.id === artwork.userId;
+
+  // Status badge visibility logic
+  const canSeeStatusBadge =
+    isSuperAdmin ||
+    (isArtist && isOwner) ||
+    (artwork.status && artwork.status !== "ACTIVE");
 
   return (
     <motion.div
@@ -139,25 +146,23 @@ export default function ArtworkCard({
       </div>
 
       {/* Add status badge */}
-      {artwork.status && (
+      {artwork.status && canSeeStatusBadge && (
         <div className="absolute top-4 right-4 z-10">
-          {(artwork.status !== "ACTIVE" || isPrivileged) && (
-            <Badge
-              type={
-                artwork.status === "ACTIVE"
-                  ? "active"
-                  : artwork.status === "INACTIVE"
-                  ? "inactive"
-                  : artwork.status === "EXPIRED"
-                  ? "expired"
-                  : "default"
-              }
-              animate
-              withPing
-            >
-              {artwork.status.charAt(0) + artwork.status.slice(1).toLowerCase()}
-            </Badge>
-          )}
+          <Badge
+            type={
+              artwork.status === "ACTIVE"
+                ? "active"
+                : artwork.status === "INACTIVE"
+                ? "inactive"
+                : artwork.status === "EXPIRED"
+                ? "expired"
+                : "default"
+            }
+            animate
+            withPing
+          >
+            {artwork.status.charAt(0) + artwork.status.slice(1).toLowerCase()}
+          </Badge>
         </div>
       )}
 
@@ -247,12 +252,12 @@ export default function ArtworkCard({
       {/* Content */}
       <div
         className={`relative p-6 flex-grow bg-white overflow-auto ${
-          !isPrivileged && "rounded-b-2xl"
+          !isSuperAdmin && "rounded-b-2xl"
         }`}
       >
         <div
           className={`absolute inset-0 bg-gradient-to-b from-indigo-50/50 via-white to-white pointer-events-none ${
-            !isPrivileged && "rounded-b-2xl"
+            !isSuperAdmin && "rounded-b-2xl"
           }`}
         />
         <div className="relative h-full flex flex-col">
@@ -355,7 +360,7 @@ export default function ArtworkCard({
       </div>
 
       {/* Action Buttons - Fixed position at bottom */}
-      {isPrivileged && (
+      {(isSuperAdmin || (isArtist && isOwner)) && (
         <div className="p-4 sm:p-6 border-t border-gray-100 flex-shrink-0 bg-white rounded-b-2xl">
           <div className="flex justify-center sm:justify-end">
             <ArtworkActions

@@ -6,11 +6,13 @@ import {
   trackArtworkInteraction,
   trackUserAction,
 } from "../services/analytics";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function useGallery() {
   const location = useLocation();
   const navigate = useNavigate();
   const initialized = useRef(false);
+  const { isArtist, user } = useAuth();
 
   // State management
   const [sortBy, setSortBy] = useState(() => {
@@ -485,6 +487,24 @@ export default function useGallery() {
       return prev;
     });
   }, [allArtists, allArtworks]);
+
+  // Auto-apply artist filter for logged-in artists only once
+  const didAutoApplyArtistFilter = useRef(false);
+  useEffect(() => {
+    if (
+      isArtist &&
+      user &&
+      filters.artist === "all" &&
+      !didAutoApplyArtistFilter.current
+    ) {
+      setFilters((prev) => ({ ...prev, artist: user.id }));
+      didAutoApplyArtistFilter.current = true;
+    }
+    // Reset the flag if user logs out or changes
+    if ((!isArtist || !user) && didAutoApplyArtistFilter.current) {
+      didAutoApplyArtistFilter.current = false;
+    }
+  }, [isArtist, user, filters.artist]);
 
   return {
     // State

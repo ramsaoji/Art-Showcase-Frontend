@@ -55,6 +55,15 @@ export default function ArtworkDetail() {
     }
   };
 
+  // Determine if the current user is the owner (artist) of this artwork
+  const isOwner = user && artwork?.userId && user.id === artwork.userId;
+
+  // Status badge visibility logic
+  const canSeeStatusBadge =
+    isSuperAdmin ||
+    (isArtist && isOwner) ||
+    (artwork?.status && artwork.status !== "ACTIVE");
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -151,8 +160,8 @@ export default function ArtworkDetail() {
                     Sold
                   </Badge>
                 )}
-                {/* Status badge: only for logged in artist or super admin */}
-                {artwork.status && (isSuperAdmin || isArtist) && user && (
+                {/* Status badge: only for allowed users */}
+                {artwork.status && canSeeStatusBadge && (
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold font-sans
                       ${

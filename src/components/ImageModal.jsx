@@ -94,6 +94,15 @@ export default function ImageModal({
     }
   }, [isOpen, image]);
 
+  // Determine if the current user is the owner (artist) of this artwork
+  const isOwner = user && image?.userId && user.id === image.userId;
+
+  // Status badge visibility logic
+  const canSeeStatusBadge =
+    isSuperAdmin ||
+    (isArtist && isOwner) ||
+    (image?.status && image.status !== "ACTIVE");
+
   return (
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="fixed inset-0 z-50" onClose={onClose}>
@@ -185,8 +194,8 @@ export default function ImageModal({
                       Sold
                     </Badge>
                   )}
-                  {/* Status badge: only for logged in artist or super admin */}
-                  {image?.status && (isSuperAdmin || isArtist) && user && (
+                  {/* Status badge: only for allowed users */}
+                  {image?.status && canSeeStatusBadge && (
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-bold font-sans
                         ${
