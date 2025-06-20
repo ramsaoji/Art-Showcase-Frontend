@@ -10,6 +10,12 @@ export default function DeleteConfirmationDialog({
   title,
   isDeleting,
 }) {
+  // Determine if this is for artwork or artist
+  const isArtwork = title && title.toLowerCase().includes("artwork");
+  const description = isArtwork
+    ? "Are you sure you want to delete this artwork? This action cannot be undone."
+    : "Are you sure you want to delete this artist? This action cannot be undone.";
+  const buttonText = isArtwork ? "Delete Artwork" : "Delete Artist";
   return (
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -53,8 +59,7 @@ export default function DeleteConfirmationDialog({
                     </Dialog.Title>
                     <div className="mt-3">
                       <p className="text-base font-sans text-gray-600">
-                        Are you sure you want to delete this artwork? This
-                        action cannot be undone.
+                        {description}
                       </p>
                     </div>
                   </div>
@@ -110,7 +115,7 @@ export default function DeleteConfirmationDialog({
                         Deleting...
                       </>
                     ) : (
-                      "Delete Artwork"
+                      buttonText
                     )}
                   </motion.button>
                   <motion.button

@@ -13,11 +13,12 @@ export default function AddArtwork() {
   const [artistId, setArtistId] = useState("");
 
   // Fetch all artists for admin
-  const { data: artists = [], isLoading: loadingArtists } =
-    trpc.user.listUsers.useQuery(undefined, {
-      enabled: isSuperAdmin,
-      select: (users) => users.filter((u) => u.role === "ARTIST"),
-    });
+  const { data, isLoading: loadingArtists } = trpc.user.listUsers.useQuery(
+    undefined,
+    { enabled: isSuperAdmin }
+  );
+
+  const artists = data?.users?.filter((u) => u.role === "ARTIST") || [];
 
   // Find the selected artist object (for super admin)
   const selectedArtist =

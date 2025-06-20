@@ -16,6 +16,7 @@ const EditArtwork = lazy(() => import("./pages/EditArtwork"));
 const Login = lazy(() => import("./pages/Login"));
 const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
 const Signup = lazy(() => import("./pages/Signup"));
+const ArtistApprovals = lazy(() => import("./pages/admin/ArtistApprovals"));
 
 // Analytics wrapper component
 function AnalyticsWrapper({ children }) {
@@ -117,6 +118,16 @@ function App() {
                     <ProtectedRoute>
                       <EditArtwork />
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ProtectedRoute superAdminOnly>
+                        <ArtistApprovals />
+                      </ProtectedRoute>
+                    </Suspense>
                   }
                 />
               </Route>

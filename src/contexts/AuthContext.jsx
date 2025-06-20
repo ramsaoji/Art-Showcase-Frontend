@@ -67,7 +67,26 @@ export function AuthProvider({ children }) {
       setUser(res.user);
       return res.user;
     } catch (err) {
-      setError(err.message || "Login failed");
+      // Parse error message if it's a JSON string (validation error)
+      let errorMessage = err.message || "Login failed";
+      try {
+        // Check if the error message is a JSON string
+        if (errorMessage.startsWith("[") && errorMessage.includes("code")) {
+          const parsedError = JSON.parse(errorMessage);
+          // Handle validation errors
+          if (
+            parsedError[0]?.code === "too_small" &&
+            parsedError[0]?.path?.includes("password")
+          ) {
+            errorMessage = `Password must contain at least ${parsedError[0].minimum} characters`;
+          }
+        }
+      } catch (parseError) {
+        // If parsing fails, use the original error message
+        console.error("Error parsing error message:", parseError);
+      }
+
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -79,6 +98,9 @@ export function AuthProvider({ children }) {
     saveToken(null);
     setUser(null);
   }, []);
+
+  // Clear error function for external use
+  const clearError = useCallback(() => setError(null), []);
 
   // Role helpers
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
@@ -93,12 +115,9 @@ export function AuthProvider({ children }) {
     logout,
     loading,
     error,
+    clearError,
     token,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

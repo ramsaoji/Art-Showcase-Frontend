@@ -51,7 +51,7 @@ export default function Alert({
 
   const AlertContent = () => (
     <div
-      className={`flex items-start gap-3 p-4 rounded-xl border backdrop-blur-sm ${style.bg} ${style.border} ${style.text} ${className}`}
+      className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm ${style.bg} ${style.border} ${style.text} ${className}`}
     >
       {showIcon && (
         <Icon className={`h-5 w-5 flex-shrink-0 ${style.iconColor}`} />

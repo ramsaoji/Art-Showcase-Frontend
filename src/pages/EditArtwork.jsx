@@ -179,21 +179,47 @@ export default function EditArtwork() {
       : null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">Edit Artwork</h1>
-        <ArtworkForm
-          initialData={artwork}
-          onSubmit={handleSubmit}
-          isLoading={updateArtworkMutation.isLoading}
-          submitLabel="Update Artwork"
-          isSuperAdmin={isSuperAdmin}
-          artists={artists}
-          loadingArtists={loadingArtists}
-          artistId={artwork.userId}
-          setArtistId={setArtistId}
-          selectedArtist={selectedArtist}
-        />
+    <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
+          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
+        </div>
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
+        </div>
+        <div className="absolute left-0 bottom-0">
+          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-amber-100/20 to-pink-100/20 blur-3xl" />
+        </div>
+      </div>
+
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="font-artistic text-4xl sm:text-5xl font-bold text-gray-900 tracking-wide mb-4">
+            Edit Artwork
+          </h2>
+          <p className="font-sans text-lg text-gray-600 max-w-2xl mx-auto">
+            Update your artwork details below. Make changes to your masterpiece
+            and save to keep your gallery up to date.
+          </p>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100">
+          <div className="p-6 sm:p-8">
+            <ArtworkForm
+              initialData={artwork}
+              onSubmit={handleSubmit}
+              isLoading={updateArtworkMutation.isLoading}
+              submitLabel="Update Artwork"
+              isSuperAdmin={isSuperAdmin}
+              artists={artists}
+              loadingArtists={loadingArtists}
+              artistId={artwork.userId}
+              setArtistId={setArtistId}
+              selectedArtist={selectedArtist}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

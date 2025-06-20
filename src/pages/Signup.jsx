@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { trpc } from "../utils/trpc";
 import { motion } from "framer-motion";
 import Alert from "../components/Alert";
@@ -19,8 +19,9 @@ export default function Signup() {
 
   const registerMutation = trpc.user.register.useMutation({
     onSuccess: () => {
-      setSuccess("Registration successful! Log in now.");
-      setTimeout(() => navigate("/login"), 1500);
+      setSuccess(
+        "Registration successful! Your account is pending approval by a admin."
+      );
     },
     onError: (err) => {
       setError(err.message || "Registration failed");
@@ -54,9 +55,22 @@ export default function Signup() {
     }
   };
 
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError("");
+        setSuccess("");
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [error, success]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+      <div
+        className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100 flex flex-col justify-center"
+        style={{ minHeight: 480 }}
+      >
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -64,16 +78,8 @@ export default function Signup() {
         >
           Sign Up as Artist
         </motion.h2>
-        {error && (
-          <Alert type="error" message={error} className="mb-4 items-center" />
-        )}
-        {success && (
-          <Alert
-            type="success"
-            message={success}
-            className="mb-4 items-center"
-          />
-        )}
+        {error && <Alert type="error" message={error} className="mb-4" />}
+        {success && <Alert type="success" message={success} className="mb-4" />}
         <form onSubmit={handleSubmit} className="space-y-4 font-sans">
           <div>
             <label className="block text-sm font-sans font-medium text-gray-700 mb-1">
@@ -166,12 +172,12 @@ export default function Signup() {
           <span className="text-gray-600 text-sm font-sans">
             Already have an account?{" "}
           </span>
-          <a
-            href="/login"
+          <Link
+            to="/login"
             className="text-indigo-600 font-medium hover:underline font-sans"
           >
             Log in
-          </a>
+          </Link>
         </div>
       </div>
     </div>

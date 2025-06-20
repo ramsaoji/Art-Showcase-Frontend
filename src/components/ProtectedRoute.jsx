@@ -3,7 +3,11 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Loader from "./ui/Loader";
 
-export default function ProtectedRoute({ children, requireRole }) {
+export default function ProtectedRoute({
+  children,
+  requireRole,
+  superAdminOnly,
+}) {
   const { user, role, isSuperAdmin, isArtist, loading } = useAuth();
 
   // Show loading state while checking authentication
@@ -20,9 +24,19 @@ export default function ProtectedRoute({ children, requireRole }) {
     return <Navigate to="/login" replace />;
   }
 
+  // If superAdminOnly, only allow super admins
+  if (superAdminOnly && !isSuperAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   // If a specific role is required, check it
   if (requireRole && role !== requireRole) {
     return <Navigate to="/" replace />;
+  }
+
+  // Ensure children is a valid React element
+  if (!React.isValidElement(children)) {
+    throw new Error("ProtectedRoute children must be a valid React element.");
   }
 
   return children;

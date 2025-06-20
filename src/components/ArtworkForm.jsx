@@ -48,43 +48,86 @@ export default function ArtworkForm({
   } = useMonthlyUploadCount();
   const monthlyUploadCount = monthlyUploadData?.count ?? 0;
   const monthlyUploadLimit = monthlyUploadData?.limit ?? 10;
-  const [formData, setFormData] = useState({
-    title: initialData?.title || "",
-    artist: initialData?.artist || "",
-    price: initialData?.price || "",
-    description: initialData?.description || "",
-    dimensions: initialData?.dimensions || "",
-    material: initialData?.material || "",
-    style: initialData?.style || "",
-    year: initialData?.year || new Date().getFullYear(),
-    featured: initialData?.featured || false,
-    sold: initialData?.sold || false,
-    monthlyUploadLimit: selectedArtist?.monthlyUploadLimit ?? 10,
-    carousel: initialData?.carousel || false,
-  });
 
-  // Separate state for dimension inputs
-  const [dimensionInputs, setDimensionInputs] = useState(() => {
+  // --- Persistence keys ---
+  const STORAGE_KEY = "addArtworkFormData";
+  const DIMENSIONS_KEY = "addArtworkDimensions";
+  const IMAGE_KEY = "addArtworkImage";
+  const ARTIST_ID_KEY = "addArtworkArtistId";
+
+  // --- Load persisted state if initialData is null (Add mode) ---
+  const getInitialFormData = () => {
+    if (initialData)
+      return {
+        title: initialData?.title || "",
+        artist: initialData?.artist || "",
+        price: initialData?.price || "",
+        description: initialData?.description || "",
+        dimensions: initialData?.dimensions || "",
+        material: initialData?.material || "",
+        style: initialData?.style || "",
+        year: initialData?.year || new Date().getFullYear(),
+        featured: initialData?.featured || false,
+        sold: initialData?.sold || false,
+        monthlyUploadLimit: selectedArtist?.monthlyUploadLimit ?? 10,
+        carousel: initialData?.carousel || false,
+      };
+    // Try to load from localStorage
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    // Default
+    return {
+      title: "",
+      artist: "",
+      price: "",
+      description: "",
+      dimensions: "",
+      material: "",
+      style: "",
+      year: new Date().getFullYear(),
+      featured: false,
+      sold: false,
+      monthlyUploadLimit: 10,
+      carousel: false,
+    };
+  };
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  // --- Dimensions ---
+  const getInitialDimensions = () => {
     if (initialData?.dimensions) {
-      // Parse existing dimensions like "24cm × 36cm"
       const match = initialData.dimensions.match(
         /(\d+(?:\.\d+)?)\s*cm\s*×\s*(\d+(?:\.\d+)?)\s*cm/
       );
-      if (match) {
-        return { width: match[1], height: match[2] };
-      }
+      if (match) return { width: match[1], height: match[2] };
+    }
+    if (!initialData) {
+      try {
+        const saved = localStorage.getItem(DIMENSIONS_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
     }
     return { width: "", height: "" };
-  });
+  };
+  const [dimensionInputs, setDimensionInputs] = useState(getInitialDimensions);
 
-  // Set up image preview: always use Cloudinary preview if public_id exists, else fallback to url
+  // --- Image preview ---
   const getInitialImagePreview = () => {
     if (initialData?.cloudinary_public_id)
       return getPreviewUrl(initialData.cloudinary_public_id);
     if (initialData?.url) return initialData.url;
+    if (!initialData) {
+      try {
+        const saved = localStorage.getItem(IMAGE_KEY);
+        if (saved) return saved;
+      } catch {}
+    }
     return null;
   };
-
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
   const [imageRemoved, setImageRemoved] = useState(false); // Track if image was intentionally removed
@@ -94,6 +137,45 @@ export default function ArtworkForm({
   const [currentStep, setCurrentStep] = useState(null);
   const [imageError, setImageError] = useState("");
   const [status, setStatus] = useState(initialData?.status || "ACTIVE");
+
+  // --- Persist formData, dimensionInputs, imagePreview, artistId on change (Add mode only) ---
+  useEffect(() => {
+    if (!initialData) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    }
+  }, [formData, initialData]);
+  useEffect(() => {
+    if (!initialData) {
+      localStorage.setItem(DIMENSIONS_KEY, JSON.stringify(dimensionInputs));
+    }
+  }, [dimensionInputs, initialData]);
+  useEffect(() => {
+    if (!initialData && imagePreview) {
+      localStorage.setItem(IMAGE_KEY, imagePreview);
+    }
+  }, [imagePreview, initialData]);
+  useEffect(() => {
+    if (!initialData && isSuperAdmin) {
+      localStorage.setItem(ARTIST_ID_KEY, artistId || "");
+    }
+  }, [artistId, initialData, isSuperAdmin]);
+  // --- Restore artistId on mount (Add mode only) ---
+  useEffect(() => {
+    if (!initialData && isSuperAdmin) {
+      try {
+        const saved = localStorage.getItem(ARTIST_ID_KEY);
+        if (saved && setArtistId) setArtistId(saved);
+      } catch {}
+    }
+    // eslint-disable-next-line
+  }, []);
+  // --- Clear persisted state on successful submit (Add mode only) ---
+  const clearPersisted = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(DIMENSIONS_KEY);
+    localStorage.removeItem(IMAGE_KEY);
+    localStorage.removeItem(ARTIST_ID_KEY);
+  };
 
   // Debug: Log initialData and imagePreview
   useEffect(() => {
@@ -354,6 +436,7 @@ export default function ArtworkForm({
         setImageFile(null);
         setImagePreview(null);
         setImageRemoved(false);
+        clearPersisted(); // <-- Clear localStorage
       }
     } catch (error) {
       console.error("Error submitting artwork:", error);
@@ -963,29 +1046,6 @@ export default function ArtworkForm({
         </div>
       </div>
 
-      {/* Submit Button */}
-      <div className="pt-4">
-        <button
-          type="submit"
-          disabled={
-            isSubmitting ||
-            (isArtist && monthlyUploadCount >= monthlyUploadLimit)
-          }
-          className="w-full inline-flex justify-center items-center px-6 py-3.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
-        >
-          {isSubmitting ? (
-            <div className="flex items-center">
-              <Loader size="small" className="mr-2" />
-              {getStepLabel()}
-            </div>
-          ) : initialData ? (
-            "Update Artwork"
-          ) : (
-            "Save Artwork"
-          )}
-        </button>
-      </div>
-
       {/* Progress Indicators */}
       {isSubmitting && (
         <div className="space-y-4 pt-4">
@@ -1006,6 +1066,60 @@ export default function ArtworkForm({
           )}
         </div>
       )}
+
+      {/* Submit and Reset Button */}
+      <div className="pt-4 flex flex-col sm:flex-row gap-4">
+        <button
+          type="submit"
+          disabled={
+            isSubmitting ||
+            (isArtist && monthlyUploadCount >= monthlyUploadLimit)
+          }
+          className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center">
+              <Loader size="small" className="mr-2" />
+              {getStepLabel()}
+            </div>
+          ) : initialData ? (
+            "Update Artwork"
+          ) : (
+            "Save Artwork"
+          )}
+        </button>
+        {/* Reset Form Button: Only show when adding new artwork */}
+        {!initialData && (
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                title: "",
+                artist: "",
+                price: "",
+                description: "",
+                dimensions: "",
+                material: "",
+                style: "",
+                year: new Date().getFullYear(),
+                featured: false,
+                sold: false,
+                monthlyUploadLimit: 10,
+                carousel: false,
+              });
+              setDimensionInputs({ width: "", height: "" });
+              setImageFile(null);
+              setImagePreview(null);
+              setImageRemoved(false);
+              if (isSuperAdmin && setArtistId) setArtistId("");
+              clearPersisted();
+            }}
+            className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-gray-400 rounded-full bg-white text-gray-700 font-sans text-base font-medium hover:bg-gray-100 hover:border-gray-500 focus:outline-none focus:ring-0 transition-colors duration-300"
+          >
+            Reset Form
+          </button>
+        )}
+      </div>
     </form>
   );
 }
