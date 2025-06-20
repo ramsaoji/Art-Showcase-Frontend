@@ -93,12 +93,13 @@ export default function Statistics() {
   const cards = [
     {
       icon: PhotoIcon,
-      label: isSuperAdmin || isArtist ? "Total Artworks" : "Active Artworks",
+      label:
+        isSuperAdmin || isArtist ? "Total Artworks" : "Artworks on Display",
       value: isSuperAdmin || isArtist ? totalArtworksCount : activeCount,
       subtext:
         isSuperAdmin || isArtist
           ? "All artworks in the system"
-          : "Currently available to the public",
+          : "Explore art from our community",
       delay: 0.1,
     },
   ];

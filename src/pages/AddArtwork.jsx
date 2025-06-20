@@ -77,6 +77,8 @@ export default function AddArtwork() {
         style: formData.get("style"),
         year: parseInt(formData.get("year")),
         featured: formData.get("featured") === "true",
+        sold: formData.get("sold") === "true",
+        carousel: formData.get("carousel") === "true",
         url: imageUrl,
         cloudinary_public_id: publicId,
       };

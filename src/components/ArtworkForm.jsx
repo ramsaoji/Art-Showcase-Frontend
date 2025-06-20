@@ -60,6 +60,7 @@ export default function ArtworkForm({
     featured: initialData?.featured || false,
     sold: initialData?.sold || false,
     monthlyUploadLimit: selectedArtist?.monthlyUploadLimit ?? 10,
+    carousel: initialData?.carousel || false,
   });
 
   // Separate state for dimension inputs
@@ -347,6 +348,7 @@ export default function ArtworkForm({
           featured: false,
           sold: false,
           monthlyUploadLimit: 10,
+          carousel: false,
         });
         setDimensionInputs({ width: "", height: "" });
         setImageFile(null);
@@ -824,7 +826,7 @@ export default function ArtworkForm({
         </div>
 
         {/* Year */}
-        <div className="col-span-2">
+        <div className="col-span-2 sm:col-span-1">
           <label
             htmlFor="year"
             className="block text-sm font-medium text-gray-700 font-sans mb-1"
@@ -940,6 +942,20 @@ export default function ArtworkForm({
               />
               <span className="text-sm font-medium text-gray-700 font-sans">
                 Mark as Sold
+              </span>
+            </label>
+          )}
+          {isSuperAdmin && (
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="carousel"
+                checked={formData.carousel || false}
+                onChange={handleInputChange}
+                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <span className="text-sm font-medium text-gray-700 font-sans">
+                Show in Carousel
               </span>
             </label>
           )}
