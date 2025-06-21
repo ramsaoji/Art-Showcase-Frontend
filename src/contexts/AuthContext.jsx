@@ -29,6 +29,29 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Helper: clear all artwork-related localStorage data
+  const clearArtworkLocalStorage = () => {
+    const keysToRemove = [];
+
+    // Get all localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        // Remove artwork form data, dimensions, and artist ID keys
+        if (
+          key.includes("artwork_form_data") ||
+          key.includes("artwork_dimensions") ||
+          key.includes("artwork_artist_id")
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+
+    // Remove the identified keys
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  };
+
   // Fetch user info if token exists
   useEffect(() => {
     async function fetchUser() {
@@ -56,6 +79,9 @@ export function AuthProvider({ children }) {
         setUser(null);
         saveToken(null);
         setError("Session expired. Please log in again.");
+
+        // Clear all artwork-related localStorage data on session expiration
+        clearArtworkLocalStorage();
       } finally {
         setLoading(false);
       }
@@ -107,25 +133,7 @@ export function AuthProvider({ children }) {
     setUser(null);
 
     // Clear all artwork-related localStorage data
-    const keysToRemove = [];
-
-    // Get all localStorage keys
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        // Remove artwork form data, dimensions, and artist ID keys
-        if (
-          key.includes("artwork_form_data") ||
-          key.includes("artwork_dimensions") ||
-          key.includes("artwork_artist_id")
-        ) {
-          keysToRemove.push(key);
-        }
-      }
-    }
-
-    // Remove the identified keys
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    clearArtworkLocalStorage();
   }, []);
 
   // Clear error function for external use

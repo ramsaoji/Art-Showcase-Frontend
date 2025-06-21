@@ -98,7 +98,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
 
   return (
     <>
-      <div className="flex items-center  flex-wrap gap-2">
+      <div className="flex items-center justify-end sm:justify-start flex-wrap gap-2">
         {/* Edit button: super admin or artist owner */}
         {(isSuperAdmin || isOwner) && (
           <motion.button

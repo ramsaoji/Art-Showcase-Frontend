@@ -362,7 +362,7 @@ export default function ArtworkCard({
       {/* Action Buttons - Fixed position at bottom */}
       {(isSuperAdmin || (isArtist && isOwner)) && (
         <div className="p-4 sm:p-6 border-t border-gray-100 flex-shrink-0 bg-white rounded-b-2xl">
-          <div className="flex justify-center sm:justify-end">
+          <div className="flex justify-end">
             <ArtworkActions
               artworkId={safeArtwork.id}
               onDelete={onDelete}

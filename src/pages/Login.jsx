@@ -5,12 +5,19 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import Alert from "../components/Alert";
 import Loader from "../components/ui/Loader";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+
+const schema = yup.object().shape({
+  email: yup
+    .string()
+    .email("Please enter a valid email")
+    .required("Email is required"),
+  password: yup.string().required("Password is required"),
+});
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,53 +31,59 @@ export default function Login() {
     clearError,
   } = useAuth();
 
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      if (isSuperAdmin) {
-        const from = location.state?.from?.pathname || "/gallery";
-        navigate(from, { replace: true });
-      } else if (isArtist) {
-        const from = location.state?.from?.pathname || "/gallery";
-        navigate(from, { replace: true });
-      }
+      const from = location.state?.from?.pathname || "/gallery";
+      navigate(from, { replace: true });
     }
   }, [user, isSuperAdmin, isArtist, navigate, location]);
 
-  // Show only one error (context error preferred)
-  const displayError = authError || error;
+  // Handle auth context errors
   useEffect(() => {
-    if (displayError) {
+    if (authError) {
       const timer = setTimeout(() => {
-        setError("");
-        if (authError) clearError();
-      }, 2500);
+        clearError();
+      }, 3000); // Clear error after 3 seconds
       return () => clearTimeout(timer);
     }
-  }, [displayError, authError, clearError]);
+  }, [authError, clearError]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
+  const onSubmit = async (data) => {
     if (authError) clearError();
-    setLoading(true);
     try {
-      await login(email, password);
-      // Navigation will be handled by the useEffect above
+      await login(data.email, data.password);
+      // Navigation is handled by the useEffect above
     } catch (err) {
-      // Only set local error if context error is not present
-      if (!authError) {
-        setError(
-          err.message || "Failed to sign in. Please check your credentials."
-        );
-      }
-    } finally {
-      setLoading(false);
+      // Set form-level error for server-side issues (e.g., wrong password)
+      setError("root.serverError", {
+        type: "manual",
+        message:
+          err.message || "Failed to sign in. Please check your credentials.",
+      });
     }
-  }
+  };
+
+  const getFieldErrorClass = (fieldName) => {
+    return errors[fieldName]
+      ? "border-red-500 ring-red-500 focus:ring-red-500 focus:border-red-500"
+      : "border-gray-200 focus:ring-indigo-500 focus:border-transparent";
+  };
+
+  // Only show server-side or auth-related errors in the main alert
+  const displayError = errors.root?.serverError?.message || authError;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen flex items-start sm:items-center justify-center bg-gradient-to-b from-gray-50 to-white p-4 sm:p-6">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
@@ -105,18 +118,19 @@ export default function Login() {
               Sign in to manage artworks
             </motion.p>
           </div>
-
           {/* Reserve space for alert */}
-          <div>
-            {displayError && <Alert type="error" message={displayError} />}
-          </div>
-
+          {displayError && (
+            <div className="min-h-[48px]">
+              <Alert type="error" message={displayError} />
+            </div>
+          )}
           <motion.form
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="space-y-6"
-            onSubmit={handleSubmit}
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
           >
             <div className="space-y-4">
               <div>
@@ -128,15 +142,19 @@ export default function Login() {
                 </label>
                 <input
                   id="email-address"
-                  name="email"
                   type="email"
                   autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none transition duration-200"
+                  {...register("email")}
+                  className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${getFieldErrorClass(
+                    "email"
+                  )}`}
                   placeholder="Enter your email"
                 />
+                {errors.email && (
+                  <p className="text-red-500 text-sm font-sans mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
               <div>
                 <label
@@ -148,13 +166,12 @@ export default function Login() {
                 <div className="relative">
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none transition duration-200 pr-10"
+                    {...register("password")}
+                    className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 pr-10 ${getFieldErrorClass(
+                      "password"
+                    )}`}
                     placeholder="Enter your password"
                   />
                   <button
@@ -169,16 +186,21 @@ export default function Login() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm font-sans mt-1">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
             </div>
 
             <div>
               <button
                 type="submit"
-                disabled={loading || authLoading}
+                disabled={isSubmitting || authLoading}
                 className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
               >
-                {loading ? (
+                {isSubmitting ? (
                   <div className="flex items-center">
                     <Loader size="small" className="mr-2" />
                     Signing in...
@@ -189,7 +211,6 @@ export default function Login() {
               </button>
             </div>
           </motion.form>
-
           <div className="mt-6 text-center">
             <span className="text-gray-600 text-sm font-sans">
               Don't have an account?{" "}

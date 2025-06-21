@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -36,7 +36,8 @@ const createValidationSchema = (
   isSuperAdmin,
   initialData,
   artists,
-  artistId
+  artistId,
+  imageRemoved
 ) => {
   return yup.object().shape({
     title: yup.string().trim().required("Title is required"),
@@ -69,11 +70,19 @@ const createValidationSchema = (
       then: (schema) => schema.required("Artist is required"),
       otherwise: (schema) => schema.optional(),
     }),
-    image: yup.mixed().when([], {
-      is: () => !initialData,
-      then: (schema) => schema.required("Image is required"),
-      otherwise: (schema) => schema.optional(),
-    }),
+    image: yup
+      .mixed()
+      .test("image-required", "Image is required", function (value) {
+        const { initialData } = this.options.context || {};
+
+        // If it's edit mode and user hasn't removed the image, don't require new image
+        if (initialData && !imageRemoved) {
+          return true;
+        }
+
+        // For all other cases (new artwork or edit mode with removed image), require image
+        return !!value;
+      }),
   });
 };
 
@@ -163,20 +172,13 @@ export default function ArtworkForm({
     selectedArtist?.artistName ??
     "Selected Artist";
 
-  // Create validation schema inside component to have access to current props
-  const validationSchema = createValidationSchema(
-    isSuperAdmin,
-    initialData,
-    artists,
-    artistId
-  );
-
   // Form state
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
   const [imageRemoved, setImageRemoved] = useState(false);
   const [imageError, setImageError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [currentStep, setCurrentStep] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savingProgress, setSavingProgress] = useState(0);
@@ -189,6 +191,7 @@ export default function ArtworkForm({
   const FORM_DATA_KEY = `artwork_form_data_${userId}`;
   const DIMENSIONS_KEY = `artwork_dimensions_${userId}`;
   const ARTIST_ID_KEY = `artwork_artist_id_${userId}`;
+  const IMAGE_FLAG_KEY = `artwork_form_has_image_${userId}`;
 
   // Material and style options
   const materialOptions = [
@@ -219,6 +222,22 @@ export default function ArtworkForm({
     "Still Life",
     "Other",
   ];
+
+  // Create validation schema inside component to have access to current props and state
+  const validationSchema = useMemo(() => {
+    return createValidationSchema(
+      isSuperAdmin,
+      initialData,
+      artists,
+      artistId,
+      imageRemoved
+    );
+  }, [isSuperAdmin, initialData, artists, artistId, imageRemoved]);
+
+  // Custom resolver that handles dynamic validation by passing a reactive context
+  const customResolver = useMemo(() => {
+    return yupResolver(validationSchema);
+  }, [validationSchema]);
 
   // Get initial form data
   const getInitialFormData = () => {
@@ -254,15 +273,17 @@ export default function ArtworkForm({
       };
     }
 
-    // Try to restore from localStorage (only for new artwork)
+    // Try to restore from localStorage (only for new artwork, excluding image data)
     const savedData = localStorage.getItem(FORM_DATA_KEY);
     const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
 
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
+        // Remove image-related data from saved data
+        const { image, imageFile, imagePreview, ...cleanData } = parsedData;
         return {
-          ...parsedData,
+          ...cleanData,
           artistId: savedArtistId || "", // Include saved artist ID
         };
       } catch (error) {
@@ -325,6 +346,7 @@ export default function ArtworkForm({
     localStorage.removeItem(FORM_DATA_KEY);
     localStorage.removeItem(DIMENSIONS_KEY);
     localStorage.removeItem(ARTIST_ID_KEY);
+    localStorage.removeItem(IMAGE_FLAG_KEY);
   };
 
   // Initialize form with React Hook Form
@@ -334,21 +356,26 @@ export default function ArtworkForm({
     watch,
     setValue,
     trigger,
-    formState: { errors, isValid, isDirty },
+    formState: { errors, isSubmitted, isDirty },
     reset,
   } = useForm({
-    resolver: yupResolver(validationSchema),
-    mode: "all",
-    reValidateMode: "onChange",
+    resolver: customResolver,
+    mode: "onSubmit",
     defaultValues: getInitialFormData(),
+    context: { initialData },
   });
 
   const watchedValues = watch();
 
-  // Force validation on mount
+  // This effect will run when the image is removed, ensuring validation is
+  // triggered AFTER the form has been submitted at least once.
   useEffect(() => {
-    trigger(); // Trigger validation on mount
-  }, [trigger]);
+    // This makes the image field's validation reactive post-submission,
+    // matching the behavior of all other fields.
+    if (isSubmitted && imageRemoved) {
+      trigger("image");
+    }
+  }, [imageRemoved, isSubmitted, trigger]);
 
   // Mark artist field as touched if there's a saved artist ID
   useEffect(() => {
@@ -398,14 +425,20 @@ export default function ArtworkForm({
 
   // Persist form data, dimensions, and artist ID on change (Add mode only)
   useEffect(() => {
-    if (!initialData) {
-      // Include artistId in the form data being saved
+    // Only persist data if the form is dirty (i.e., has been modified by the user)
+    // This prevents the form from overwriting localStorage with empty values on reset.
+    if (!initialData && isDirty) {
+      // Include artistId in the form data being saved, but exclude image data
       const formDataToSave = {
         ...watchedValues,
         artistId: watchedValues.artistId || artistId, // Use form value or prop value
       };
 
-      localStorage.setItem(FORM_DATA_KEY, JSON.stringify(formDataToSave));
+      // Remove image-related data before saving to localStorage
+      const { image, imageFile, imagePreview, ...cleanFormData } =
+        formDataToSave;
+
+      localStorage.setItem(FORM_DATA_KEY, JSON.stringify(cleanFormData));
       localStorage.setItem(DIMENSIONS_KEY, JSON.stringify(dimensionInputs));
       if (isSuperAdmin && artistId) {
         localStorage.setItem(ARTIST_ID_KEY, artistId);
@@ -420,6 +453,7 @@ export default function ArtworkForm({
     FORM_DATA_KEY,
     DIMENSIONS_KEY,
     ARTIST_ID_KEY,
+    isDirty,
   ]);
 
   // Check if form has data but no image (for page refresh notification)
@@ -427,7 +461,12 @@ export default function ArtworkForm({
     if (initialData) return false; // Don't show for edit mode
     if (imageFile || imagePreview) return false; // Don't show if image exists
 
-    // Check if there's meaningful saved data
+    // The key condition: only show the warning if an image was previously
+    // selected in this session before the refresh.
+    const hadImage = localStorage.getItem(IMAGE_FLAG_KEY) === "true";
+    if (!hadImage) return false;
+
+    // Also check if there's meaningful saved text data.
     const savedData = localStorage.getItem(FORM_DATA_KEY);
     if (!savedData) return false;
 
@@ -489,6 +528,7 @@ export default function ArtworkForm({
       }
 
       setImageFile(file);
+      setImageLoaded(false); // Reset loader state
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -497,6 +537,11 @@ export default function ArtworkForm({
 
       // Set image in form
       setValue("image", file, { shouldValidate: true });
+
+      // Set the flag in localStorage
+      if (!initialData) {
+        localStorage.setItem(IMAGE_FLAG_KEY, "true");
+      }
     }
   };
 
@@ -507,7 +552,13 @@ export default function ArtworkForm({
     setImageFile(null);
     setImagePreview(null);
     setImageRemoved(true);
-    setValue("image", null, { shouldValidate: true });
+    setImageLoaded(false);
+    setValue("image", undefined, { shouldValidate: true });
+
+    // Remove the flag from localStorage
+    if (!initialData) {
+      localStorage.removeItem(IMAGE_FLAG_KEY);
+    }
 
     // Reset file input
     const fileInput = document.getElementById("file-upload");
@@ -619,6 +670,10 @@ export default function ArtworkForm({
     } catch (error) {
       console.error("Error submitting artwork:", error);
       setError("Failed to submit artwork. Please try again.");
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } finally {
       setTimeout(() => {
         setIsSubmitting(false);
@@ -635,8 +690,20 @@ export default function ArtworkForm({
       setImageFile(null);
       setImagePreview(null);
       setImageRemoved(false);
+      setImageError("");
+      setImageLoaded(false);
       if (isSuperAdmin && setArtistId) setArtistId("");
       clearPersisted();
+    }
+  };
+
+  // Scroll to top if validation fails on submit
+  const onInvalid = (errors) => {
+    if (Object.keys(errors).length > 0) {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     }
   };
 
@@ -656,9 +723,12 @@ export default function ArtworkForm({
   const shouldShowPreview = imagePreview && !imageRemoved;
 
   return (
-    <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6 font-sans">
+    <form
+      onSubmit={handleSubmit(onSubmitForm, onInvalid)}
+      className="space-y-6 font-sans"
+    >
       {/* Page refresh notification */}
-      {hasFormDataButNoImage && (
+      {hasFormDataButNoImage && !imageRemoved && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
           <div className="flex items-start">
             <div className="flex-shrink-0">
@@ -783,28 +853,31 @@ export default function ArtworkForm({
                     src={imagePreview}
                     alt="Preview"
                     className="h-64 w-auto object-contain rounded-lg shadow-md"
+                    onLoad={() => setImageLoaded(true)}
                   />
                   {/* Close button positioned at top-right of image */}
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg z-10"
-                    title="Remove image"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  {imageLoaded && (
+                    <button
+                      type="button"
+                      onClick={handleImageRemove}
+                      className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg z-10"
+                      title="Remove image"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -841,7 +914,9 @@ export default function ArtworkForm({
           // Show upload dropzone when no image
           <label
             className={`block cursor-pointer ${
-              imageError || errors.image ? "border-red-300" : "border-gray-200"
+              imageError || errors.image
+                ? "border-red-300 bg-red-50/30"
+                : "border-gray-200"
             } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
           >
             <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
@@ -853,12 +928,12 @@ export default function ArtworkForm({
                 <p className="mt-1 text-sm text-gray-500 font-sans">
                   PNG, JPG up to 5MB
                 </p>
-                {imageRemoved && (
+                {/* {imageRemoved && (
                   <p className="mt-2 text-xs text-red-500 font-sans">
                     Image removed - Please select a new image
                   </p>
-                )}
-                {hasFormDataButNoImage && (
+                )} */}
+                {hasFormDataButNoImage && !imageRemoved && (
                   <p className="mt-2 text-xs text-amber-600 font-sans px-2 py-1 rounded">
                     Your form data was saved, but please upload your image again
                   </p>
@@ -892,13 +967,7 @@ export default function ArtworkForm({
             </p>
           </div>
         )}
-        {/* Show image required error when form has data but no image */}
-        {hasFormDataButNoImage && !errors.image && (
-          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
-            <p className="text-sm text-red-700 font-sans">Image is required</p>
-          </div>
-        )}
+        {/* Show image required error when form has data but no image, or when validation fails */}
       </div>
 
       {/* Form Grid */}
@@ -1471,7 +1540,7 @@ export default function ArtworkForm({
       <div className="pt-4 flex flex-col sm:flex-row gap-4">
         <button
           type="submit"
-          disabled={!isValid || isSubmitting}
+          disabled={isSubmitting}
           className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
         >
           {isSubmitting ? (
@@ -1512,6 +1581,7 @@ export default function ArtworkForm({
               setImagePreview(null);
               setImageRemoved(false);
               setImageError("");
+              setImageLoaded(false);
               setArtistFieldTouched(false);
 
               // Clear artist selection
@@ -1522,10 +1592,11 @@ export default function ArtworkForm({
               // Clear localStorage
               clearPersisted();
 
-              // Trigger validation to update form state
-              setTimeout(() => {
-                trigger();
-              }, 100);
+              // Scroll to top
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
             }}
             className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-gray-400 rounded-full bg-white text-gray-700 font-sans text-base font-medium hover:bg-gray-100 hover:border-gray-500 focus:outline-none focus:ring-0 transition-colors duration-300"
           >
