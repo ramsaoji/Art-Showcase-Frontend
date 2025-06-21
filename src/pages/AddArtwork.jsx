@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 import { motion } from "framer-motion";
 import { trpc } from "../utils/trpc";
@@ -8,14 +7,40 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function AddArtwork() {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user } = useAuth();
   const [error, setError] = useState(null);
   const [artistId, setArtistId] = useState("");
+  const [shouldLoadArtists, setShouldLoadArtists] = useState(false);
 
-  // Fetch all artists for admin
+  // Create user-specific localStorage key
+  const ARTIST_ID_KEY = `artwork_artist_id_${user?.id || "anonymous"}`;
+
+  // Debug: Log user and localStorage key
+  useEffect(() => {
+    console.log("AddArtwork - user:", user);
+    console.log("AddArtwork - ARTIST_ID_KEY:", ARTIST_ID_KEY);
+    console.log(
+      "AddArtwork - localStorage keys:",
+      Object.keys(localStorage).filter((key) => key.includes("artwork"))
+    );
+  }, [user, ARTIST_ID_KEY]);
+
+  // Helper to set artistId and persist to localStorage
+  const handleSetArtistId = (id) => {
+    console.log("handleSetArtistId called with:", id);
+    console.log("Storing in localStorage with key:", ARTIST_ID_KEY);
+    setArtistId(id);
+    localStorage.setItem(ARTIST_ID_KEY, id || "");
+    console.log(
+      "localStorage after setting:",
+      localStorage.getItem(ARTIST_ID_KEY)
+    );
+  };
+
+  // Fetch all artists for admin - only when shouldLoadArtists is true
   const { data, isLoading: loadingArtists } = trpc.user.listUsers.useQuery(
     undefined,
-    { enabled: isSuperAdmin }
+    { enabled: isSuperAdmin && shouldLoadArtists }
   );
 
   const artists = (
@@ -30,21 +55,45 @@ export default function AddArtwork() {
   const utils = trpc.useContext();
 
   // Add tRPC mutation
-  const createArtworkMutation = trpc.artwork.createArtwork.useMutation({
-    onSuccess: () => {
-      console.log("Artwork created successfully");
+  const createArtworkMutation = trpc.artwork.createArtworkWithImage.useMutation(
+    {
+      onSuccess: () => {
+        console.log("Artwork created successfully");
 
-      // Invalidate relevant queries to refresh the UI
-      utils.artwork.getAllArtworks.invalidate();
-      utils.artwork.getFeaturedArtworks.invalidate();
+        // Invalidate relevant queries to refresh the UI
+        utils.artwork.getAllArtworks.invalidate();
+        utils.artwork.getFeaturedArtworks.invalidate();
 
-      navigate("/gallery");
-    },
-    onError: (error) => {
-      console.error("Error creating artwork:", error);
-      setError(error.message || "Failed to save artwork. Please try again.");
-    },
-  });
+        navigate("/gallery");
+      },
+      onError: (error) => {
+        console.error("Error creating artwork:", error);
+        setError(error.message || "Failed to save artwork. Please try again.");
+      },
+    }
+  );
+
+  // Restore artistId from localStorage on mount
+  useEffect(() => {
+    if (isSuperAdmin && artists.length > 0) {
+      const saved = localStorage.getItem(ARTIST_ID_KEY);
+      if (saved && artists.some((a) => a.id === saved)) {
+        setArtistId(saved);
+      }
+      // If the saved artistId is not in the list, clear it
+      if (saved && !artists.some((a) => a.id === saved)) {
+        setArtistId("");
+        localStorage.removeItem(ARTIST_ID_KEY);
+      }
+    }
+  }, [isSuperAdmin, artists, ARTIST_ID_KEY]);
+
+  // Debug: Log artist selection
+  useEffect(() => {
+    console.log("AddArtwork - artistId:", artistId);
+    console.log("AddArtwork - selectedArtist:", selectedArtist);
+    console.log("AddArtwork - artists count:", artists.length);
+  }, [artistId, selectedArtist, artists]);
 
   const handleSubmit = async (formData) => {
     try {
@@ -56,23 +105,31 @@ export default function AddArtwork() {
         return;
       }
 
-      // Handle image upload (keep this on client side)
+      // Get image file and convert to base64
       const imageFile = formData.get("image");
-      let imageUrl = null;
-      let publicId = null;
+      let imageBase64 = null;
 
       if (imageFile) {
-        try {
-          // Upload to Cloudinary
-          const uploadResult = await uploadImage(imageFile);
-          imageUrl = uploadResult.url;
-          publicId = uploadResult.public_id;
-
-          console.log("Upload completed:", uploadResult);
-        } catch (uploadError) {
-          console.error("Upload error:", uploadError);
-          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        // Check if it's a File object (new upload) or base64 string (from localStorage)
+        if (imageFile instanceof File) {
+          imageBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(imageFile);
+          });
+        } else {
+          // If it's not a File object, it might be base64 from localStorage
+          // In this case, we should show an error asking user to re-upload
+          setError(
+            "Image data was lost during page refresh. Please upload your image again."
+          );
+          return;
         }
+      } else {
+        // No image file provided
+        setError("Image is required. Please upload an image.");
+        return;
       }
 
       // Prepare data for tRPC mutation
@@ -88,8 +145,7 @@ export default function AddArtwork() {
         featured: formData.get("featured") === "true",
         sold: formData.get("sold") === "true",
         carousel: formData.get("carousel") === "true",
-        url: imageUrl,
-        cloudinary_public_id: publicId,
+        imageBase64,
       };
       if (isSuperAdmin && artistId) {
         artworkData.artistId = artistId;
@@ -104,6 +160,9 @@ export default function AddArtwork() {
 
       // Call tRPC mutation
       await createArtworkMutation.mutateAsync(artworkData);
+      // After successful submission, clear artistId and localStorage
+      setArtistId("");
+      localStorage.removeItem(ARTIST_ID_KEY);
     } catch (err) {
       console.error("Error in handleSubmit:", err);
       if (!createArtworkMutation.error) {
@@ -153,6 +212,7 @@ export default function AddArtwork() {
           </motion.div>
         )}
 
+        {/* Always render the form - artist selection handles its own loading state */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -162,12 +222,12 @@ export default function AddArtwork() {
           <div className="p-6 sm:p-8">
             <ArtworkForm
               onSubmit={handleSubmit}
-              isSuperAdmin={isSuperAdmin}
               artists={artists}
               loadingArtists={loadingArtists}
               artistId={artistId}
-              setArtistId={setArtistId}
+              setArtistId={handleSetArtistId}
               selectedArtist={selectedArtist}
+              setShouldLoadArtists={setShouldLoadArtists}
             />
           </div>
         </motion.div>

@@ -24,6 +24,7 @@ export default function Gallery() {
     error,
     styles,
     isArtistsLoading,
+    isArtistFilterLoading,
     isMaterialsLoading,
     isStylesLoading,
     hasMoreArtists,
@@ -38,6 +39,7 @@ export default function Gallery() {
     artistSearch,
     materialSearch,
     styleSearch,
+    markDropdownOpened,
 
     // Handlers
     setSelectedImage,
@@ -107,6 +109,7 @@ export default function Gallery() {
           isMobileFiltersOpen={isMobileFiltersOpen}
           setIsMobileFiltersOpen={setIsMobileFiltersOpen}
           isArtistsLoading={isArtistsLoading}
+          isArtistFilterLoading={isArtistFilterLoading}
           isMaterialsLoading={isMaterialsLoading}
           isStylesLoading={isStylesLoading}
           hasMoreArtists={hasMoreArtists}
@@ -121,6 +124,7 @@ export default function Gallery() {
           artistSearch={artistSearch}
           materialSearch={materialSearch}
           styleSearch={styleSearch}
+          markDropdownOpened={markDropdownOpened}
         />
 
         {/* Gallery Grid with Artworks */}

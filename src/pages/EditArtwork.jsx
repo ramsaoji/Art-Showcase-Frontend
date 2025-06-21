@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { trpc } from "../utils/trpc";
-import { uploadImage } from "../config/cloudinary";
 import ArtworkForm from "../components/ArtworkForm";
 import Loader from "../components/ui/Loader";
 import { useAuth } from "../contexts/AuthContext";
@@ -10,8 +9,7 @@ export default function EditArtwork() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
-  const { isSuperAdmin, user } = useAuth();
-  const [artistId, setArtistId] = useState(null);
+  const { isSuperAdmin } = useAuth();
 
   console.log("Route ID from useParams:", id, "Type:", typeof id);
 
@@ -35,21 +33,23 @@ export default function EditArtwork() {
     }
   );
 
-  const updateArtworkMutation = trpc.artwork.updateArtwork.useMutation({
-    onSuccess: () => {
-      console.log("Artwork updated successfully");
-      // Invalidate relevant queries to refresh the UI
-      utils.artwork.getAllArtworks.invalidate();
-      utils.artwork.getFeaturedArtworks.invalidate();
-      utils.artwork.getArtworkById.invalidate({ id: id });
+  const updateArtworkMutation = trpc.artwork.updateArtworkWithImage.useMutation(
+    {
+      onSuccess: () => {
+        console.log("Artwork updated successfully");
+        // Invalidate relevant queries to refresh the UI
+        utils.artwork.getAllArtworks.invalidate();
+        utils.artwork.getFeaturedArtworks.invalidate();
+        utils.artwork.getArtworkById.invalidate({ id: id });
 
-      navigate("/gallery");
-    },
-    onError: (error) => {
-      console.error("Error updating artwork:", error);
-      setError(`Failed to update artwork: ${error.message}`);
-    },
-  });
+        navigate("/gallery");
+      },
+      onError: (error) => {
+        console.error("Error updating artwork:", error);
+        setError(`Failed to update artwork: ${error.message}`);
+      },
+    }
+  );
 
   // Fetch all artists for admin (for super admin to edit monthly limit)
   const { data: artistsRaw = [], isLoading: loadingArtists } =
@@ -74,19 +74,14 @@ export default function EditArtwork() {
 
       // Handle image upload if a new image is provided
       const imageFile = formData.get("image");
-      let imageUrl = artwork.url;
-      let publicId = artwork.cloudinary_public_id;
-
+      let imageBase64 = null;
       if (imageFile && imageFile.size > 0) {
-        try {
-          // Upload to Cloudinary
-          const uploadResult = await uploadImage(imageFile);
-          imageUrl = uploadResult.url;
-          publicId = uploadResult.public_id;
-        } catch (uploadError) {
-          console.error("Upload error:", uploadError);
-          throw new Error(`Failed to upload image: ${uploadError.message}`);
-        }
+        imageBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
       }
 
       // Prepare update data
@@ -103,9 +98,8 @@ export default function EditArtwork() {
         featured: formData.get("featured") === "true",
         sold: formData.get("sold") === "true",
         carousel: formData.get("carousel") === "true",
-        url: imageUrl,
-        cloudinary_public_id: publicId,
         status: formData.get("status"),
+        imageBase64,
       };
 
       // For super admin, include monthlyUploadLimit if set
@@ -117,7 +111,7 @@ export default function EditArtwork() {
       }
 
       console.log("Artwork ID before update:", artwork.id);
-      console.log("Update data ID before update:", updateData.id);
+      console.log("Update data before update:", updateData);
       // Update artwork using tRPC mutation
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (error) {
@@ -212,11 +206,8 @@ export default function EditArtwork() {
               onSubmit={handleSubmit}
               isLoading={updateArtworkMutation.isLoading}
               submitLabel="Update Artwork"
-              isSuperAdmin={isSuperAdmin}
               artists={artists}
               loadingArtists={loadingArtists}
-              artistId={artwork.userId}
-              setArtistId={setArtistId}
               selectedArtist={selectedArtist}
             />
           </div>

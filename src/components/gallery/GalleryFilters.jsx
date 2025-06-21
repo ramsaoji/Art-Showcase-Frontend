@@ -218,7 +218,7 @@ function SearchableFilterSection({
             })
           ) : (
             <div className="px-3 py-2 text-sm text-gray-500 font-sans">
-              No matches found
+              No options found
             </div>
           )}
         </InfiniteScroll>
@@ -239,6 +239,7 @@ export default function GalleryFilters({
   isMobileFiltersOpen,
   setIsMobileFiltersOpen,
   isArtistsLoading,
+  isArtistFilterLoading,
   isMaterialsLoading,
   isStylesLoading,
   hasMoreArtists,
@@ -253,6 +254,7 @@ export default function GalleryFilters({
   artistSearch = "",
   materialSearch = "",
   styleSearch = "",
+  markDropdownOpened,
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
@@ -430,7 +432,10 @@ export default function GalleryFilters({
                       allLabel="All Artists"
                       searchPlaceholder="Search artists..."
                       searchQuery={artistSearch}
-                      onSearch={handleArtistSearch}
+                      onSearch={(query) => {
+                        markDropdownOpened("artist");
+                        handleArtistSearch(query);
+                      }}
                       isLoading={isArtistsLoading}
                       hasMore={hasMoreArtists}
                       onLoadMore={loadMoreArtists}
@@ -450,7 +455,10 @@ export default function GalleryFilters({
                       allLabel="All Materials"
                       searchPlaceholder="Search materials..."
                       searchQuery={materialSearch}
-                      onSearch={handleMaterialSearch}
+                      onSearch={(query) => {
+                        markDropdownOpened("material");
+                        handleMaterialSearch(query);
+                      }}
                       isLoading={isMaterialsLoading}
                       hasMore={hasMoreMaterials}
                       onLoadMore={loadMoreMaterials}
@@ -467,7 +475,10 @@ export default function GalleryFilters({
                       allLabel="All Styles"
                       searchPlaceholder="Search styles..."
                       searchQuery={styleSearch}
-                      onSearch={handleStyleSearch}
+                      onSearch={(query) => {
+                        markDropdownOpened("style");
+                        handleStyleSearch(query);
+                      }}
                       isLoading={isStylesLoading}
                       hasMore={hasMoreStyles}
                       onLoadMore={loadMoreStyles}
@@ -713,7 +724,10 @@ export default function GalleryFilters({
                   allLabel="All Artists"
                   searchPlaceholder="Search artists..."
                   searchQuery={artistSearch}
-                  onSearch={handleArtistSearch}
+                  onSearch={(query) => {
+                    markDropdownOpened("artist");
+                    handleArtistSearch(query);
+                  }}
                   isLoading={isArtistsLoading}
                   hasMore={hasMoreArtists}
                   onLoadMore={loadMoreArtists}
@@ -760,7 +774,10 @@ export default function GalleryFilters({
                   allLabel="All Materials"
                   searchPlaceholder="Search materials..."
                   searchQuery={materialSearch}
-                  onSearch={handleMaterialSearch}
+                  onSearch={(query) => {
+                    markDropdownOpened("material");
+                    handleMaterialSearch(query);
+                  }}
                   isLoading={isMaterialsLoading}
                   hasMore={hasMoreMaterials}
                   onLoadMore={loadMoreMaterials}
@@ -806,7 +823,10 @@ export default function GalleryFilters({
                   allLabel="All Styles"
                   searchPlaceholder="Search styles..."
                   searchQuery={styleSearch}
-                  onSearch={handleStyleSearch}
+                  onSearch={(query) => {
+                    markDropdownOpened("style");
+                    handleStyleSearch(query);
+                  }}
                   isLoading={isStylesLoading}
                   hasMore={hasMoreStyles}
                   onLoadMore={loadMoreStyles}
@@ -1026,7 +1046,10 @@ export default function GalleryFilters({
                       allLabel="All Artists"
                       searchPlaceholder="Search artists..."
                       searchQuery={artistSearch}
-                      onSearch={handleArtistSearch}
+                      onSearch={(query) => {
+                        markDropdownOpened("artist");
+                        handleArtistSearch(query);
+                      }}
                       isLoading={isArtistsLoading}
                       hasMore={hasMoreArtists}
                       onLoadMore={loadMoreArtists}
@@ -1046,7 +1069,10 @@ export default function GalleryFilters({
                       allLabel="All Materials"
                       searchPlaceholder="Search materials..."
                       searchQuery={materialSearch}
-                      onSearch={handleMaterialSearch}
+                      onSearch={(query) => {
+                        markDropdownOpened("material");
+                        handleMaterialSearch(query);
+                      }}
                       isLoading={isMaterialsLoading}
                       hasMore={hasMoreMaterials}
                       onLoadMore={loadMoreMaterials}
@@ -1063,7 +1089,10 @@ export default function GalleryFilters({
                       allLabel="All Styles"
                       searchPlaceholder="Search styles..."
                       searchQuery={styleSearch}
-                      onSearch={handleStyleSearch}
+                      onSearch={(query) => {
+                        markDropdownOpened("style");
+                        handleStyleSearch(query);
+                      }}
                       isLoading={isStylesLoading}
                       hasMore={hasMoreStyles}
                       onLoadMore={loadMoreStyles}
@@ -1169,7 +1198,10 @@ export default function GalleryFilters({
                         return maskEmailInLabel(found.label);
                       }
                     }
-                    return filters.artist;
+                    // If artist not found in results yet, show loading or fallback
+                    return isArtistsLoading || isArtistFilterLoading
+                      ? "Loading..."
+                      : `Artist ${filters.artist}`;
                   })()}
               </span>
               <button

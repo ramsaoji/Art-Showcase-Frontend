@@ -4,7 +4,6 @@ import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { trpc } from "../utils/trpc"; // Adjust path to your trpc setup
 import { useAuth } from "../contexts/AuthContext";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
-import { deleteImage } from "../config/cloudinary";
 import { motion } from "framer-motion";
 import Alert from "./Alert";
 
@@ -19,14 +18,6 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
-
-  // Get artwork data for Cloudinary cleanup
-  const { data: artworkData } = trpc.artwork.getArtworkById.useQuery(
-    { id: artworkId },
-    {
-      enabled: false, // Only fetch when needed for deletion
-    }
-  );
 
   // Only show edit for artists if they own the artwork
   const isOwner = user && artwork && artwork.userId === user.id;
@@ -75,20 +66,6 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
     setError(null);
     setIsDeleting(true);
     try {
-      let artworkDataToDelete = artworkData;
-      if (!artworkDataToDelete) {
-        artworkDataToDelete = await utils.artwork.getArtworkById.fetch({
-          id: artworkId,
-        });
-      }
-      if (!artworkDataToDelete) throw new Error("Artwork not found");
-      const { cloudinary_public_id } = artworkDataToDelete;
-      if (cloudinary_public_id) {
-        try {
-          await deleteImage(cloudinary_public_id);
-        } catch {}
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1000));
       await deleteArtworkMutation.mutateAsync({ id: artworkId });
     } catch (error) {
       setError(

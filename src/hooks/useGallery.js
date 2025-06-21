@@ -17,7 +17,7 @@ export default function useGallery() {
   const location = useLocation();
   const navigate = useNavigate();
   const initialized = useRef(false);
-  const { isArtist, user } = useAuth();
+  const { isArtist, user, loading: authLoading } = useAuth();
 
   // State management
   const [sortBy, setSortBy] = useState(() => {
@@ -58,6 +58,17 @@ export default function useGallery() {
   const [allArtworks, setAllArtworks] = useState([]);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Add state to track which dropdowns have been opened (for lazy loading)
+  const [openedDropdowns, setOpenedDropdowns] = useState({
+    artist: false,
+    material: false,
+    style: false,
+  });
+
+  // Add state to track if we need to load artist data for active filter
+  const [shouldLoadArtistForFilter, setShouldLoadArtistForFilter] =
+    useState(false);
 
   const ITEMS_PER_PAGE = 12;
 
@@ -119,7 +130,18 @@ export default function useGallery() {
       page: currentPage,
       limit: ITEMS_PER_PAGE,
     }),
-    [searchQuery, filters, sortBy, currentPage]
+    [
+      searchQuery.trim(),
+      filters.material,
+      filters.artist,
+      filters.availability,
+      filters.featured,
+      filters.status,
+      filters.style,
+      sortBy,
+      currentPage,
+      ITEMS_PER_PAGE,
+    ]
   );
 
   // Single tRPC query with proper dependency management
@@ -137,7 +159,7 @@ export default function useGallery() {
     staleTime: 30000,
     cacheTime: 300000,
     keepPreviousData: true,
-    enabled: true,
+    enabled: !authLoading, // Only enable when auth is not loading
     onSuccess: (data) => {
       console.log("Query succeeded with data:", data);
     },
@@ -469,6 +491,7 @@ export default function useGallery() {
   const [artistPage, setArtistPage] = useState(1);
   const [artistResults, setArtistResults] = useState([]);
   const prevArtistSearch = useRef("");
+
   // Clear results only when search string changes
   useEffect(() => {
     if (prevArtistSearch.current !== artistSearch) {
@@ -478,12 +501,78 @@ export default function useGallery() {
     }
     // eslint-disable-next-line
   }, [artistSearch]);
+
+  // Check if we need to load artist data for the active filter
+  useEffect(() => {
+    if (filters.artist !== "all" && !shouldLoadArtistForFilter) {
+      // Check if the artist is already in our results
+      const artistExists = artistResults.some(
+        (artist) => artist.id === filters.artist
+      );
+      if (!artistExists) {
+        setShouldLoadArtistForFilter(true);
+        // Mark artist dropdown as opened to enable the query
+        setOpenedDropdowns((prev) => ({ ...prev, artist: true }));
+        // Set a search query to find this specific artist
+        // We'll need to get the artist name from the backend or use a different approach
+        // For now, let's try to load all artists and find the one we need
+      }
+    }
+  }, [filters.artist, artistResults, shouldLoadArtistForFilter]);
+
+  // Add a separate query to get artist details when filter is applied
+  const { data: artistFilterData, isLoading: isArtistFilterLoading } =
+    useArtistsSearch(
+      {
+        search: "", // Empty search to get all artists
+        limit: 50, // Higher limit to find the specific artist
+        page: 1,
+      },
+      {
+        enabled: shouldLoadArtistForFilter && openedDropdowns.artist,
+      }
+    );
+
+  // Handle artist filter data
+  useEffect(() => {
+    if (artistFilterData && shouldLoadArtistForFilter) {
+      const foundArtist = artistFilterData.artists.find(
+        (a) => a.id === filters.artist
+      );
+      if (foundArtist) {
+        const artistWithLabel = {
+          id: foundArtist.id,
+          label: `${foundArtist.artistName} (${foundArtist.email})`,
+        };
+        // Add to artist results if not already present
+        setArtistResults((prev) => {
+          const exists = prev.some((a) => a.id === artistWithLabel.id);
+          if (!exists) {
+            return [...prev, artistWithLabel];
+          }
+          return prev;
+        });
+      }
+      setShouldLoadArtistForFilter(false);
+    }
+  }, [artistFilterData, shouldLoadArtistForFilter, filters.artist]);
+
   // Append new items or replace only on first page
   const {
     data: artistData,
     isLoading: isArtistsLoading,
     isFetching: isArtistsFetching,
-  } = useArtistsSearch({ search: artistSearch, limit: 12, page: artistPage });
+  } = useArtistsSearch(
+    {
+      search: artistSearch,
+      limit: 12,
+      page: artistPage,
+    },
+    {
+      enabled: openedDropdowns.artist, // Only fetch when artist dropdown has been opened
+    }
+  );
+
   useEffect(() => {
     if (artistData) {
       const newArtists = artistData.artists.map((a) => ({
@@ -496,9 +585,15 @@ export default function useGallery() {
         const uniqueNew = newArtists.filter((a) => !existingIds.has(a.id));
         return [...prev, ...uniqueNew];
       });
+
+      // If we were loading artist data for the filter, mark it as done
+      if (shouldLoadArtistForFilter) {
+        setShouldLoadArtistForFilter(false);
+      }
     }
     // eslint-disable-next-line
-  }, [artistData, artistPage]);
+  }, [artistData, artistPage, shouldLoadArtistForFilter]);
+
   const hasMoreArtists = artistData?.hasMore;
   const handleArtistSearch = (q) => {
     if (q !== artistSearch) {
@@ -529,11 +624,16 @@ export default function useGallery() {
     data: materialData,
     isLoading: isMaterialsLoading,
     isFetching: isMaterialsFetching,
-  } = useMaterialsSearch({
-    search: materialSearch,
-    limit: 12,
-    page: materialPage,
-  });
+  } = useMaterialsSearch(
+    {
+      search: materialSearch,
+      limit: 12,
+      page: materialPage,
+    },
+    {
+      enabled: openedDropdowns.material, // Only fetch when material dropdown has been opened
+    }
+  );
   useEffect(() => {
     if (materialData) {
       const newMaterials = materialData.items.map((m) => ({
@@ -581,7 +681,16 @@ export default function useGallery() {
     data: styleData,
     isLoading: isStylesLoading,
     isFetching: isStylesFetching,
-  } = useStylesSearch({ search: styleSearch, limit: 12, page: stylePage });
+  } = useStylesSearch(
+    {
+      search: styleSearch,
+      limit: 12,
+      page: stylePage,
+    },
+    {
+      enabled: openedDropdowns.style, // Only fetch when style dropdown has been opened
+    }
+  );
   useEffect(() => {
     if (styleData) {
       const newStyles = styleData.items.map((s) => ({
@@ -609,6 +718,36 @@ export default function useGallery() {
       setStylePage((p) => p + 1);
     }
   };
+
+  // Functions to handle filter section expansion
+  const expandFilter = useCallback((filterType) => {
+    setOpenedDropdowns((prev) => ({
+      ...prev,
+      [filterType]: true,
+    }));
+  }, []);
+
+  const collapseFilter = useCallback((filterType) => {
+    setOpenedDropdowns((prev) => ({
+      ...prev,
+      [filterType]: false,
+    }));
+  }, []);
+
+  const toggleFilter = useCallback((filterType) => {
+    setOpenedDropdowns((prev) => ({
+      ...prev,
+      [filterType]: !prev[filterType],
+    }));
+  }, []);
+
+  // Functions to mark dropdowns as opened (for lazy loading)
+  const markDropdownOpened = useCallback((dropdownType) => {
+    setOpenedDropdowns((prev) => ({
+      ...prev,
+      [dropdownType]: true,
+    }));
+  }, []);
 
   return {
     // State
@@ -648,6 +787,7 @@ export default function useGallery() {
     materials: Array.isArray(materialResults) ? materialResults : [],
     styles: Array.isArray(styleResults) ? styleResults : [],
     isArtistsLoading,
+    isArtistFilterLoading,
     isMaterialsLoading,
     isStylesLoading,
     hasMoreArtists,
@@ -659,5 +799,12 @@ export default function useGallery() {
     loadMoreArtists,
     loadMoreMaterials,
     loadMoreStyles,
+
+    // New state for opened dropdowns
+    openedDropdowns,
+    setOpenedDropdowns,
+
+    // New functions for lazy loading
+    markDropdownOpened,
   };
 }

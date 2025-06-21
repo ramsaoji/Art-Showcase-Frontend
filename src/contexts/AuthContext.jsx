@@ -37,6 +37,13 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return;
       }
+
+      // If we already have user data, don't fetch again
+      if (user) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -55,7 +62,7 @@ export function AuthProvider({ children }) {
     }
     fetchUser();
     // eslint-disable-next-line
-  }, [token]);
+  }, [token, user]);
 
   // Login function
   const login = useCallback(async (email, password) => {
@@ -95,8 +102,30 @@ export function AuthProvider({ children }) {
 
   // Logout function
   const logout = useCallback(() => {
+    // Clear token and user state
     saveToken(null);
     setUser(null);
+
+    // Clear all artwork-related localStorage data
+    const keysToRemove = [];
+
+    // Get all localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        // Remove artwork form data, dimensions, and artist ID keys
+        if (
+          key.includes("artwork_form_data") ||
+          key.includes("artwork_dimensions") ||
+          key.includes("artwork_artist_id")
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+
+    // Remove the identified keys
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
   }, []);
 
   // Clear error function for external use

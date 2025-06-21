@@ -1,243 +1,453 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
-import { deleteImage, getPreviewUrl } from "../config/cloudinary"; // Add this import
+import { getPreviewUrl } from "../config/cloudinary"; // Keep this for image preview
 import { useAuth } from "../contexts/AuthContext";
 import { trpc } from "../utils/trpc";
-import { useMonthlyUploadCount } from "../utils/trpc";
+import {
+  useMonthlyUploadCount,
+  useArtistMonthlyUploadCount,
+} from "../utils/trpc";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
   return (
-    <div className="w-full">
-      <div className="flex justify-between mb-1">
-        <span className="text-base font-sans font-medium text-indigo-700">
-          {label}
-        </span>
-        <span className="text-base font-sans font-medium text-indigo-700">
-          {progress}%
-        </span>
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm text-gray-600 font-sans">
+        <span>{label}</span>
+        <span>{progress}%</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
+      <div className="w-full bg-gray-200 rounded-full h-2">
         <div
-          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+          className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
           style={{ width: `${progress}%` }}
-        ></div>
+        />
       </div>
     </div>
   );
 }
 
+// Validation schema
+const createValidationSchema = (
+  isSuperAdmin,
+  initialData,
+  artists,
+  artistId
+) => {
+  return yup.object().shape({
+    title: yup.string().trim().required("Title is required"),
+    material: yup.string().trim().required("Material is required"),
+    style: yup.string().trim().required("Style is required"),
+    description: yup.string().trim().required("Description is required"),
+    price: yup
+      .number()
+      .typeError("Price must be a number")
+      .positive("Price must be greater than 0")
+      .required("Price is required"),
+    year: yup
+      .number()
+      .typeError("Year must be a number")
+      .min(1900, "Year must be at least 1900")
+      .max(new Date().getFullYear() + 1, "Year cannot be in the future")
+      .required("Year is required"),
+    width: yup
+      .number()
+      .typeError("Width must be a number")
+      .positive("Width must be greater than 0")
+      .required("Width is required"),
+    height: yup
+      .number()
+      .typeError("Height must be a number")
+      .positive("Height must be greater than 0")
+      .required("Height is required"),
+    artistId: yup.string().when([], {
+      is: () => isSuperAdmin && !initialData,
+      then: (schema) => schema.required("Artist is required"),
+      otherwise: (schema) => schema.optional(),
+    }),
+    image: yup.mixed().when([], {
+      is: () => !initialData,
+      then: (schema) => schema.required("Image is required"),
+      otherwise: (schema) => schema.optional(),
+    }),
+  });
+};
+
 export default function ArtworkForm({
   onSubmit,
   initialData = null,
-  isSuperAdmin = false,
   artists = [],
   loadingArtists = false,
   artistId = "",
   setArtistId = () => {},
   selectedArtist = null,
+  setShouldLoadArtists = () => {},
 }) {
-  const { isSuperAdmin: authIsSuperAdmin, isArtist, user } = useAuth();
-  // Fetch monthly upload count for the current artist
-  const {
-    data: monthlyUploadData,
-    isLoading: loadingMonthlyUpload,
-    error: monthlyUploadError,
-  } = useMonthlyUploadCount();
+  const { isSuperAdmin, isArtist, user } = useAuth();
+  // Debug log
+  console.log(
+    "ArtworkForm: isSuperAdmin",
+    isSuperAdmin,
+    "isArtist",
+    isArtist,
+    "initialData",
+    initialData
+  );
+  console.log(
+    "ArtworkForm: artistId",
+    artistId,
+    "type:",
+    typeof artistId,
+    "length:",
+    artistId?.length
+  );
+  // Only fetch monthly upload count for artists creating new artwork
+  const shouldFetchUploadCount = isArtist && !isSuperAdmin && !initialData; // Only for artists (not admins) creating new artwork
+  let monthlyUploadData, loadingMonthlyUpload, monthlyUploadError;
+  if (shouldFetchUploadCount) {
+    const query = useMonthlyUploadCount(true);
+    monthlyUploadData = query.data;
+    loadingMonthlyUpload = query.isLoading;
+    monthlyUploadError = query.error;
+  } else {
+    monthlyUploadData = undefined;
+    loadingMonthlyUpload = false;
+    monthlyUploadError = undefined;
+  }
   const monthlyUploadCount = monthlyUploadData?.count ?? 0;
   const monthlyUploadLimit = monthlyUploadData?.limit ?? 10;
 
-  // --- Persistence keys ---
-  const STORAGE_KEY = "addArtworkFormData";
-  const DIMENSIONS_KEY = "addArtworkDimensions";
-  const IMAGE_KEY = "addArtworkImage";
-  const ARTIST_ID_KEY = "addArtworkArtistId";
+  // For admins: fetch selected artist's upload count
+  let selectedArtistUploadData,
+    loadingSelectedArtistUpload,
+    selectedArtistUploadError;
 
-  // --- Load persisted state if initialData is null (Add mode) ---
-  const getInitialFormData = () => {
-    if (initialData)
-      return {
-        title: initialData?.title || "",
-        artist: initialData?.artist || "",
-        price: initialData?.price || "",
-        description: initialData?.description || "",
-        dimensions: initialData?.dimensions || "",
-        material: initialData?.material || "",
-        style: initialData?.style || "",
-        year: initialData?.year || new Date().getFullYear(),
-        featured: initialData?.featured || false,
-        sold: initialData?.sold || false,
-        monthlyUploadLimit: selectedArtist?.monthlyUploadLimit ?? 10,
-        carousel: initialData?.carousel || false,
-      };
-    // Try to load from localStorage
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {}
-    // Default
-    return {
-      title: "",
-      artist: "",
-      price: "",
-      description: "",
-      dimensions: "",
-      material: "",
-      style: "",
-      year: new Date().getFullYear(),
-      featured: false,
-      sold: false,
-      monthlyUploadLimit: 10,
-      carousel: false,
-    };
-  };
-  const [formData, setFormData] = useState(getInitialFormData);
+  // Only fetch if we have a valid artistId and are in the right conditions
+  const shouldFetchArtistUploadCount = Boolean(
+    isSuperAdmin && !initialData && artistId && artistId.trim() !== ""
+  );
 
-  // --- Dimensions ---
-  const getInitialDimensions = () => {
-    if (initialData?.dimensions) {
-      const match = initialData.dimensions.match(
-        /(\d+(?:\.\d+)?)\s*cm\s*×\s*(\d+(?:\.\d+)?)\s*cm/
-      );
-      if (match) return { width: match[1], height: match[2] };
-    }
-    if (!initialData) {
-      try {
-        const saved = localStorage.getItem(DIMENSIONS_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return { width: "", height: "" };
-  };
-  const [dimensionInputs, setDimensionInputs] = useState(getInitialDimensions);
+  console.log(
+    "Debug - shouldFetchArtistUploadCount:",
+    shouldFetchArtistUploadCount
+  );
+  console.log("Debug - artistId:", artistId, "type:", typeof artistId);
 
-  // --- Image preview ---
-  const getInitialImagePreview = () => {
-    if (initialData?.cloudinary_public_id)
-      return getPreviewUrl(initialData.cloudinary_public_id);
-    if (initialData?.url) return initialData.url;
-    if (!initialData) {
-      try {
-        const saved = localStorage.getItem(IMAGE_KEY);
-        if (saved) return saved;
-      } catch {}
+  // Always create the query, but control when it runs with enabled
+  const artistUploadQuery = trpc.artwork.getArtistMonthlyUploadCount.useQuery(
+    { artistId: artistId?.trim() || "" },
+    {
+      enabled: shouldFetchArtistUploadCount,
+      retry: false,
+      refetchOnWindowFocus: false,
     }
-    return null;
-  };
+  );
+
+  if (shouldFetchArtistUploadCount) {
+    selectedArtistUploadData = artistUploadQuery?.data;
+    loadingSelectedArtistUpload = artistUploadQuery?.isLoading || false;
+    selectedArtistUploadError = artistUploadQuery?.error;
+  } else {
+    selectedArtistUploadData = undefined;
+    loadingSelectedArtistUpload = false;
+    selectedArtistUploadError = undefined;
+  }
+  const selectedArtistUploadCount = selectedArtistUploadData?.count ?? 0;
+  const selectedArtistUploadLimit = selectedArtistUploadData?.limit ?? 10;
+  const selectedArtistName =
+    selectedArtistUploadData?.artistName ??
+    selectedArtist?.artistName ??
+    "Selected Artist";
+
+  // Create validation schema inside component to have access to current props
+  const validationSchema = createValidationSchema(
+    isSuperAdmin,
+    initialData,
+    artists,
+    artistId
+  );
+
+  // Form state
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
-  const [imageRemoved, setImageRemoved] = useState(false); // Track if image was intentionally removed
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [imageError, setImageError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savingProgress, setSavingProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(null);
-  const [imageError, setImageError] = useState("");
+  const [error, setError] = useState(null);
   const [status, setStatus] = useState(initialData?.status || "ACTIVE");
+  const [artistFieldTouched, setArtistFieldTouched] = useState(false);
 
-  // --- Persist formData, dimensionInputs, imagePreview, artistId on change (Add mode only) ---
-  useEffect(() => {
-    if (!initialData) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
-    }
-  }, [formData, initialData]);
-  useEffect(() => {
-    if (!initialData) {
-      localStorage.setItem(DIMENSIONS_KEY, JSON.stringify(dimensionInputs));
-    }
-  }, [dimensionInputs, initialData]);
-  useEffect(() => {
-    if (!initialData && imagePreview) {
-      localStorage.setItem(IMAGE_KEY, imagePreview);
-    }
-  }, [imagePreview, initialData]);
-  useEffect(() => {
-    if (!initialData && isSuperAdmin) {
-      localStorage.setItem(ARTIST_ID_KEY, artistId || "");
-    }
-  }, [artistId, initialData, isSuperAdmin]);
-  // --- Restore artistId on mount (Add mode only) ---
-  useEffect(() => {
-    if (!initialData && isSuperAdmin) {
-      try {
-        const saved = localStorage.getItem(ARTIST_ID_KEY);
-        if (saved && setArtistId) setArtistId(saved);
-      } catch {}
-    }
-    // eslint-disable-next-line
-  }, []);
-  // --- Clear persisted state on successful submit (Add mode only) ---
-  const clearPersisted = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(DIMENSIONS_KEY);
-    localStorage.removeItem(IMAGE_KEY);
-    localStorage.removeItem(ARTIST_ID_KEY);
-  };
+  // Local storage keys - make them user-specific
+  const userId = user?.id || "anonymous";
+  const FORM_DATA_KEY = `artwork_form_data_${userId}`;
+  const DIMENSIONS_KEY = `artwork_dimensions_${userId}`;
+  const ARTIST_ID_KEY = `artwork_artist_id_${userId}`;
 
-  // Debug: Log initialData and imagePreview
-  useEffect(() => {
-    console.log("ArtworkForm initialData:", initialData);
-    console.log("ArtworkForm imagePreview:", getInitialImagePreview());
-    console.log("ArtworkForm imagePreview state:", imagePreview);
-  }, [initialData]);
-
-  // Predefined options for materials and styles
+  // Material and style options
   const materialOptions = [
     "Oil on Canvas",
     "Acrylic on Canvas",
     "Watercolor on Paper",
     "Mixed Media",
     "Digital Art",
-    "Charcoal on Paper",
-    "Pencil on Paper",
-    "Ink on Paper",
-    "Pastel on Paper",
-    "Gouache on Paper",
-    "Tempera on Canvas",
-    "Collage",
+    "Sculpture",
     "Photography",
-    "Sculpture - Bronze",
-    "Sculpture - Marble",
-    "Sculpture - Wood",
-    "Sculpture - Clay",
+    "Printmaking",
+    "Collage",
+    "Drawing",
     "Other",
   ];
 
   const styleOptions = [
     "Abstract",
-    "Contemporary",
-    "Modern",
+    "Realistic",
     "Impressionist",
     "Expressionist",
     "Surrealist",
-    "Minimalist",
-    "Pop Art",
-    "Cubist",
-    "Realist",
-    "Portrait",
-    "Landscape",
-    "Still Life",
-    "Street Art",
-    "Folk Art",
+    "Contemporary",
     "Traditional",
-    "Conceptual",
+    "Modern",
+    "Landscape",
+    "Portrait",
+    "Still Life",
     "Other",
   ];
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
-    console.log(`Input changed: ${name} = ${newValue} (${typeof newValue})`);
-    setFormData((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
+  // Get initial form data
+  const getInitialFormData = () => {
+    if (initialData) {
+      // Parse dimensions for edit mode
+      let width = "",
+        height = "";
+      if (initialData.dimensions) {
+        const match = initialData.dimensions.match(
+          /(\d+(?:\.\d+)?)cm × (\d+(?:\.\d+)?)cm/
+        );
+        if (match) {
+          width = match[1];
+          height = match[2];
+        }
+      }
+
+      return {
+        title: initialData.title || "",
+        material: initialData.material || "",
+        style: initialData.style || "",
+        description: initialData.description || "",
+        price: initialData.price || "",
+        year: initialData.year || new Date().getFullYear(),
+        featured: initialData.featured || false,
+        sold: initialData.sold || false,
+        carousel: initialData.carousel || false,
+        monthlyUploadLimit: 10,
+        artistId: "", // No artist selection for edit mode
+        width: width,
+        height: height,
+        dimensions: initialData.dimensions || "",
+      };
+    }
+
+    // Try to restore from localStorage (only for new artwork)
+    const savedData = localStorage.getItem(FORM_DATA_KEY);
+    const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
+
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        return {
+          ...parsedData,
+          artistId: savedArtistId || "", // Include saved artist ID
+        };
+      } catch (error) {
+        console.error("Error parsing saved form data:", error);
+      }
+    }
+
+    return {
+      title: "",
+      material: "",
+      style: "",
+      description: "",
+      price: "",
+      year: new Date().getFullYear(),
+      featured: false,
+      sold: false,
+      carousel: false,
+      monthlyUploadLimit: 10,
+      artistId: savedArtistId || "", // Include saved artist ID
+      width: "",
+      height: "",
+      dimensions: "",
+    };
   };
 
-  // Handle dimension inputs separately
+  // Get initial dimensions
+  const getInitialDimensions = () => {
+    if (initialData?.dimensions) {
+      const match = initialData.dimensions.match(
+        /(\d+(?:\.\d+)?)cm × (\d+(?:\.\d+)?)cm/
+      );
+      if (match) {
+        return { width: match[1], height: match[2] };
+      }
+    }
+
+    // Try to restore from localStorage
+    const savedDimensions = localStorage.getItem(DIMENSIONS_KEY);
+    if (savedDimensions) {
+      try {
+        return JSON.parse(savedDimensions);
+      } catch (error) {
+        console.error("Error parsing saved dimensions:", error);
+      }
+    }
+
+    return { width: "", height: "" };
+  };
+
+  // Get initial image preview
+  function getInitialImagePreview() {
+    if (initialData?.url) {
+      return initialData.url;
+    }
+    return null;
+  }
+
+  // Clear persisted data
+  const clearPersisted = () => {
+    localStorage.removeItem(FORM_DATA_KEY);
+    localStorage.removeItem(DIMENSIONS_KEY);
+    localStorage.removeItem(ARTIST_ID_KEY);
+  };
+
+  // Initialize form with React Hook Form
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    trigger,
+    formState: { errors, isValid, isDirty },
+    reset,
+  } = useForm({
+    resolver: yupResolver(validationSchema),
+    mode: "all",
+    reValidateMode: "onChange",
+    defaultValues: getInitialFormData(),
+  });
+
+  const watchedValues = watch();
+
+  // Force validation on mount
+  useEffect(() => {
+    trigger(); // Trigger validation on mount
+  }, [trigger]);
+
+  // Mark artist field as touched if there's a saved artist ID
+  useEffect(() => {
+    if (!initialData && isSuperAdmin) {
+      const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
+      if (savedArtistId) {
+        setArtistFieldTouched(true);
+      }
+    }
+  }, [initialData, isSuperAdmin, ARTIST_ID_KEY]);
+
+  // Initialize dimensions state
+  const [dimensionInputs, setDimensionInputs] = useState(
+    getInitialDimensions()
+  );
+
+  // Restore artist ID from localStorage (only for new artwork)
+  useEffect(() => {
+    if (!initialData && isSuperAdmin) {
+      const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
+      if (savedArtistId && setArtistId) {
+        setArtistId(savedArtistId);
+        setValue("artistId", savedArtistId, { shouldValidate: true });
+        // Mark artist field as touched to show it's been interacted with
+        setArtistFieldTouched(true);
+      }
+    }
+  }, [initialData, isSuperAdmin, setArtistId, setValue, ARTIST_ID_KEY]);
+
+  // Additional effect to handle artist restoration after artists are loaded
+  useEffect(() => {
+    if (!initialData && isSuperAdmin && artists.length > 0) {
+      const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
+      if (savedArtistId && !watchedValues.artistId) {
+        setValue("artistId", savedArtistId, { shouldValidate: true });
+        setArtistFieldTouched(true);
+      }
+    }
+  }, [
+    artists,
+    initialData,
+    isSuperAdmin,
+    setValue,
+    watchedValues.artistId,
+    ARTIST_ID_KEY,
+  ]);
+
+  // Persist form data, dimensions, and artist ID on change (Add mode only)
+  useEffect(() => {
+    if (!initialData) {
+      // Include artistId in the form data being saved
+      const formDataToSave = {
+        ...watchedValues,
+        artistId: watchedValues.artistId || artistId, // Use form value or prop value
+      };
+
+      localStorage.setItem(FORM_DATA_KEY, JSON.stringify(formDataToSave));
+      localStorage.setItem(DIMENSIONS_KEY, JSON.stringify(dimensionInputs));
+      if (isSuperAdmin && artistId) {
+        localStorage.setItem(ARTIST_ID_KEY, artistId);
+      }
+    }
+  }, [
+    watchedValues,
+    dimensionInputs,
+    artistId,
+    initialData,
+    isSuperAdmin,
+    FORM_DATA_KEY,
+    DIMENSIONS_KEY,
+    ARTIST_ID_KEY,
+  ]);
+
+  // Check if form has data but no image (for page refresh notification)
+  const hasFormDataButNoImage = (() => {
+    if (initialData) return false; // Don't show for edit mode
+    if (imageFile || imagePreview) return false; // Don't show if image exists
+
+    // Check if there's meaningful saved data
+    const savedData = localStorage.getItem(FORM_DATA_KEY);
+    if (!savedData) return false;
+
+    try {
+      const parsedData = JSON.parse(savedData);
+      // Only show if there's actual form content (not just default values)
+      return !!(
+        parsedData.title ||
+        parsedData.material ||
+        parsedData.style ||
+        parsedData.description ||
+        parsedData.price ||
+        (parsedData.year && parsedData.year !== new Date().getFullYear())
+      );
+    } catch {
+      return false;
+    }
+  })();
+
+  // Handle dimension changes
   const handleDimensionChange = (field, value) => {
     const newDimensions = { ...dimensionInputs, [field]: value };
     setDimensionInputs(newDimensions);
@@ -245,31 +455,36 @@ export default function ArtworkForm({
     // Update the main form data with formatted dimensions
     if (newDimensions.width && newDimensions.height) {
       const formattedDimensions = `${newDimensions.width}cm × ${newDimensions.height}cm`;
-      setFormData((prev) => ({ ...prev, dimensions: formattedDimensions }));
+      setValue("dimensions", formattedDimensions, { shouldValidate: true });
     } else {
-      setFormData((prev) => ({ ...prev, dimensions: "" }));
+      setValue("dimensions", "", { shouldValidate: true });
     }
   };
 
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
-
+  // Handle image change
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     setImageError("");
-    setImageRemoved(false); // Reset removed state when new image is selected
+    setImageRemoved(false);
+
+    // Clear any existing form errors when user uploads an image
+    if (error) {
+      setError(null);
+    }
 
     if (file) {
       // Check file type
       const validTypes = ["image/jpeg", "image/jpg", "image/png"];
       if (!validTypes.includes(file.type)) {
         setImageError("Please upload only JPG, JPEG or PNG files");
-        e.target.value = null; // Reset file input
+        e.target.value = null;
         return;
       }
 
       if (file.size > MAX_FILE_SIZE) {
         setImageError("Image size must be less than 5MB");
-        e.target.value = null; // Reset file input
+        e.target.value = null;
         return;
       }
 
@@ -279,15 +494,20 @@ export default function ArtworkForm({
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
+
+      // Set image in form
+      setValue("image", file, { shouldValidate: true });
     }
   };
 
+  // Handle image remove
   const handleImageRemove = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
     setImageRemoved(true);
+    setValue("image", null, { shouldValidate: true });
 
     // Reset file input
     const fileInput = document.getElementById("file-upload");
@@ -296,67 +516,31 @@ export default function ArtworkForm({
     }
   };
 
-  // Handle monthly upload limit change (for super admin)
+  // Handle monthly upload limit change
   const handleMonthlyLimitChange = (e) => {
     const value =
       e.target.value === ""
         ? ""
         : Math.max(1, Math.min(1000, Number(e.target.value)));
-    setFormData((prev) => ({ ...prev, monthlyUploadLimit: value }));
+    setValue("monthlyUploadLimit", value);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Get field error class
+  const getFieldErrorClass = (fieldName) => {
+    return errors[fieldName]
+      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+      : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-500";
+  };
 
-    // Validate artistId for super admin (add mode only)
-    if (isSuperAdmin && !initialData && !artistId) {
-      setImageError("Please select an artist before saving.");
-      return;
-    }
-
-    // Validate image requirement
-    const hasImage = imageFile || (initialData?.url && !imageRemoved);
-    // If imagePreview is a DataURL and imageFile is null, block submission
-    if (!hasImage && imagePreview && !imageFile) {
-      setImageError("Please re-upload the image before saving.");
-      return;
-    }
-    if (!hasImage) {
-      setImageError("Please select an image for the artwork");
-      return;
-    }
-
-    // Validate dimensions
-    if (!dimensionInputs.width || !dimensionInputs.height) {
-      setImageError("Please enter both width and height dimensions");
-      return;
-    }
-
+  // Form submission handler
+  const onSubmitForm = async (data) => {
+    setError(null);
     setIsSubmitting(true);
     setCurrentStep("uploading");
-    setUploadProgress(0);
-    setSavingProgress(0);
+
+    let submissionSuccessful = false;
 
     try {
-      // Handle Cloudinary cleanup for edit mode
-      if (
-        initialData &&
-        (imageFile || imageRemoved) &&
-        initialData.cloudinary_public_id
-      ) {
-        setCurrentStep("cleaning");
-        try {
-          await deleteImage(initialData.cloudinary_public_id);
-          console.log("Old image deleted from Cloudinary successfully");
-        } catch (cloudinaryError) {
-          console.error(
-            "Error deleting old image from Cloudinary:",
-            cloudinaryError
-          );
-          // Continue with the update even if old image deletion fails
-        }
-      }
-
       setCurrentStep("uploading");
 
       // Create FormData object to handle file upload
@@ -365,31 +549,34 @@ export default function ArtworkForm({
         submitData.append("image", imageFile);
       }
 
-      // Add a flag to indicate if image was removed (for backend handling)
+      // Add a flag to indicate if image was removed
       if (imageRemoved) {
         submitData.append("imageRemoved", "true");
       }
 
-      // Log form data before submission
-      console.log("Form data before submission:", formData);
-
-      // Append other form data
-      Object.entries(formData).forEach(([key, value]) => {
-        // Convert boolean to string "true"/"false" for FormData
-        const formValue = typeof value === "boolean" ? String(value) : value;
-        submitData.append(key, formValue);
-        console.log(
-          `Appending to FormData: ${key} = ${formValue} (${typeof formValue})`
-        );
+      // Append form data
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          const formValue = typeof value === "boolean" ? String(value) : value;
+          submitData.append(key, formValue);
+        }
       });
+
+      // Add dimensions
+      if (dimensionInputs.width && dimensionInputs.height) {
+        submitData.set(
+          "dimensions",
+          `${dimensionInputs.width}cm × ${dimensionInputs.height}cm`
+        );
+      }
 
       // For super admin, include monthlyUploadLimit if set
       if (isSuperAdmin && selectedArtist) {
-        submitData.set("monthlyUploadLimit", formData.monthlyUploadLimit);
+        submitData.set("monthlyUploadLimit", data.monthlyUploadLimit);
       }
 
       // Pass status if admin
-      if (isSuperAdmin && initialData) {
+      if (isSuperAdmin) {
         submitData.set("status", status);
       }
 
@@ -427,30 +614,11 @@ export default function ArtworkForm({
       clearInterval(savingInterval);
       setSavingProgress(100);
 
-      // Reset form after successful submission (only for new artwork)
-      if (!initialData) {
-        setFormData({
-          title: "",
-          artist: "",
-          price: "",
-          description: "",
-          dimensions: "",
-          material: "",
-          style: "",
-          year: new Date().getFullYear(),
-          featured: false,
-          sold: false,
-          monthlyUploadLimit: 10,
-          carousel: false,
-        });
-        setDimensionInputs({ width: "", height: "" });
-        setImageFile(null);
-        setImagePreview(null);
-        setImageRemoved(false);
-        clearPersisted(); // <-- Clear localStorage
-      }
+      // Mark submission as successful
+      submissionSuccessful = true;
     } catch (error) {
       console.error("Error submitting artwork:", error);
+      setError("Failed to submit artwork. Please try again.");
     } finally {
       setTimeout(() => {
         setIsSubmitting(false);
@@ -459,13 +627,22 @@ export default function ArtworkForm({
         setSavingProgress(0);
       }, 1000);
     }
+
+    // Reset form only after successful submission (only for new artwork)
+    if (submissionSuccessful && !initialData) {
+      reset();
+      setDimensionInputs({ width: "", height: "" });
+      setImageFile(null);
+      setImagePreview(null);
+      setImageRemoved(false);
+      if (isSuperAdmin && setArtistId) setArtistId("");
+      clearPersisted();
+    }
   };
 
   // Get the current step label for display
   const getStepLabel = () => {
     switch (currentStep) {
-      case "cleaning":
-        return "Removing old image...";
       case "uploading":
         return imageFile ? "Uploading new image..." : "Processing...";
       case "saving":
@@ -479,45 +656,112 @@ export default function ArtworkForm({
   const shouldShowPreview = imagePreview && !imageRemoved;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 font-sans">
-      {/* Monthly upload limit info for artists */}
-      {isArtist && (
-        <div className="mb-4">
+    <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6 font-sans">
+      {/* Page refresh notification */}
+      {hasFormDataButNoImage && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-amber-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800 font-sans">
+                Form data restored
+              </h3>
+              <div className="mt-2 text-sm text-amber-700 font-sans">
+                <p>
+                  Your form data was saved from your previous session, but the
+                  image was lost during page refresh. Please upload your image
+                  again to continue.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly Upload Count Display - Only for Artists */}
+      {shouldFetchUploadCount && (
+        <div className="mb-6">
           {loadingMonthlyUpload ? (
-            <div className="text-sm text-gray-500">
-              Checking your monthly upload limit...
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                <span className="text-sm text-blue-700 font-sans">
+                  Loading upload count...
+                </span>
+              </div>
             </div>
           ) : monthlyUploadError ? (
-            <div className="text-sm text-red-500">
-              Could not load your monthly upload count.
-            </div>
+            <Alert
+              type="error"
+              message={`Failed to load upload count: ${monthlyUploadError.message}`}
+            />
           ) : (
-            <div
-              className={`text-sm font-sans ${
+            <Alert
+              type={
                 monthlyUploadCount >= monthlyUploadLimit
-                  ? "text-red-600"
-                  : "text-gray-700"
-              }`}
-            >
-              {monthlyUploadCount >= monthlyUploadLimit ? (
-                <>
-                  <span className="font-bold">
-                    You have reached your monthly upload limit (
-                    {monthlyUploadLimit} artworks).
-                  </span>
-                  <br />
-                  <span>You cannot add more artworks this month.</span>
-                </>
-              ) : (
-                <>
-                  <span>You have uploaded </span>
-                  <span className="font-bold">{monthlyUploadCount}</span>
-                  <span> out of </span>
-                  <span className="font-bold">{monthlyUploadLimit}</span>
-                  <span> artworks allowed this month.</span>
-                </>
-              )}
+                  ? "error"
+                  : monthlyUploadCount >= monthlyUploadLimit * 0.8
+                  ? "warning"
+                  : "info"
+              }
+              message={
+                monthlyUploadCount >= monthlyUploadLimit
+                  ? `Monthly upload limit reached (${monthlyUploadCount}/${monthlyUploadLimit}). You cannot upload more artwork this month.`
+                  : monthlyUploadCount >= monthlyUploadLimit * 0.8
+                  ? `Monthly upload count: ${monthlyUploadCount}/${monthlyUploadLimit}. You're approaching your limit.`
+                  : `Monthly upload count: ${monthlyUploadCount}/${monthlyUploadLimit}`
+              }
+            />
+          )}
+        </div>
+      )}
+
+      {/* For admins: fetch selected artist's upload count */}
+      {isSuperAdmin && !initialData && shouldFetchArtistUploadCount && (
+        <div className="mb-6">
+          {loadingSelectedArtistUpload ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                <span className="text-sm text-blue-700 font-sans">
+                  Loading {selectedArtistName}'s upload count...
+                </span>
+              </div>
             </div>
+          ) : selectedArtistUploadError ? (
+            <Alert
+              type="error"
+              message={`Failed to load selected artist's upload count: ${selectedArtistUploadError.message}`}
+            />
+          ) : (
+            <Alert
+              type={
+                selectedArtistUploadCount >= selectedArtistUploadLimit
+                  ? "error"
+                  : selectedArtistUploadCount >= selectedArtistUploadLimit * 0.8
+                  ? "warning"
+                  : "info"
+              }
+              message={
+                selectedArtistUploadCount >= selectedArtistUploadLimit
+                  ? `${selectedArtistName}'s monthly upload limit reached (${selectedArtistUploadCount}/${selectedArtistUploadLimit}).`
+                  : selectedArtistUploadCount >= selectedArtistUploadLimit * 0.8
+                  ? `${selectedArtistName}'s monthly upload count: ${selectedArtistUploadCount}/${selectedArtistUploadLimit}. They're approaching their limit.`
+                  : `${selectedArtistName}'s monthly upload count: ${selectedArtistUploadCount}/${selectedArtistUploadLimit}`
+              }
+            />
           )}
         </div>
       )}
@@ -564,26 +808,6 @@ export default function ArtworkForm({
                 </div>
               </div>
 
-              {/* Status message */}
-              {/* {imageFile && (
-                <div className="flex justify-center mb-4">
-                  <div className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm font-sans rounded-full">
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    New Image Selected
-                  </div>
-                </div>
-              )} */}
-
               {/* Change image button */}
               <div className="flex justify-center">
                 <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm font-sans font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
@@ -617,7 +841,7 @@ export default function ArtworkForm({
           // Show upload dropzone when no image
           <label
             className={`block cursor-pointer ${
-              imageError ? "border-red-300" : "border-gray-200"
+              imageError || errors.image ? "border-red-300" : "border-gray-200"
             } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
           >
             <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
@@ -632,6 +856,11 @@ export default function ArtworkForm({
                 {imageRemoved && (
                   <p className="mt-2 text-xs text-red-500 font-sans">
                     Image removed - Please select a new image
+                  </p>
+                )}
+                {hasFormDataButNoImage && (
+                  <p className="mt-2 text-xs text-amber-600 font-sans px-2 py-1 rounded">
+                    Your form data was saved, but please upload your image again
                   </p>
                 )}
               </div>
@@ -655,6 +884,21 @@ export default function ArtworkForm({
             <p className="text-sm text-red-700 font-sans">{imageError}</p>
           </div>
         )}
+        {errors.image && (
+          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-700 font-sans">
+              {errors.image.message}
+            </p>
+          </div>
+        )}
+        {/* Show image required error when form has data but no image */}
+        {hasFormDataButNoImage && !errors.image && (
+          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-700 font-sans">Image is required</p>
+          </div>
+        )}
       </div>
 
       {/* Form Grid */}
@@ -668,52 +912,79 @@ export default function ArtworkForm({
             >
               Select Artist <span className="text-red-500">*</span>
             </label>
-            {loadingArtists ? (
-              <div className="flex items-center space-x-2 text-gray-500 text-sm font-sans mt-2">
-                <div className="animate-spin h-4 w-4 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
-                <span>Loading artists...</span>
-              </div>
-            ) : (
-              <div className="relative">
-                <select
-                  id="artistSelect"
-                  className="block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
-                  value={artistId}
-                  onChange={(e) => setArtistId(e.target.value)}
-                >
-                  <option value="" className="font-sans">
-                    Select an artist
-                  </option>
-                  {artists &&
-                    artists
-                      .filter((artist) => artist.approved && artist.active)
-                      .map((artist) => (
-                        <option
-                          key={artist.id}
-                          value={artist.id}
-                          className="font-sans"
-                        >
-                          {artist.artistName || artist.email} ({artist.email})
-                        </option>
-                      ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg
-                    className="w-5 h-5 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
+            <div className="relative">
+              <Controller
+                name="artistId"
+                control={control}
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    id="artistSelect"
+                    className={`block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${getFieldErrorClass(
+                      "artistId"
+                    )}`}
+                    onFocus={() => {
+                      setArtistFieldTouched(true);
+                      if (artists.length === 0 && !loadingArtists) {
+                        setShouldLoadArtists(true);
+                      }
+                    }}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setArtistFieldTouched(true);
+                      trigger("artistId");
+                      // Also update the parent component's artistId state for localStorage
+                      if (isSuperAdmin && setArtistId) {
+                        setArtistId(e.target.value);
+                      }
+                    }}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M8 9l4 4 4-4"
-                    />
-                  </svg>
-                </div>
+                    <option value="" className="font-sans">
+                      Select an artist
+                    </option>
+                    {loadingArtists ? (
+                      <option value="" disabled className="font-sans">
+                        Loading artists...
+                      </option>
+                    ) : (
+                      artists &&
+                      artists
+                        .filter((artist) => artist.approved && artist.active)
+                        .map((artist) => (
+                          <option
+                            key={artist.id}
+                            value={artist.id}
+                            className="font-sans"
+                          >
+                            {artist.artistName || artist.email} ({artist.email})
+                          </option>
+                        ))
+                    )}
+                  </select>
+                )}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 9l4 4 4-4"
+                  />
+                </svg>
               </div>
+            </div>
+            {(errors.artistId ||
+              (artistFieldTouched && !watchedValues.artistId)) && (
+              <p className="mt-1 text-sm text-red-600 font-sans">
+                {errors.artistId?.message || "Artist is required"}
+              </p>
             )}
           </div>
         )}
@@ -726,19 +997,27 @@ export default function ArtworkForm({
           >
             Title <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
+          <Controller
             name="title"
-            id="title"
-            required
-            value={formData.title}
-            onChange={handleInputChange}
-            placeholder="Enter the artwork title"
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="text"
+                id="title"
+                placeholder="Enter the artwork title"
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                  "title"
+                )}`}
+              />
+            )}
           />
+          {errors.title && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {errors.title.message}
+            </p>
+          )}
         </div>
-
-        {/* Artist input field removed as requested */}
 
         {/* Price */}
         <div className="col-span-2">
@@ -748,18 +1027,28 @@ export default function ArtworkForm({
           >
             Price <span className="text-red-500">*</span>
           </label>
-          <input
-            type="number"
+          <Controller
             name="price"
-            id="price"
-            required
-            value={formData.price}
-            onChange={handleInputChange}
-            placeholder="Enter price in INR"
-            min="0"
-            step="1"
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="number"
+                id="price"
+                placeholder="Enter price in INR"
+                min="0"
+                step="1"
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                  "price"
+                )}`}
+              />
+            )}
           />
+          {errors.price && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {errors.price.message}
+            </p>
+          )}
         </div>
 
         {/* Description */}
@@ -770,16 +1059,26 @@ export default function ArtworkForm({
           >
             Description <span className="text-red-500">*</span>
           </label>
-          <textarea
+          <Controller
             name="description"
-            id="description"
-            rows={4}
-            required
-            value={formData.description}
-            onChange={handleInputChange}
-            placeholder="Describe the artwork, its inspiration, and any unique features..."
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans resize-none"
+            control={control}
+            render={({ field }) => (
+              <textarea
+                {...field}
+                id="description"
+                rows={4}
+                placeholder="Describe the artwork, its inspiration, and any unique features..."
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans resize-none ${getFieldErrorClass(
+                  "description"
+                )}`}
+              />
+            )}
           />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {errors.description.message}
+            </p>
+          )}
         </div>
 
         {/* Dimensions - Split into Width and Height */}
@@ -795,17 +1094,32 @@ export default function ArtworkForm({
               >
                 Width (cm)
               </label>
-              <input
-                type="number"
-                id="width"
-                required
-                value={dimensionInputs.width}
-                onChange={(e) => handleDimensionChange("width", e.target.value)}
-                placeholder="24"
-                min="0.1"
-                step="0.1"
-                className="block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+              <Controller
+                name="width"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="number"
+                    id="width"
+                    placeholder="24"
+                    min="0.1"
+                    step="0.1"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleDimensionChange("width", e.target.value);
+                    }}
+                    className={`block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                      "width"
+                    )}`}
+                  />
+                )}
               />
+              {errors.width && (
+                <p className="mt-1 text-sm text-red-600 font-sans">
+                  {errors.width.message}
+                </p>
+              )}
             </div>
             <div>
               <label
@@ -814,25 +1128,38 @@ export default function ArtworkForm({
               >
                 Height (cm)
               </label>
-              <input
-                type="number"
-                id="height"
-                required
-                value={dimensionInputs.height}
-                onChange={(e) =>
-                  handleDimensionChange("height", e.target.value)
-                }
-                placeholder="36"
-                min="0.1"
-                step="0.1"
-                className="block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+              <Controller
+                name="height"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="number"
+                    id="height"
+                    placeholder="36"
+                    min="0.1"
+                    step="0.1"
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleDimensionChange("height", e.target.value);
+                    }}
+                    className={`block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                      "height"
+                    )}`}
+                  />
+                )}
               />
+              {errors.height && (
+                <p className="mt-1 text-sm text-red-600 font-sans">
+                  {errors.height.message}
+                </p>
+              )}
             </div>
           </div>
-          {formData.dimensions && (
+          {watchedValues.dimensions && (
             <p className="mt-2 text-sm text-gray-600 font-sans">
               Preview:{" "}
-              <span className="font-medium">{formData.dimensions}</span>
+              <span className="font-medium">{watchedValues.dimensions}</span>
             </p>
           )}
         </div>
@@ -846,37 +1173,52 @@ export default function ArtworkForm({
             Material <span className="text-red-500">*</span>
           </label>
           <div className="relative">
-            <select
+            <Controller
               name="material"
-              id="material"
-              required
-              value={formData.material}
-              onChange={handleInputChange}
-              className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
-            >
-              <option value="">Select material</option>
-              {materialOptions.map((material) => (
-                <option key={material} value={material}>
-                  {material}
-                </option>
-              ))}
-            </select>
+              control={control}
+              render={({ field }) => (
+                <select
+                  {...field}
+                  id="material"
+                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${getFieldErrorClass(
+                    "material"
+                  )}`}
+                >
+                  <option value="">Select material</option>
+                  {materialOptions.map((material) => (
+                    <option
+                      key={material}
+                      value={material}
+                      className="font-sans"
+                    >
+                      {material}
+                    </option>
+                  ))}
+                </select>
+              )}
+            />
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <svg
-                className="w-5 h-5 text-gray-400"
+                className="w-5 h-5 text-gray-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
+                  d="M8 9l4 4 4-4"
                 />
               </svg>
             </div>
           </div>
+          {errors.material && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {errors.material.message}
+            </p>
+          )}
         </div>
 
         {/* Style - Dropdown */}
@@ -888,37 +1230,48 @@ export default function ArtworkForm({
             Style <span className="text-red-500">*</span>
           </label>
           <div className="relative">
-            <select
+            <Controller
               name="style"
-              id="style"
-              required
-              value={formData.style}
-              onChange={handleInputChange}
-              className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
-            >
-              <option value="">Select style</option>
-              {styleOptions.map((style) => (
-                <option key={style} value={style}>
-                  {style}
-                </option>
-              ))}
-            </select>
+              control={control}
+              render={({ field }) => (
+                <select
+                  {...field}
+                  id="style"
+                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${getFieldErrorClass(
+                    "style"
+                  )}`}
+                >
+                  <option value="">Select style</option>
+                  {styleOptions.map((style) => (
+                    <option key={style} value={style} className="font-sans">
+                      {style}
+                    </option>
+                  ))}
+                </select>
+              )}
+            />
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <svg
-                className="w-5 h-5 text-gray-400"
+                className="w-5 h-5 text-gray-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
+                  d="M8 9l4 4 4-4"
                 />
               </svg>
             </div>
           </div>
+          {errors.style && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {errors.style.message}
+            </p>
+          )}
         </div>
 
         {/* Year */}
@@ -929,18 +1282,28 @@ export default function ArtworkForm({
           >
             Year <span className="text-red-500">*</span>
           </label>
-          <input
-            type="number"
+          <Controller
             name="year"
-            id="year"
-            required
-            value={formData.year}
-            onChange={handleInputChange}
-            placeholder={new Date().getFullYear().toString()}
-            min="1800"
-            max={new Date().getFullYear()}
-            className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="number"
+                id="year"
+                placeholder={new Date().getFullYear().toString()}
+                min="1800"
+                max={new Date().getFullYear()}
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                  "year"
+                )}`}
+              />
+            )}
           />
+          {errors.year && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {errors.year.message}
+            </p>
+          )}
         </div>
 
         {/* Super Admin: Status - Dropdown */}
@@ -954,7 +1317,7 @@ export default function ArtworkForm({
                 name="status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans bg-white appearance-none"
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none`}
               >
                 <option value="ACTIVE" className="font-sans">
                   Active
@@ -988,27 +1351,31 @@ export default function ArtworkForm({
 
         {/* Super Admin: Set monthly upload limit for selected artist */}
         {isSuperAdmin && (
-          <div className="mb-4 col-span-2 sm:col-span-1">
+          <div className="col-span-2 sm:col-span-1">
             <label
               htmlFor="monthlyUploadLimit"
               className="block text-sm font-medium text-gray-700 font-sans mb-1"
             >
               Monthly Upload Limit for Artist
             </label>
-            <input
-              type="number"
-              id="monthlyUploadLimit"
+            <Controller
               name="monthlyUploadLimit"
-              placeholder="Default is 10. Leave blank or set to 10 for standard limit."
-              min={1}
-              max={1000}
-              value={formData.monthlyUploadLimit}
-              onChange={handleMonthlyLimitChange}
-              className="mt-1 block w-full border border-gray-200 rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none font-sans"
+              control={control}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  type="number"
+                  id="monthlyUploadLimit"
+                  placeholder="Default is 10. Leave blank or set to 10 for standard limit."
+                  min={1}
+                  max={1000}
+                  onChange={handleMonthlyLimitChange}
+                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                    "monthlyUploadLimit"
+                  )}`}
+                />
+              )}
             />
-            {/* <p className="text-xs text-gray-500 mt-1">
-              Default is 10. Leave blank or set to 10 for standard limit.
-            </p> */}
           </div>
         )}
 
@@ -1016,12 +1383,17 @@ export default function ArtworkForm({
         <div className="col-span-2 flex flex-wrap gap-6">
           {isSuperAdmin && (
             <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
+              <Controller
                 name="featured"
-                checked={formData.featured}
-                onChange={handleInputChange}
-                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="checkbox"
+                    checked={field.value}
+                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                )}
               />
               <span className="text-sm font-medium text-gray-700 font-sans">
                 Featured Artwork
@@ -1030,12 +1402,17 @@ export default function ArtworkForm({
           )}
           {isSuperAdmin && (
             <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
+              <Controller
                 name="sold"
-                checked={formData.sold}
-                onChange={handleInputChange}
-                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="checkbox"
+                    checked={field.value}
+                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                )}
               />
               <span className="text-sm font-medium text-gray-700 font-sans">
                 Mark as Sold
@@ -1044,12 +1421,17 @@ export default function ArtworkForm({
           )}
           {isSuperAdmin && (
             <label className="flex items-center space-x-3">
-              <input
-                type="checkbox"
+              <Controller
                 name="carousel"
-                checked={formData.carousel || false}
-                onChange={handleInputChange}
-                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="checkbox"
+                    checked={field.value || false}
+                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                )}
               />
               <span className="text-sm font-medium text-gray-700 font-sans">
                 Show in Carousel
@@ -1062,9 +1444,6 @@ export default function ArtworkForm({
       {/* Progress Indicators */}
       {isSubmitting && (
         <div className="space-y-4 pt-4">
-          {currentStep === "cleaning" && (
-            <ProgressBar progress={30} label="Removing old image..." />
-          )}
           {currentStep === "uploading" && (
             <ProgressBar
               progress={uploadProgress}
@@ -1080,14 +1459,19 @@ export default function ArtworkForm({
         </div>
       )}
 
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-700 font-sans">{error}</p>
+        </div>
+      )}
+
       {/* Submit and Reset Button */}
       <div className="pt-4 flex flex-col sm:flex-row gap-4">
         <button
           type="submit"
-          disabled={
-            isSubmitting ||
-            (isArtist && monthlyUploadCount >= monthlyUploadLimit)
-          }
+          disabled={!isValid || isSubmitting}
           className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
         >
           {isSubmitting ? (
@@ -1101,31 +1485,47 @@ export default function ArtworkForm({
             "Save Artwork"
           )}
         </button>
+
         {/* Reset Form Button: Only show when adding new artwork */}
         {!initialData && (
           <button
             type="button"
             onClick={() => {
-              setFormData({
+              // Reset form data
+              reset({
                 title: "",
-                artist: "",
-                price: "",
-                description: "",
-                dimensions: "",
                 material: "",
                 style: "",
+                description: "",
+                price: "",
                 year: new Date().getFullYear(),
                 featured: false,
                 sold: false,
-                monthlyUploadLimit: 10,
                 carousel: false,
+                monthlyUploadLimit: 10,
+                artistId: "",
               });
+
+              // Reset other state
               setDimensionInputs({ width: "", height: "" });
               setImageFile(null);
               setImagePreview(null);
               setImageRemoved(false);
-              if (isSuperAdmin && setArtistId) setArtistId("");
+              setImageError("");
+              setArtistFieldTouched(false);
+
+              // Clear artist selection
+              if (isSuperAdmin && setArtistId) {
+                setArtistId("");
+              }
+
+              // Clear localStorage
               clearPersisted();
+
+              // Trigger validation to update form state
+              setTimeout(() => {
+                trigger();
+              }, 100);
             }}
             className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-gray-400 rounded-full bg-white text-gray-700 font-sans text-base font-medium hover:bg-gray-100 hover:border-gray-500 focus:outline-none focus:ring-0 transition-colors duration-300"
           >

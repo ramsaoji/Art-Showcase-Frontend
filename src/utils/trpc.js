@@ -21,21 +21,50 @@ export const trpcClient = trpc.createClient({
 });
 
 // Helper for monthly upload count
-export function useMonthlyUploadCount() {
-  return trpc.useQuery(["artwork.getMonthlyUploadCount"]);
+export function useMonthlyUploadCount(enabled = true) {
+  return trpc.useQuery(["artwork.getMonthlyUploadCount"], {
+    enabled: enabled,
+  });
+}
+
+// Helper for getting a specific artist's monthly upload count (for admins)
+export function useArtistMonthlyUploadCount(artistId, enabled = true) {
+  // Extra validation to prevent any invalid values
+  const isValidArtistId =
+    artistId &&
+    typeof artistId === "string" &&
+    artistId.trim() !== "" &&
+    artistId.length > 0;
+
+  // Only create the query if we have a valid artistId
+  if (!isValidArtistId) {
+    return {
+      data: undefined,
+      isLoading: false,
+      error: undefined,
+      refetch: () => {},
+    };
+  }
+
+  return trpc.useQuery(
+    ["artwork.getArtistMonthlyUploadCount", { artistId: artistId.trim() }],
+    {
+      enabled: enabled && isValidArtistId,
+    }
+  );
 }
 
 // Artists search (infinite scroll, search)
-export function useArtistsSearch(params) {
-  return trpc.user.listArtistsPublic.useQuery(params);
+export function useArtistsSearch(params, options = {}) {
+  return trpc.user.listArtistsPublic.useQuery(params, options);
 }
 
 // Materials search (infinite scroll, search)
-export function useMaterialsSearch(params) {
-  return trpc.artwork.getMaterials.useQuery(params);
+export function useMaterialsSearch(params, options = {}) {
+  return trpc.artwork.getMaterials.useQuery(params, options);
 }
 
 // Styles search (infinite scroll, search)
-export function useStylesSearch(params) {
-  return trpc.artwork.getStyles.useQuery(params);
+export function useStylesSearch(params, options = {}) {
+  return trpc.artwork.getStyles.useQuery(params, options);
 }
