@@ -215,18 +215,15 @@ export default function ArtistApprovals() {
                             {artist.artworksCount ?? 0}
                           </td>
                           <td className="font-sans align-middle">
-                            <button
-                              className={`px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold font-sans transition-all duration-200 mr-2 border-none outline-none focus:ring-2 focus:ring-indigo-300 ${
+                            <span
+                              className={`px-2.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold font-sans align-middle inline-block ${
                                 artist.active
-                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                  : "bg-red-100 text-red-700 hover:bg-red-200"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
                               }`}
-                              onClick={() =>
-                                handleSetActive(artist.id, !artist.active)
-                              }
                             >
                               {artist.active ? "Active" : "Inactive"}
-                            </button>
+                            </span>
                           </td>
                           <td className="font-sans align-middle">
                             <span
