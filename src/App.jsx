@@ -5,9 +5,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 import { trackPageView } from "./services/analytics";
 import Loader from "./components/ui/Loader";
+import Home from "./pages/Home";
 
 // Lazy load page components
-const Home = lazy(() => import("./pages/Home"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const Contact = lazy(() => import("./pages/Contact"));
 const About = lazy(() => import("./pages/About"));
