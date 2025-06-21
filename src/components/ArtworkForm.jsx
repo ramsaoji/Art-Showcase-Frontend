@@ -992,17 +992,12 @@ export default function ArtworkForm({
                     className={`block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${getFieldErrorClass(
                       "artistId"
                     )}`}
-                    onFocus={() => {
+                    onBlur={() => {
                       setArtistFieldTouched(true);
-                      if (artists.length === 0 && !loadingArtists) {
-                        setShouldLoadArtists(true);
-                      }
                     }}
                     onChange={(e) => {
                       field.onChange(e);
-                      setArtistFieldTouched(true);
                       trigger("artistId");
-                      // Also update the parent component's artistId state for localStorage
                       if (isSuperAdmin && setArtistId) {
                         setArtistId(e.target.value);
                       }
@@ -1049,8 +1044,7 @@ export default function ArtworkForm({
                 </svg>
               </div>
             </div>
-            {(errors.artistId ||
-              (artistFieldTouched && !watchedValues.artistId)) && (
+            {errors.artistId && (isSubmitted || artistFieldTouched) && (
               <p className="mt-1 text-sm text-red-600 font-sans">
                 {errors.artistId?.message || "Artist is required"}
               </p>
