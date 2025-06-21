@@ -353,6 +353,18 @@ export default function ArtworkDetail() {
                         </p>
                       </div>
                     )}
+                    {/* Expiry date for super admin or owner */}
+                    {artwork.expiresAt &&
+                      (isSuperAdmin || (isArtist && isOwner)) && (
+                        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-4 border border-red-100 sm:col-span-2">
+                          <h3 className="text-sm font-sans font-medium text-red-700 mb-1">
+                            Expires
+                          </h3>
+                          <p className="text-base sm:text-lg font-sans text-red-700">
+                            {format(new Date(artwork.expiresAt), "PPP")}
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </motion.div>
               </div>

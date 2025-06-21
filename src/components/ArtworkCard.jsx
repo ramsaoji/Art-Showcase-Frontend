@@ -355,6 +355,14 @@ export default function ArtworkCard({
                 Added: {format(new Date(safeArtwork.createdAt), "MMM d, yyyy")}
               </span>
             )}
+            {/* Expiry date for super admin or owner */}
+            {safeArtwork.expiresAt &&
+              (isSuperAdmin || (isArtist && isOwner)) && (
+                <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-red-700 rounded-full shadow-sm border border-red-100">
+                  Expires:{" "}
+                  {format(new Date(safeArtwork.expiresAt), "MMM d, yyyy")}
+                </span>
+              )}
           </div>
         </div>
       </div>

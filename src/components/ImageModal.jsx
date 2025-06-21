@@ -349,7 +349,7 @@ export default function ImageModal({
                         </div>
                       )}
                       {image?.createdAt && (
-                        <div className="col-span-2">
+                        <div>
                           <h3 className="text-sm font-sans font-medium text-gray-500 mb-1">
                             Added
                           </h3>
@@ -358,6 +358,17 @@ export default function ImageModal({
                           </p>
                         </div>
                       )}
+                      {image?.expiresAt &&
+                        (isSuperAdmin || (isArtist && isOwner)) && (
+                          <div>
+                            <h3 className="text-sm font-sans font-medium text-red-700 mb-1">
+                              Expires
+                            </h3>
+                            <p className="text-base font-sans text-red-700">
+                              {format(new Date(image.expiresAt), "PPP")}
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </motion.div>
                 </div>
