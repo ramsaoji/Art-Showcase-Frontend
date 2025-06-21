@@ -992,12 +992,19 @@ export default function ArtworkForm({
                     className={`block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${getFieldErrorClass(
                       "artistId"
                     )}`}
-                    onBlur={() => {
-                      setArtistFieldTouched(true);
+                    onFocus={() => {
+                      if (artists.length === 0 && !loadingArtists) {
+                        setShouldLoadArtists(true);
+                      }
                     }}
+                    // onBlur={() => {
+                    //   setArtistFieldTouched(true);
+                    //   trigger("artistId");
+                    // }}
                     onChange={(e) => {
                       field.onChange(e);
                       trigger("artistId");
+                      // Also update the parent component's artistId state for localStorage
                       if (isSuperAdmin && setArtistId) {
                         setArtistId(e.target.value);
                       }
