@@ -3,19 +3,19 @@ import { Dialog, Transition } from "@headlessui/react";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 
-export default function DeleteConfirmationDialog({
+export default function ConfirmationDialog({
   isOpen,
   onClose,
   onConfirm,
-  title,
+  dialogTitle,
   isDeleting,
+  description,
+  buttonText,
+  loadingText,
 }) {
-  // Determine if this is for artwork or artist
-  const isArtwork = title && title.toLowerCase().includes("artwork");
-  const description = isArtwork
-    ? "Are you sure you want to delete this artwork? This action cannot be undone."
-    : "Are you sure you want to delete this artist? This action cannot be undone.";
-  const buttonText = isArtwork ? "Delete Artwork" : "Delete Artist";
+  const desc = description;
+  const btnText = buttonText;
+  const loaderText = loadingText || "Processing...";
   return (
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -55,11 +55,11 @@ export default function DeleteConfirmationDialog({
                       as="h3"
                       className="font-artistic text-2xl font-bold tracking-wide text-gray-900"
                     >
-                      Delete {title}
+                      {dialogTitle}
                     </Dialog.Title>
                     <div className="mt-3">
                       <p className="text-base font-sans text-gray-600">
-                        {description}
+                        {desc}
                       </p>
                     </div>
                   </div>
@@ -76,7 +76,7 @@ export default function DeleteConfirmationDialog({
                       />
                     </div>
                     <p className="text-sm text-center font-sans text-gray-500">
-                      Deleting artwork...
+                      {loaderText}
                     </p>
                   </div>
                 )}
@@ -115,7 +115,7 @@ export default function DeleteConfirmationDialog({
                         Deleting...
                       </>
                     ) : (
-                      buttonText
+                      btnText
                     )}
                   </motion.button>
                   <motion.button

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { trpc } from "../../utils/trpc";
 import Alert from "../../components/Alert";
 import Loader from "../../components/ui/Loader";
-import DeleteConfirmationDialog from "../../components/DeleteConfirmationDialog";
+import ConfirmationDialog from "../../components/ConfirmationDialog";
 
 export default function ArtistApprovals() {
   const [error, setError] = useState("");
@@ -44,6 +44,7 @@ export default function ArtistApprovals() {
       setSuccess("Status updated!");
       refetch();
       utils.user.listUsers.invalidate();
+      utils.artwork.getAllArtworks.invalidate();
     },
     onError: (err) => setError(err.message),
   });
@@ -62,6 +63,12 @@ export default function ArtistApprovals() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  // State for activate/deactivate dialog
+  const [activeDialogOpen, setActiveDialogOpen] = useState(false);
+  const [activeDialogUser, setActiveDialogUser] = useState(null);
+  const [activeDialogAction, setActiveDialogAction] = useState(null); // 'activate' or 'deactivate'
+  const [isSettingActive, setIsSettingActive] = useState(false);
 
   // Handler to open delete dialog
   const handleDeleteUserClick = (user) => {
@@ -94,10 +101,30 @@ export default function ArtistApprovals() {
     approveMutation.mutate({ id });
   };
 
-  const handleSetActive = (id, active) => {
+  const handleSetActive = (id, active, user) => {
     setError("");
     setSuccess("");
-    setActiveMutation.mutate({ id, active });
+    setActiveDialogUser(user);
+    setActiveDialogAction(active ? "activate" : "deactivate");
+    setActiveDialogOpen(true);
+  };
+
+  const confirmSetActive = async () => {
+    if (!activeDialogUser) return;
+    setIsSettingActive(true);
+    try {
+      await setActiveMutation.mutateAsync({
+        id: activeDialogUser.id,
+        active: activeDialogAction === "activate",
+      });
+      setActiveDialogOpen(false);
+      setActiveDialogUser(null);
+      setActiveDialogAction(null);
+    } catch (err) {
+      setError(err.message || "Failed to update status");
+    } finally {
+      setIsSettingActive(false);
+    }
   };
 
   // Auto-clear success and error messages after 2.5 seconds
@@ -254,7 +281,11 @@ export default function ArtistApprovals() {
                                     : "bg-green-500 text-white hover:bg-green-600"
                                 }`}
                                 onClick={() =>
-                                  handleSetActive(artist.id, !artist.active)
+                                  handleSetActive(
+                                    artist.id,
+                                    !artist.active,
+                                    artist
+                                  )
                                 }
                                 disabled={setActiveMutation.isLoading}
                               >
@@ -323,16 +354,55 @@ export default function ArtistApprovals() {
           </div>
         )}
       </div>
-      {/* Delete Confirmation Dialog for User */}
-      <DeleteConfirmationDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleConfirmDeleteUser}
-        title={
-          userToDelete ? userToDelete.artistName || userToDelete.email : "User"
-        }
-        isDeleting={isDeletingUser}
-      />
+      {deleteDialogOpen && userToDelete && (
+        <ConfirmationDialog
+          isOpen={deleteDialogOpen}
+          onClose={() => {
+            setUserToDelete(null);
+            setDeleteDialogOpen(false);
+          }}
+          onConfirm={handleConfirmDeleteUser}
+          dialogTitle={`Delete ${
+            userToDelete.artistName || userToDelete.email
+          }`}
+          description={
+            "Are you sure you want to delete this artist? This action cannot be undone."
+          }
+          buttonText={"Delete Artist"}
+          loadingText={"Deleting artist..."}
+          isDeleting={isDeletingUser}
+        />
+      )}
+      {activeDialogOpen && activeDialogUser && (
+        <ConfirmationDialog
+          isOpen={activeDialogOpen}
+          onClose={() => {
+            setActiveDialogUser(null);
+            setActiveDialogAction(null);
+            setActiveDialogOpen(false);
+          }}
+          onConfirm={confirmSetActive}
+          dialogTitle={`${
+            activeDialogAction === "activate" ? "Activate" : "Deactivate"
+          } ${activeDialogUser.artistName || activeDialogUser.email}`}
+          isDeleting={isSettingActive}
+          description={
+            activeDialogAction === "activate"
+              ? "Are you sure you want to activate this artist? All their non-expired artworks will become active and visible."
+              : "Are you sure you want to deactivate this artist? All their non-expired artworks will become inactive and hidden."
+          }
+          buttonText={
+            activeDialogAction === "activate"
+              ? "Activate Artist"
+              : "Deactivate Artist"
+          }
+          loadingText={
+            activeDialogAction === "activate"
+              ? "Activating artist..."
+              : "Deactivating artist..."
+          }
+        />
+      )}
     </div>
   );
 }

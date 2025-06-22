@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { trpc } from "../utils/trpc"; // Adjust path to your trpc setup
 import { useAuth } from "../contexts/AuthContext";
-import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
+import ConfirmationDialog from "./ConfirmationDialog";
 import { motion } from "framer-motion";
 import Alert from "./Alert";
 
@@ -124,7 +124,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
                 value={status}
                 onChange={handleStatusChange}
                 disabled={isStatusUpdating}
-                className="appearance-none inline-flex min-w-[90px] items-center px-3 sm:px-4 py-1.5 sm:py-2 pr-6 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
+                className="appearance-none inline-flex min-w-[95px] items-center px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-12 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
                 title="Change artwork status"
               >
                 <option value="ACTIVE" className="font-sans text-sm">
@@ -137,7 +137,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
                   Expired
                 </option>
               </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-yellow-700">
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 flex items-center text-yellow-700">
                 <svg
                   className="w-4 h-4"
                   fill="none"
@@ -171,11 +171,15 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         )}
       </div>
 
-      <DeleteConfirmationDialog
+      <ConfirmationDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        title="Artwork"
+        dialogTitle={`Delete ${artwork.title}`}
+        description={
+          "Are you sure you want to delete this artwork? This action cannot be undone."
+        }
+        buttonText={"Delete Artwork"}
         isDeleting={isDeleting}
       />
 
