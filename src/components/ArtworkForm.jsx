@@ -265,7 +265,7 @@ export default function ArtworkForm({
         featured: initialData.featured || false,
         sold: initialData.sold || false,
         carousel: initialData.carousel || false,
-        monthlyUploadLimit: 10,
+        monthlyUploadLimit: initialData.monthlyUploadLimit ?? 10,
         artistId: "", // No artist selection for edit mode
         width: width,
         height: height,

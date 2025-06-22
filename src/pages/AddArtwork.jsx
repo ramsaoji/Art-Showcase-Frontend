@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ArtworkForm from "../components/ArtworkForm";
 import { motion } from "framer-motion";
-import { trpc } from "../utils/trpc";
+import { trpc, uploadToCloudinary } from "../utils/trpc";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function AddArtwork() {
@@ -14,16 +14,6 @@ export default function AddArtwork() {
 
   // Create user-specific localStorage key
   const ARTIST_ID_KEY = `artwork_artist_id_${user?.id || "anonymous"}`;
-
-  // Debug: Log user and localStorage key
-  useEffect(() => {
-    console.log("AddArtwork - user:", user);
-    console.log("AddArtwork - ARTIST_ID_KEY:", ARTIST_ID_KEY);
-    console.log(
-      "AddArtwork - localStorage keys:",
-      Object.keys(localStorage).filter((key) => key.includes("artwork"))
-    );
-  }, [user, ARTIST_ID_KEY]);
 
   // Helper to set artistId and persist to localStorage
   const handleSetArtistId = (id) => {
@@ -54,24 +44,62 @@ export default function AddArtwork() {
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
 
-  // Add tRPC mutation
   const createArtworkMutation = trpc.artwork.createArtworkWithImage.useMutation(
     {
       onSuccess: () => {
-        console.log("Artwork created successfully");
-
-        // Invalidate relevant queries to refresh the UI
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
-
         navigate("/gallery");
       },
       onError: (error) => {
-        console.error("Error creating artwork:", error);
         setError(error.message || "Failed to save artwork. Please try again.");
       },
     }
   );
+
+  const handleSubmit = async (formData) => {
+    try {
+      setError(null);
+      if (isSuperAdmin && !artistId) {
+        setError("Artist is required when adding on behalf of an artist.");
+        return;
+      }
+      const imageFile = formData.get("image");
+      if (!imageFile || !(imageFile instanceof File)) {
+        setError("Image is required. Please upload an image.");
+        return;
+      }
+      // Upload to Cloudinary first
+      const cloudinaryResult = await uploadToCloudinary(imageFile);
+      // Prepare data for tRPC mutation
+      const artworkData = {
+        title: formData.get("title"),
+        price: parseFloat(formData.get("price")),
+        description: formData.get("description"),
+        dimensions: formData.get("dimensions"),
+        material: formData.get("material"),
+        style: formData.get("style"),
+        year: parseInt(formData.get("year")),
+        featured: formData.get("featured") === "true",
+        sold: formData.get("sold") === "true",
+        carousel: formData.get("carousel") === "true",
+        imageUrl: cloudinaryResult.secure_url,
+        cloudinaryPublicId: cloudinaryResult.public_id,
+      };
+      if (isSuperAdmin && artistId) {
+        artworkData.artistId = artistId;
+        const limit = formData.get("monthlyUploadLimit");
+        if (limit !== null && limit !== undefined && limit !== "") {
+          artworkData.monthlyUploadLimit = Number(limit);
+        }
+      }
+      await createArtworkMutation.mutateAsync(artworkData);
+      setArtistId("");
+      localStorage.removeItem(ARTIST_ID_KEY);
+    } catch (err) {
+      setError(err.message || "Failed to save artwork. Please try again.");
+    }
+  };
 
   // Restore artistId from localStorage on mount
   useEffect(() => {
@@ -94,82 +122,6 @@ export default function AddArtwork() {
     console.log("AddArtwork - selectedArtist:", selectedArtist);
     console.log("AddArtwork - artists count:", artists.length);
   }, [artistId, selectedArtist, artists]);
-
-  const handleSubmit = async (formData) => {
-    try {
-      setError(null); // Clear previous errors
-
-      // Validate artistId before uploading image
-      if (isSuperAdmin && !artistId) {
-        setError("Artist is required when adding on behalf of an artist.");
-        return;
-      }
-
-      // Get image file and convert to base64
-      const imageFile = formData.get("image");
-      let imageBase64 = null;
-
-      if (imageFile) {
-        // Check if it's a File object (new upload) or base64 string (from localStorage)
-        if (imageFile instanceof File) {
-          imageBase64 = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(imageFile);
-          });
-        } else {
-          // If it's not a File object, it might be base64 from localStorage
-          // In this case, we should show an error asking user to re-upload
-          setError(
-            "Image data was lost during page refresh. Please upload your image again."
-          );
-          return;
-        }
-      } else {
-        // No image file provided
-        setError("Image is required. Please upload an image.");
-        return;
-      }
-
-      // Prepare data for tRPC mutation
-      const artworkData = {
-        title: formData.get("title"),
-        artist: formData.get("artist"),
-        price: parseFloat(formData.get("price")),
-        description: formData.get("description"),
-        dimensions: formData.get("dimensions"),
-        material: formData.get("material"),
-        style: formData.get("style"),
-        year: parseInt(formData.get("year")),
-        featured: formData.get("featured") === "true",
-        sold: formData.get("sold") === "true",
-        carousel: formData.get("carousel") === "true",
-        imageBase64,
-      };
-      if (isSuperAdmin && artistId) {
-        artworkData.artistId = artistId;
-        // Add monthlyUploadLimit if present
-        const limit = formData.get("monthlyUploadLimit");
-        if (limit !== null && limit !== undefined && limit !== "") {
-          artworkData.monthlyUploadLimit = Number(limit);
-        }
-      }
-
-      console.log("Submitting artwork data:", artworkData);
-
-      // Call tRPC mutation
-      await createArtworkMutation.mutateAsync(artworkData);
-      // After successful submission, clear artistId and localStorage
-      setArtistId("");
-      localStorage.removeItem(ARTIST_ID_KEY);
-    } catch (err) {
-      console.error("Error in handleSubmit:", err);
-      if (!createArtworkMutation.error) {
-        setError(err.message || "Failed to save artwork. Please try again.");
-      }
-    }
-  };
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">

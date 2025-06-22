@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { trpc } from "../utils/trpc";
+import { trpc, uploadToCloudinary } from "../utils/trpc";
 import ArtworkForm from "../components/ArtworkForm";
 import Loader from "../components/ui/Loader";
 import { useAuth } from "../contexts/AuthContext";
@@ -33,24 +33,6 @@ export default function EditArtwork() {
     }
   );
 
-  const updateArtworkMutation = trpc.artwork.updateArtworkWithImage.useMutation(
-    {
-      onSuccess: () => {
-        console.log("Artwork updated successfully");
-        // Invalidate relevant queries to refresh the UI
-        utils.artwork.getAllArtworks.invalidate();
-        utils.artwork.getFeaturedArtworks.invalidate();
-        utils.artwork.getArtworkById.invalidate({ id: id });
-
-        navigate("/gallery");
-      },
-      onError: (error) => {
-        console.error("Error updating artwork:", error);
-        setError(`Failed to update artwork: ${error.message}`);
-      },
-    }
-  );
-
   // Fetch all artists for admin (for super admin to edit monthly limit)
   const { data: artistsRaw = [], isLoading: loadingArtists } =
     trpc.user.listUsers.useQuery(undefined, {
@@ -66,29 +48,36 @@ export default function EditArtwork() {
     }
   }, [isLoading, artwork, fetchError]);
 
+  const updateArtworkMutation = trpc.artwork.updateArtworkWithImage.useMutation(
+    {
+      onSuccess: () => {
+        utils.artwork.getAllArtworks.invalidate();
+        utils.artwork.getFeaturedArtworks.invalidate();
+        utils.artwork.getArtworkById.invalidate({ id: artwork.id });
+        navigate("/gallery");
+      },
+      onError: (error) => {
+        setError(error.message || "Failed to update artwork");
+      },
+    }
+  );
+
   const handleSubmit = async (formData) => {
     if (!artwork) return;
-
     try {
-      setError(null); // Clear any previous errors
-
-      // Handle image upload if a new image is provided
+      setError(null);
       const imageFile = formData.get("image");
-      let imageBase64 = null;
+      let imageUrl = undefined;
+      let cloudinaryPublicId = undefined;
       if (imageFile && imageFile.size > 0) {
-        imageBase64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(imageFile);
-        });
+        const cloudinaryResult = await uploadToCloudinary(imageFile);
+        imageUrl = cloudinaryResult.secure_url;
+        cloudinaryPublicId = cloudinaryResult.public_id;
       }
-
       // Prepare update data
       const updateData = {
         id: artwork.id,
         title: formData.get("title"),
-        artist: formData.get("artist"),
         price: parseFloat(formData.get("price")),
         description: formData.get("description"),
         dimensions: formData.get("dimensions"),
@@ -98,24 +87,20 @@ export default function EditArtwork() {
         featured: formData.get("featured") === "true",
         sold: formData.get("sold") === "true",
         carousel: formData.get("carousel") === "true",
-        status: formData.get("status"),
-        imageBase64,
+        status: formData.get("status") || "ACTIVE",
       };
-
-      // For super admin, include monthlyUploadLimit if set
+      if (imageUrl && cloudinaryPublicId) {
+        updateData.imageUrl = imageUrl;
+        updateData.cloudinaryPublicId = cloudinaryPublicId;
+      }
       if (isSuperAdmin) {
         const limit = formData.get("monthlyUploadLimit");
         if (limit !== null && limit !== undefined && limit !== "") {
           updateData.monthlyUploadLimit = Number(limit);
         }
       }
-
-      console.log("Artwork ID before update:", artwork.id);
-      console.log("Update data before update:", updateData);
-      // Update artwork using tRPC mutation
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (error) {
-      console.error("Error in handleSubmit:", error);
       setError(error.message || "Failed to update artwork");
     }
   };
@@ -173,6 +158,9 @@ export default function EditArtwork() {
       ? artists.find((a) => a.id === artwork.userId)
       : null;
 
+  // Debug: log the artwork object to check monthlyUploadLimit
+  console.log("EditArtwork: artwork data passed to form", artwork);
+
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
       {/* Background decorative elements */}
@@ -204,7 +192,7 @@ export default function EditArtwork() {
             <ArtworkForm
               initialData={artwork}
               onSubmit={handleSubmit}
-              isLoading={updateArtworkMutation.isLoading}
+              isLoading={false}
               submitLabel="Update Artwork"
               artists={artists}
               loadingArtists={loadingArtists}

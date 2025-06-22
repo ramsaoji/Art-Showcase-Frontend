@@ -3,10 +3,15 @@ import { createTRPCReact } from "@trpc/react-query";
 
 export const trpc = createTRPCReact();
 
+// Normalize base URL (remove trailing slashes)
+const baseUrl = (
+  import.meta.env.VITE_API_URL || "http://localhost:3001/"
+).replace(/\/+$/, "");
+
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: import.meta.env.VITE_API_URL || "http://localhost:3001/trpc",
+      url: baseUrl + "/trpc",
       fetch(url, options = {}) {
         // Inject JWT token from localStorage
         const token = localStorage.getItem("token");
@@ -67,4 +72,31 @@ export function useMaterialsSearch(params, options = {}) {
 // Styles search (infinite scroll, search)
 export function useStylesSearch(params, options = {}) {
   return trpc.artwork.getStyles.useQuery(params, options);
+}
+
+/**
+ * Utility to upload an image file directly to Cloudinary using a backend-provided signature
+ */
+export async function uploadToCloudinary(file) {
+  // Get signature from backend
+  const sigRes = await fetch(baseUrl + "/api/artwork/cloudinary-signature");
+  const { signature, timestamp, apiKey, cloudName, folder } =
+    await sigRes.json();
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("api_key", apiKey);
+  formData.append("timestamp", timestamp);
+  formData.append("signature", signature);
+  formData.append("folder", folder);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+  if (!res.ok) throw new Error("Cloudinary upload failed");
+  return await res.json(); // contains secure_url, public_id, etc.
 }
