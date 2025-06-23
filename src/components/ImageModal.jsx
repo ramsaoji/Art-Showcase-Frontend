@@ -9,7 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { formatPrice } from "../utils/formatters";
+import { formatPrice, formatLocalDateTime } from "../utils/formatters";
 import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { trackArtworkInteraction } from "../services/analytics";
 import Badge from "./Badge";
@@ -354,7 +354,7 @@ export default function ImageModal({
                             Added
                           </h3>
                           <p className="text-base font-sans text-gray-700">
-                            {format(new Date(image.createdAt), "PPP")}
+                            {formatLocalDateTime(image.createdAt)}
                           </p>
                         </div>
                       )}
@@ -365,7 +365,7 @@ export default function ImageModal({
                               Expires
                             </h3>
                             <p className="text-base font-sans text-red-700">
-                              {format(new Date(image.expiresAt), "PPP")}
+                              {formatLocalDateTime(image.expiresAt)}
                             </p>
                           </div>
                         )}

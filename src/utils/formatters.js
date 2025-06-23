@@ -6,3 +6,33 @@ export const formatPrice = (price) => {
     maximumFractionDigits: 0,
   }).format(price);
 };
+
+export function formatLocalDateTime(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    // timeZoneName: "short",
+  });
+}
+
+export function toDatetimeLocalValue(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const pad = (n) => n.toString().padStart(2, "0");
+  return (
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1) +
+    "-" +
+    pad(date.getDate()) +
+    "T" +
+    pad(date.getHours()) +
+    ":" +
+    pad(date.getMinutes())
+  );
+}

@@ -88,6 +88,7 @@ export default function EditArtwork() {
         sold: formData.get("sold") === "true",
         carousel: formData.get("carousel") === "true",
         status: formData.get("status") || "ACTIVE",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
       if (imageUrl && cloudinaryPublicId) {
         updateData.imageUrl = imageUrl;
@@ -98,6 +99,10 @@ export default function EditArtwork() {
         if (limit !== null && limit !== undefined && limit !== "") {
           updateData.monthlyUploadLimit = Number(limit);
         }
+      }
+      const expiresAt = formData.get("expiresAt");
+      if (isSuperAdmin && expiresAt) {
+        updateData.expiresAt = new Date(expiresAt);
       }
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (error) {

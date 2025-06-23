@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
-import { formatPrice } from "../utils/formatters";
+import { formatPrice, formatLocalDateTime } from "../utils/formatters";
 import { getThumbnailUrl } from "../config/cloudinary";
 import useOptimizedImage from "../hooks/useOptimizedImage";
 import ArtworkActions from "./ArtworkActions";
@@ -352,15 +352,14 @@ export default function ArtworkCard({
             </span>
             {safeArtwork.createdAt && (
               <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-gray-800 rounded-full shadow-sm border border-gray-100">
-                Added: {format(new Date(safeArtwork.createdAt), "MMM d, yyyy")}
+                Added: {formatLocalDateTime(safeArtwork.createdAt)}
               </span>
             )}
             {/* Expiry date for super admin or owner */}
             {safeArtwork.expiresAt &&
               (isSuperAdmin || (isArtist && isOwner)) && (
                 <span className="px-3 py-1 text-sm font-sans font-medium bg-white text-red-700 rounded-full shadow-sm border border-red-100">
-                  Expires:{" "}
-                  {format(new Date(safeArtwork.expiresAt), "MMM d, yyyy")}
+                  Expires: {formatLocalDateTime(safeArtwork.expiresAt)}
                 </span>
               )}
           </div>

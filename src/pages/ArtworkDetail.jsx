@@ -5,7 +5,7 @@ import { ShareIcon, PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getOptimizedImageUrl, getPreviewUrl } from "../config/cloudinary";
-import { formatPrice } from "../utils/formatters";
+import { formatPrice, formatLocalDateTime } from "../utils/formatters";
 import Alert from "../components/Alert";
 import Badge from "../components/Badge";
 import Loader from "../components/ui/Loader";
@@ -349,7 +349,7 @@ export default function ArtworkDetail() {
                           Added
                         </h3>
                         <p className="text-base sm:text-lg font-sans text-gray-900">
-                          {format(new Date(artwork.createdAt), "PPP")}
+                          {formatLocalDateTime(artwork.createdAt)}
                         </p>
                       </div>
                     )}
@@ -361,7 +361,7 @@ export default function ArtworkDetail() {
                             Expires
                           </h3>
                           <p className="text-base sm:text-lg font-sans text-red-700">
-                            {format(new Date(artwork.expiresAt), "PPP")}
+                            {formatLocalDateTime(artwork.expiresAt)}
                           </p>
                         </div>
                       )}

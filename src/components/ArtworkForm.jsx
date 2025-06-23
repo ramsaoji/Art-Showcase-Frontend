@@ -12,6 +12,7 @@ import {
   useMonthlyUploadCount,
   useArtistMonthlyUploadCount,
 } from "../utils/trpc";
+import { toDatetimeLocalValue } from "../utils/formatters";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -83,6 +84,7 @@ const createValidationSchema = (
         // For all other cases (new artwork or edit mode with removed image), require image
         return !!value;
       }),
+    expiresAt: yup.date().nullable().optional(),
   });
 };
 
@@ -185,6 +187,21 @@ export default function ArtworkForm({
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(initialData?.status || "ACTIVE");
   const [artistFieldTouched, setArtistFieldTouched] = useState(false);
+  const [expiresAt, setExpiresAt] = useState(() => {
+    if (!initialData && isSuperAdmin) {
+      // 30 days from now, formatted for datetime-local
+      const now = new Date();
+      const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      return toDatetimeLocalValue(future);
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    if (initialData?.expiresAt) {
+      setExpiresAt(toDatetimeLocalValue(initialData.expiresAt));
+    }
+  }, [initialData]);
 
   // Local storage keys - make them user-specific
   const userId = user?.id || "anonymous";
@@ -270,6 +287,9 @@ export default function ArtworkForm({
         width: width,
         height: height,
         dimensions: initialData.dimensions || "",
+        expiresAt: initialData.expiresAt
+          ? new Date(initialData.expiresAt)
+          : null,
       };
     }
 
@@ -629,6 +649,11 @@ export default function ArtworkForm({
       // Pass status if admin
       if (isSuperAdmin) {
         submitData.set("status", status);
+      }
+
+      if (isSuperAdmin && expiresAt) {
+        const iso = new Date(expiresAt).toISOString();
+        submitData.set("expiresAt", iso);
       }
 
       // Simulate upload progress
@@ -1446,6 +1471,33 @@ export default function ArtworkForm({
                 />
               )}
             />
+          </div>
+        )}
+
+        {/* Super Admin: Expires At */}
+        {isSuperAdmin && (
+          <div className="col-span-2">
+            <label
+              htmlFor="expiresAt"
+              className="block text-sm font-medium text-gray-700 font-sans mb-1"
+            >
+              Expires At
+            </label>
+            <input
+              type="datetime-local"
+              id="expiresAt"
+              name="expiresAt"
+              value={expiresAt || ""}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                "expiresAt"
+              )}`}
+            />
+            {errors.expiresAt && (
+              <p className="mt-1 text-sm text-red-600 font-sans">
+                {errors.expiresAt.message}
+              </p>
+            )}
           </div>
         )}
 
