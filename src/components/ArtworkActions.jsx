@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { trpc } from "../utils/trpc"; // Adjust path to your trpc setup
@@ -22,6 +22,11 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
   // Only show edit for artists if they own the artwork
   const isOwner = user && artwork && artwork.userId === user.id;
   if (!isSuperAdmin && !isOwner) return null;
+
+  // Sync local status state with prop
+  useEffect(() => {
+    setStatus(artwork?.status || "ACTIVE");
+  }, [artwork?.status]);
 
   // Delete mutation
   const deleteArtworkMutation = trpc.artwork.deleteArtwork.useMutation({
@@ -85,10 +90,21 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
     setIsStatusUpdating(true);
     setError(null);
     try {
-      await updateArtworkMutation.mutateAsync({
+      let payload = {
         id: artworkId,
         status: newStatus,
-      });
+      };
+      // If changing from expired to active/inactive, update expiresAt to 1 month from now
+      const isExpired =
+        artwork.status === "EXPIRED" ||
+        (artwork.expiresAt && new Date(artwork.expiresAt) < new Date());
+      if ((newStatus === "ACTIVE" || newStatus === "INACTIVE") && isExpired) {
+        const oneMonthFromNow = new Date();
+        oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+        payload.expiresAt = oneMonthFromNow.toISOString();
+      }
+      console.log("Artwork status update payload:", payload);
+      await updateArtworkMutation.mutateAsync(payload);
     } catch (err) {
       setError("Failed to update status. Please try again.");
     } finally {

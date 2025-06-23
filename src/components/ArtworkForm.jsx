@@ -197,6 +197,9 @@ export default function ArtworkForm({
     return "";
   });
 
+  // Track if the monthly upload limit input has been manually changed
+  const [monthlyLimitTouched, setMonthlyLimitTouched] = useState(false);
+
   useEffect(() => {
     if (initialData?.expiresAt) {
       setExpiresAt(toDatetimeLocalValue(initialData.expiresAt));
@@ -589,6 +592,7 @@ export default function ArtworkForm({
 
   // Handle monthly upload limit change
   const handleMonthlyLimitChange = (e) => {
+    setMonthlyLimitTouched(true);
     const value =
       e.target.value === ""
         ? ""
@@ -596,11 +600,56 @@ export default function ArtworkForm({
     setValue("monthlyUploadLimit", value);
   };
 
+  useEffect(() => {
+    if (
+      isSuperAdmin &&
+      !initialData &&
+      selectedArtistUploadLimit !== undefined &&
+      selectedArtistUploadLimit !== null &&
+      !monthlyLimitTouched
+    ) {
+      setValue("monthlyUploadLimit", selectedArtistUploadLimit, {
+        shouldValidate: true,
+      });
+    }
+  }, [
+    isSuperAdmin,
+    initialData,
+    selectedArtistUploadLimit,
+    setValue,
+    monthlyLimitTouched,
+  ]);
+
+  // Reset touched state when selected artist changes
+  useEffect(() => {
+    setMonthlyLimitTouched(false);
+  }, [selectedArtistUploadLimit]);
+
   // Get field error class
   const getFieldErrorClass = (fieldName) => {
     return errors[fieldName]
       ? "border-red-500 focus:border-red-500 focus:ring-red-500"
       : "border-gray-200 focus:border-indigo-500 focus:ring-indigo-500";
+  };
+
+  // Handle expiry date change
+  const handleExpiryDateChange = (e) => {
+    const newDate = e.target.value;
+    setExpiresAt(newDate);
+
+    if (newDate) {
+      const selectedDate = new Date(newDate);
+      const now = new Date();
+
+      // If date is in the past, set to EXPIRED
+      if (selectedDate < now) {
+        setStatus("EXPIRED");
+      }
+      // If date is in the future and current status is EXPIRED, set to ACTIVE
+      else if (selectedDate > now && status === "EXPIRED") {
+        setStatus("ACTIVE");
+      }
+    }
   };
 
   // Form submission handler
@@ -613,6 +662,11 @@ export default function ArtworkForm({
 
     try {
       setCurrentStep("uploading");
+
+      // Check if expiry date is in the past
+      if (expiresAt && new Date(expiresAt) < new Date()) {
+        setStatus("EXPIRED");
+      }
 
       // Create FormData object to handle file upload
       const submitData = new FormData();
@@ -641,9 +695,10 @@ export default function ArtworkForm({
         );
       }
 
-      // For super admin, include monthlyUploadLimit if set
-      if (isSuperAdmin && selectedArtist) {
-        submitData.set("monthlyUploadLimit", data.monthlyUploadLimit);
+      // For super admin, always include monthlyUploadLimit
+      if (isSuperAdmin) {
+        const limitValue = data.monthlyUploadLimit || 10;
+        submitData.set("monthlyUploadLimit", limitValue);
       }
 
       // Pass status if admin
@@ -654,6 +709,11 @@ export default function ArtworkForm({
       if (isSuperAdmin && expiresAt) {
         const iso = new Date(expiresAt).toISOString();
         submitData.set("expiresAt", iso);
+      }
+
+      // Log all FormData fields before submitting
+      for (let pair of submitData.entries()) {
+        console.log("FormData:", pair[0], pair[1]);
       }
 
       // Simulate upload progress
@@ -746,6 +806,20 @@ export default function ArtworkForm({
 
   // Check if we should show the image preview
   const shouldShowPreview = imagePreview && !imageRemoved;
+
+  // Update monthlyUploadLimit when selected artist changes (for super admin add mode)
+  useEffect(() => {
+    if (
+      isSuperAdmin &&
+      !initialData &&
+      selectedArtistUploadLimit !== undefined &&
+      selectedArtistUploadLimit !== null
+    ) {
+      setValue("monthlyUploadLimit", selectedArtistUploadLimit, {
+        shouldValidate: true,
+      });
+    }
+  }, [isSuperAdmin, initialData, selectedArtistUploadLimit, setValue]);
 
   return (
     <form
@@ -1411,13 +1485,38 @@ export default function ArtworkForm({
               <select
                 name="status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none`}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  // Prevent setting ACTIVE or INACTIVE status if expiry date is in the past
+                  if (
+                    (newStatus === "ACTIVE" || newStatus === "INACTIVE") &&
+                    expiresAt &&
+                    new Date(expiresAt) < new Date()
+                  ) {
+                    return; // Don't update status
+                  }
+                  setStatus(newStatus);
+                }}
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${
+                  expiresAt &&
+                  new Date(expiresAt) < new Date() &&
+                  (status === "ACTIVE" || status === "INACTIVE")
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
               >
-                <option value="ACTIVE" className="font-sans">
+                <option
+                  value="ACTIVE"
+                  className="font-sans"
+                  disabled={expiresAt && new Date(expiresAt) < new Date()}
+                >
                   Active
                 </option>
-                <option value="INACTIVE" className="font-sans">
+                <option
+                  value="INACTIVE"
+                  className="font-sans"
+                  disabled={expiresAt && new Date(expiresAt) < new Date()}
+                >
                   Inactive
                 </option>
                 <option value="EXPIRED" className="font-sans">
@@ -1441,6 +1540,14 @@ export default function ArtworkForm({
                 </svg>
               </div>
             </div>
+            {expiresAt &&
+              new Date(expiresAt) < new Date() &&
+              (status === "ACTIVE" || status === "INACTIVE") && (
+                <p className="mt-1 text-sm text-red-600 font-sans">
+                  Cannot set status to Active or Inactive with a past expiry
+                  date. Please change the expiry date or select Expired status.
+                </p>
+              )}
           </div>
         )}
 
@@ -1488,7 +1595,7 @@ export default function ArtworkForm({
               id="expiresAt"
               name="expiresAt"
               value={expiresAt || ""}
-              onChange={(e) => setExpiresAt(e.target.value)}
+              onChange={handleExpiryDateChange}
               className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
                 "expiresAt"
               )}`}

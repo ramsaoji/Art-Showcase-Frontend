@@ -161,7 +161,14 @@ export default function ArtworkCard({
             animate
             withPing
           >
-            {artwork.status.charAt(0) + artwork.status.slice(1).toLowerCase()}
+            {artwork.status === "EXPIRED"
+              ? artwork.expiredBy === "admin"
+                ? "Expired (admin)"
+                : artwork.expiredBy === "auto"
+                ? "Expired (auto)"
+                : "Expired"
+              : artwork.status.charAt(0) +
+                artwork.status.slice(1).toLowerCase()}
           </Badge>
         </div>
       )}

@@ -215,8 +215,14 @@ export default function ImageModal({
                         }
                       `}
                     >
-                      {image.status.charAt(0) +
-                        image.status.slice(1).toLowerCase()}
+                      {image.status === "EXPIRED"
+                        ? image.expiredBy === "admin"
+                          ? "Expired (admin)"
+                          : image.expiredBy === "auto"
+                          ? "Expired (auto)"
+                          : "Expired"
+                        : image.status.charAt(0) +
+                          image.status.slice(1).toLowerCase()}
                     </span>
                   )}
                 </div>

@@ -17,14 +17,8 @@ export default function AddArtwork() {
 
   // Helper to set artistId and persist to localStorage
   const handleSetArtistId = (id) => {
-    console.log("handleSetArtistId called with:", id);
-    console.log("Storing in localStorage with key:", ARTIST_ID_KEY);
     setArtistId(id);
     localStorage.setItem(ARTIST_ID_KEY, id || "");
-    console.log(
-      "localStorage after setting:",
-      localStorage.getItem(ARTIST_ID_KEY)
-    );
   };
 
   // Fetch all artists for admin - only when shouldLoadArtists is true
@@ -49,6 +43,12 @@ export default function AddArtwork() {
       onSuccess: () => {
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
+        // Invalidate user data to refresh monthlyUploadLimit
+        utils.user.listUsers.invalidate();
+        // Invalidate artist's monthly upload count
+        if (artistId) {
+          utils.artwork.getArtistMonthlyUploadCount.invalidate({ artistId });
+        }
         navigate("/gallery");
       },
       onError: (error) => {
@@ -91,7 +91,16 @@ export default function AddArtwork() {
         artworkData.artistId = artistId;
         const limit = formData.get("monthlyUploadLimit");
         if (limit !== null && limit !== undefined && limit !== "") {
-          artworkData.monthlyUploadLimit = Number(limit);
+          artworkData.monthlyUploadLimit = parseInt(limit);
+        }
+      }
+      if (isSuperAdmin) {
+        const status = formData.get("status");
+        if (status) {
+          artworkData.status = status;
+          if (status === "EXPIRED") {
+            artworkData.expiredBy = "admin";
+          }
         }
       }
       const expiresAt = formData.get("expiresAt");
@@ -122,11 +131,7 @@ export default function AddArtwork() {
   }, [isSuperAdmin, artists, ARTIST_ID_KEY]);
 
   // Debug: Log artist selection
-  useEffect(() => {
-    console.log("AddArtwork - artistId:", artistId);
-    console.log("AddArtwork - selectedArtist:", selectedArtist);
-    console.log("AddArtwork - artists count:", artists.length);
-  }, [artistId, selectedArtist, artists]);
+  useEffect(() => {}, [artistId, selectedArtist, artists]);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
