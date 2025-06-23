@@ -99,6 +99,10 @@ export default function EditArtwork() {
         if (limit !== null && limit !== undefined && limit !== "") {
           updateData.monthlyUploadLimit = Number(limit);
         }
+        const aiLimit = formData.get("aiDescriptionDailyLimit");
+        if (aiLimit !== null && aiLimit !== undefined && aiLimit !== "") {
+          updateData.aiDescriptionDailyLimit = Number(aiLimit);
+        }
       }
       const expiresAt = formData.get("expiresAt");
       if (isSuperAdmin && expiresAt) {

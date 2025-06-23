@@ -4,7 +4,7 @@ import { createTRPCReact } from "@trpc/react-query";
 export const trpc = createTRPCReact();
 
 // Normalize base URL (remove trailing slashes)
-const baseUrl = (
+export const baseUrl = (
   import.meta.env.VITE_API_URL || "http://localhost:3001/"
 ).replace(/\/+$/, "");
 
@@ -53,6 +53,31 @@ export function useArtistMonthlyUploadCount(artistId, enabled = true) {
 
   return trpc.useQuery(
     ["artwork.getArtistMonthlyUploadCount", { artistId: artistId.trim() }],
+    {
+      enabled: enabled && isValidArtistId,
+    }
+  );
+}
+
+// Helper for getting a specific artist's usage stats (for admins)
+export function useArtistUsageStats(artistId, enabled = true) {
+  const isValidArtistId =
+    artistId &&
+    typeof artistId === "string" &&
+    artistId.trim() !== "" &&
+    artistId.length > 0;
+
+  if (!isValidArtistId) {
+    return {
+      data: undefined,
+      isLoading: false,
+      error: undefined,
+      refetch: () => {},
+    };
+  }
+
+  return trpc.useQuery(
+    ["artwork.getArtistUsageStats", { artistId: artistId.trim() }],
     {
       enabled: enabled && isValidArtistId,
     }

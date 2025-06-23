@@ -93,6 +93,10 @@ export default function AddArtwork() {
         if (limit !== null && limit !== undefined && limit !== "") {
           artworkData.monthlyUploadLimit = parseInt(limit);
         }
+        const aiLimit = formData.get("aiDescriptionDailyLimit");
+        if (aiLimit !== null && aiLimit !== undefined && aiLimit !== "") {
+          artworkData.aiDescriptionDailyLimit = parseInt(aiLimit);
+        }
       }
       if (isSuperAdmin) {
         const status = formData.get("status");

@@ -10,9 +10,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { trpc } from "../utils/trpc";
 import {
   useMonthlyUploadCount,
-  useArtistMonthlyUploadCount,
+  // useArtistMonthlyUploadCount,
 } from "../utils/trpc";
 import { toDatetimeLocalValue } from "../utils/formatters";
+import { baseUrl } from "../utils/trpc";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -88,6 +89,42 @@ const createValidationSchema = (
   });
 };
 
+// Compress image file to base64 (JPEG, quality 0.7, max width/height 1024px)
+async function compressImageToBase64(file, maxSize = 1024, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.onload = () => {
+        // Calculate new dimensions
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+        // Draw to canvas
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        // Export as JPEG
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl.split(",")[1]); // base64 only
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ArtworkForm({
   onSubmit,
   initialData = null,
@@ -148,31 +185,43 @@ export default function ArtworkForm({
   );
   console.log("Debug - artistId:", artistId, "type:", typeof artistId);
 
-  // Always create the query, but control when it runs with enabled
-  const artistUploadQuery = trpc.artwork.getArtistMonthlyUploadCount.useQuery(
-    { artistId: artistId?.trim() || "" },
-    {
-      enabled: shouldFetchArtistUploadCount,
-      retry: false,
-      refetchOnWindowFocus: false,
-    }
-  );
+  // Replace the old query with the new one for super admin
+  const artistUsageQuery = trpc.artwork.getArtistUsageStats
+    ? trpc.artwork.getArtistUsageStats.useQuery
+    : undefined;
+
+  const artistUsageStatsQuery = artistUsageQuery
+    ? artistUsageQuery(
+        { artistId: artistId?.trim() || "" },
+        {
+          enabled: shouldFetchArtistUploadCount,
+          retry: false,
+          refetchOnWindowFocus: false,
+        }
+      )
+    : { data: undefined, isLoading: false, error: undefined };
 
   if (shouldFetchArtistUploadCount) {
-    selectedArtistUploadData = artistUploadQuery?.data;
-    loadingSelectedArtistUpload = artistUploadQuery?.isLoading || false;
-    selectedArtistUploadError = artistUploadQuery?.error;
+    selectedArtistUploadData = artistUsageStatsQuery?.data;
+    loadingSelectedArtistUpload = artistUsageStatsQuery?.isLoading || false;
+    selectedArtistUploadError = artistUsageStatsQuery?.error;
   } else {
     selectedArtistUploadData = undefined;
     loadingSelectedArtistUpload = false;
     selectedArtistUploadError = undefined;
   }
-  const selectedArtistUploadCount = selectedArtistUploadData?.count ?? 0;
-  const selectedArtistUploadLimit = selectedArtistUploadData?.limit ?? 10;
+
+  const selectedArtistUploadCount =
+    selectedArtistUploadData?.monthlyUploadCount ?? 0;
+  const selectedArtistUploadLimit =
+    selectedArtistUploadData?.monthlyUploadLimit ?? 10;
   const selectedArtistName =
     selectedArtistUploadData?.artistName ??
     selectedArtist?.artistName ??
     "Selected Artist";
+
+  const selectedArtistAiLimit =
+    selectedArtistUploadData?.aiDescriptionDailyLimit ?? 5;
 
   // Form state
   const [imageFile, setImageFile] = useState(null);
@@ -199,6 +248,26 @@ export default function ArtworkForm({
 
   // Track if the monthly upload limit input has been manually changed
   const [monthlyLimitTouched, setMonthlyLimitTouched] = useState(false);
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const [aiTitleLoading, setAiTitleLoading] = useState(false);
+  const [aiTitleError, setAiTitleError] = useState("");
+
+  const [aiRemaining, setAiRemaining] = useState(null);
+  const [aiLimitReached, setAiLimitReached] = useState(false);
+
+  const [aiLimitTouched, setAiLimitTouched] = useState(false);
+
+  const [aiLimit, setAiLimit] = useState(null);
+
+  // Add state for editArtistUsageStats
+  const [editArtistUsageStats, setEditArtistUsageStats] = useState(null);
+  const [loadingEditArtistUsageStats, setLoadingEditArtistUsageStats] =
+    useState(false);
+  const [editArtistUsageStatsError, setEditArtistUsageStatsError] =
+    useState(null);
 
   useEffect(() => {
     if (initialData?.expiresAt) {
@@ -286,6 +355,7 @@ export default function ArtworkForm({
         sold: initialData.sold || false,
         carousel: initialData.carousel || false,
         monthlyUploadLimit: initialData.monthlyUploadLimit ?? 10,
+        aiDescriptionDailyLimit: initialData.aiDescriptionDailyLimit ?? 5,
         artistId: "", // No artist selection for edit mode
         width: width,
         height: height,
@@ -308,6 +378,7 @@ export default function ArtworkForm({
         return {
           ...cleanData,
           artistId: savedArtistId || "", // Include saved artist ID
+          aiDescriptionDailyLimit: parsedData.aiDescriptionDailyLimit ?? 5,
         };
       } catch (error) {
         console.error("Error parsing saved form data:", error);
@@ -325,6 +396,7 @@ export default function ArtworkForm({
       sold: false,
       carousel: false,
       monthlyUploadLimit: 10,
+      aiDescriptionDailyLimit: 5,
       artistId: savedArtistId || "", // Include saved artist ID
       width: "",
       height: "",
@@ -652,6 +724,71 @@ export default function ArtworkForm({
     }
   };
 
+  // AI Description Handler
+  const handleAIDescription = async () => {
+    setAiError("");
+    setAiLoading(true);
+    setAiLimitReached(false);
+    try {
+      // Use imageFile (local file) or fallback to imagePreview (base64) or initialData.url
+      let imageData = null;
+
+      if (imageFile) {
+        // Compress and convert local file to base64
+        imageData = await compressImageToBase64(imageFile);
+      } else if (imagePreview && imagePreview.startsWith("data:")) {
+        // Use existing base64 from imagePreview
+        imageData = imagePreview.split(",")[1];
+      } else if (initialData?.url) {
+        // Fallback: fetch image from URL and convert to base64
+        const response = await fetch(initialData.url);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        imageData = await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            const base64 = reader.result.split(",")[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      if (!imageData) {
+        setAiError("Please upload an image first.");
+        setAiLoading(false);
+        return;
+      }
+
+      const response = await fetch(baseUrl + "/api/ai/generate-description", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ imageData }),
+      });
+      const data = await response.json();
+      if (response.status === 429) {
+        setAiError(data.error || "Daily AI description limit reached.");
+        setAiLimitReached(true);
+        setAiRemaining(0);
+        return;
+      }
+      if (!response.ok)
+        throw new Error(data.error || "Failed to generate description.");
+      setValue("description", data.description, { shouldValidate: true });
+      if (typeof data.remaining === "number") {
+        setAiRemaining(data.remaining);
+        setAiLimitReached(data.remaining === 0);
+      }
+    } catch (err) {
+      setAiError(err.message || "Failed to generate description.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   // Form submission handler
   const onSubmitForm = async (data) => {
     setError(null);
@@ -695,10 +832,17 @@ export default function ArtworkForm({
         );
       }
 
-      // For super admin, always include monthlyUploadLimit
+      // Debug: log AI limit value
+      console.log(
+        "aiDescriptionDailyLimit in data:",
+        data.aiDescriptionDailyLimit
+      );
+      // For super admin, always include monthlyUploadLimit and aiDescriptionDailyLimit
       if (isSuperAdmin) {
-        const limitValue = data.monthlyUploadLimit || 10;
+        const limitValue = data.monthlyUploadLimit ?? 10;
         submitData.set("monthlyUploadLimit", limitValue);
+        const aiLimitValue = data.aiDescriptionDailyLimit ?? 5;
+        submitData.set("aiDescriptionDailyLimit", aiLimitValue);
       }
 
       // Pass status if admin
@@ -821,11 +965,112 @@ export default function ArtworkForm({
     }
   }, [isSuperAdmin, initialData, selectedArtistUploadLimit, setValue]);
 
+  useEffect(() => {
+    async function fetchQuota() {
+      try {
+        const response = await fetch(baseUrl + "/api/ai/remaining-quota", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        const data = await response.json();
+        if (typeof data.remaining === "number") {
+          setAiRemaining(data.remaining);
+          setAiLimitReached(data.remaining === 0);
+        }
+        if (typeof data.limit === "number") {
+          setAiLimit(data.limit);
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    }
+    fetchQuota();
+  }, []);
+
+  // Update aiDescriptionDailyLimit when selected artist changes (for super admin add mode)
+  useEffect(() => {
+    if (
+      isSuperAdmin &&
+      !initialData &&
+      selectedArtistAiLimit !== undefined &&
+      selectedArtistAiLimit !== null &&
+      !aiLimitTouched
+    ) {
+      setValue("aiDescriptionDailyLimit", selectedArtistAiLimit, {
+        shouldValidate: true,
+      });
+    }
+  }, [
+    isSuperAdmin,
+    initialData,
+    selectedArtistAiLimit,
+    setValue,
+    aiLimitTouched,
+  ]);
+
+  // Reset touched state when selected artist changes
+  useEffect(() => {
+    setAiLimitTouched(false);
+  }, [selectedArtistAiLimit]);
+
+  // Add a handler for the AI limit field
+  const handleAiLimitChange = (e) => {
+    setAiLimitTouched(true);
+    const value =
+      e.target.value === ""
+        ? ""
+        : Math.max(1, Math.min(100, Number(e.target.value)));
+    setValue("aiDescriptionDailyLimit", value);
+  };
+
+  // Fetch usage stats for the artist in edit mode (super admin)
+  useEffect(() => {
+    async function fetchEditArtistUsageStats() {
+      if (
+        isSuperAdmin &&
+        initialData &&
+        (initialData.userId || initialData.artistId)
+      ) {
+        setLoadingEditArtistUsageStats(true);
+        setEditArtistUsageStatsError(null);
+        try {
+          const artistId = initialData.userId || initialData.artistId;
+          const response = await fetch(
+            baseUrl +
+              "/trpc/artwork.getArtistUsageStats?input=" +
+              encodeURIComponent(JSON.stringify({ artistId })),
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          const json = await response.json();
+          // TRPC returns { result: { data: ... } }
+          setEditArtistUsageStats(json?.result?.data ?? null);
+        } catch (err) {
+          setEditArtistUsageStatsError(err);
+        } finally {
+          setLoadingEditArtistUsageStats(false);
+        }
+      }
+    }
+    fetchEditArtistUsageStats();
+  }, [isSuperAdmin, initialData]);
+
   return (
     <form
       onSubmit={handleSubmit(onSubmitForm, onInvalid)}
       className="space-y-6 font-sans"
     >
+      {/* Show artist name above image label in edit mode for admins */}
+      {isSuperAdmin && initialData && initialData.artistName && (
+        <div className="flex justify-center mb-2">
+          <span className="text-lg font-semibold text-gray-700 font-artistic text-center">
+            Artwork by: {initialData.artistName}
+          </span>
+        </div>
+      )}
+
       {/* Page refresh notification */}
       {hasFormDataButNoImage && !imageRemoved && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -1222,12 +1467,47 @@ export default function ArtworkForm({
 
         {/* Description */}
         <div className="col-span-2">
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700 font-sans mb-1"
-          >
-            Description <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 font-sans"
+            >
+              Description <span className="text-red-500">*</span>
+            </label>
+            {isSuperAdmin && initialData && editArtistUsageStats ? (
+              <span className="text-xs text-gray-500 font-sans">
+                AI description usage:{" "}
+                <span className="font-semibold">
+                  {editArtistUsageStats.aiDescriptionUsed ?? 0}
+                </span>
+                /
+                <span className="font-semibold">
+                  {editArtistUsageStats.aiDescriptionDailyLimit ?? 5}
+                </span>{" "}
+                used today
+              </span>
+            ) : isSuperAdmin && !initialData && selectedArtistUploadData ? (
+              <span className="text-xs text-gray-500 font-sans">
+                {selectedArtistName}'s AI description usage:{" "}
+                <span className="font-semibold">
+                  {selectedArtistUploadData.aiDescriptionUsed ?? 0}
+                </span>
+                /
+                <span className="font-semibold">
+                  {selectedArtistUploadData.aiDescriptionDailyLimit ?? 5}
+                </span>{" "}
+                used today
+              </span>
+            ) : isArtist &&
+              typeof aiRemaining === "number" &&
+              typeof aiLimit === "number" ? (
+              <span className="text-xs text-gray-500 font-sans">
+                AI description usage:{" "}
+                <span className="font-semibold">{aiLimit - aiRemaining}</span>/
+                <span className="font-semibold">{aiLimit}</span> used today
+              </span>
+            ) : null}
+          </div>
           <Controller
             name="description"
             control={control}
@@ -1243,9 +1523,93 @@ export default function ArtworkForm({
               />
             )}
           />
+          <div className="flex flex-col sm:flex-row gap-2 mt-2">
+            <div className="flex items-center">
+              <button
+                type="button"
+                className="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={handleAIDescription}
+                disabled={
+                  aiLoading ||
+                  aiLimitReached ||
+                  !(imageFile || imagePreview || initialData?.url)
+                }
+                title={
+                  !(imageFile || imagePreview || initialData?.url)
+                    ? "Please upload an image first to generate AI description"
+                    : aiLimitReached
+                    ? "Daily AI limit reached"
+                    : "Generate description using AI"
+                }
+              >
+                {aiLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4 mr-1.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                      />
+                    </svg>
+                    AI Generate
+                  </>
+                )}
+              </button>
+              {!(imageFile || imagePreview || initialData?.url) &&
+                !aiLoading && (
+                  <span className="ml-3 text-xs text-gray-500 font-sans whitespace-nowrap">
+                    💡 Upload an image first to use AI description generation
+                  </span>
+                )}
+            </div>
+          </div>
+          {aiError && (
+            <p className="mt-1 text-sm text-red-600 font-sans">{aiError}</p>
+          )}
+          {aiTitleError && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              {aiTitleError}
+            </p>
+          )}
           {errors.description && (
             <p className="mt-1 text-sm text-red-600 font-sans">
               {errors.description.message}
+            </p>
+          )}
+          {aiLimitReached && (
+            <p className="mt-1 text-sm text-red-600 font-sans">
+              You have reached your daily AI description limit. Please try again
+              tomorrow or contact admin.
             </p>
           )}
         </div>
@@ -1581,9 +1945,39 @@ export default function ArtworkForm({
           </div>
         )}
 
+        {/* Super Admin: Set AI description daily limit for selected artist */}
+        {isSuperAdmin && (
+          <div className="col-span-2 sm:col-span-1">
+            <label
+              htmlFor="aiDescriptionDailyLimit"
+              className="block text-sm font-medium text-gray-700 font-sans mb-1"
+            >
+              AI Description Daily Limit for Artist
+            </label>
+            <Controller
+              name="aiDescriptionDailyLimit"
+              control={control}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  type="number"
+                  id="aiDescriptionDailyLimit"
+                  placeholder="Default is 5 or set any other."
+                  min={1}
+                  max={100}
+                  onChange={handleAiLimitChange}
+                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                    "aiDescriptionDailyLimit"
+                  )}`}
+                />
+              )}
+            />
+          </div>
+        )}
+
         {/* Super Admin: Expires At */}
         {isSuperAdmin && (
-          <div className="col-span-2">
+          <div className="col-span-2 sm:col-span-1">
             <label
               htmlFor="expiresAt"
               className="block text-sm font-medium text-gray-700 font-sans mb-1"
@@ -1732,6 +2126,7 @@ export default function ArtworkForm({
                 sold: false,
                 carousel: false,
                 monthlyUploadLimit: 10,
+                aiDescriptionDailyLimit: 5,
                 artistId: "",
               });
 
