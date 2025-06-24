@@ -136,6 +136,179 @@ export default function ArtworkForm({
   setShouldLoadArtists = () => {},
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
+
+  // 1. Call all hooks that provide data needed by helpers
+  const { data: backendLimits = { monthlyUpload: 10, aiDescriptionDaily: 5 } } =
+    useBackendLimits();
+  const { data: quotaData } = useRemainingQuota({ enabled: isArtist });
+  const aiLimit = quotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
+  const aiRemaining = quotaData?.ai?.remaining ?? aiLimit;
+  const utils = trpc.useContext();
+  const generateAIDescriptionMutation =
+    trpc.ai.generateAIDescription.useMutation();
+
+  // 2. Now define helpers that use backendLimits
+  const userId = user?.id || "anonymous";
+  const FORM_DATA_KEY = `artwork_form_data_${userId}`;
+  const DIMENSIONS_KEY = `artwork_dimensions_${userId}`;
+  const ARTIST_ID_KEY = `artwork_artist_id_${userId}`;
+  const IMAGE_FLAG_KEY = `artwork_form_has_image_${userId}`;
+
+  // Helper: Get default expiresAt value (30 days from now, formatted for datetime-local)
+  const getDefaultExpiresAt = () => {
+    const now = new Date();
+    const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return toDatetimeLocalValue(future);
+  };
+
+  const getInitialFormData = () => {
+    if (initialData) {
+      let width = "",
+        height = "";
+      if (initialData.dimensions) {
+        const match = initialData.dimensions.match(
+          /(\d+(?:\.\d+)?)cm × (\d+(?:\.\d+)?)cm/
+        );
+        if (match) {
+          width = match[1];
+          height = match[2];
+        }
+      }
+      return {
+        title: initialData.title || "",
+        material: initialData.material || "",
+        style: initialData.style || "",
+        description: initialData.description || "",
+        price: initialData.price || "",
+        year: initialData.year || new Date().getFullYear(),
+        featured: initialData.featured || false,
+        sold: initialData.sold || false,
+        carousel: initialData.carousel || false,
+        monthlyUploadLimit:
+          initialData.monthlyUploadLimit ?? backendLimits.monthlyUpload,
+        aiDescriptionDailyLimit:
+          initialData.aiDescriptionDailyLimit ??
+          backendLimits.aiDescriptionDaily,
+        artistId: "",
+        width: width,
+        height: height,
+        dimensions: initialData.dimensions || "",
+        expiresAt: initialData.expiresAt
+          ? toDatetimeLocalValue(new Date(initialData.expiresAt))
+          : "",
+        status: initialData.status || "ACTIVE",
+      };
+    }
+    const savedData = localStorage.getItem(FORM_DATA_KEY);
+    const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        const { image, imageFile, imagePreview, ...cleanData } = parsedData;
+        return {
+          ...cleanData,
+          artistId: savedArtistId || cleanData.artistId || "",
+          aiDescriptionDailyLimit:
+            parsedData.aiDescriptionDailyLimit ??
+            backendLimits.aiDescriptionDaily,
+          monthlyUploadLimit:
+            parsedData.monthlyUploadLimit ?? backendLimits.monthlyUpload,
+          status: parsedData.status || "ACTIVE",
+          expiresAt: parsedData.expiresAt
+            ? toDatetimeLocalValue(parsedData.expiresAt)
+            : "",
+        };
+      } catch (error) {
+        console.error("Error parsing saved form data:", error);
+      }
+    }
+    // If super admin and add mode, set expiresAt to 30 days from now
+    let expiresAtDefault = "";
+    if (isSuperAdmin) {
+      expiresAtDefault = getDefaultExpiresAt();
+    }
+    return {
+      title: "",
+      material: "",
+      style: "",
+      description: "",
+      price: "",
+      year: new Date().getFullYear(),
+      featured: false,
+      sold: false,
+      carousel: false,
+      monthlyUploadLimit: backendLimits.monthlyUpload,
+      aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
+      artistId: savedArtistId || "",
+      width: "",
+      height: "",
+      dimensions: "",
+      status: "ACTIVE",
+      expiresAt: expiresAtDefault,
+    };
+  };
+
+  const getInitialDimensions = () => {
+    if (initialData?.dimensions) {
+      const match = initialData.dimensions.match(
+        /(\d+(?:\.\d+)?)cm × (\d+(?:\.\d+)?)cm/
+      );
+      if (match) {
+        return { width: match[1], height: match[2] };
+      }
+    }
+    const savedDimensions = localStorage.getItem(DIMENSIONS_KEY);
+    if (savedDimensions) {
+      try {
+        return JSON.parse(savedDimensions);
+      } catch (error) {
+        console.error("Error parsing saved dimensions:", error);
+      }
+    }
+    return { width: "", height: "" };
+  };
+
+  function getInitialImagePreview() {
+    if (initialData?.url) {
+      return initialData.url;
+    }
+    return null;
+  }
+
+  const clearPersisted = () => {
+    localStorage.removeItem(FORM_DATA_KEY);
+    localStorage.removeItem(DIMENSIONS_KEY);
+    localStorage.removeItem(ARTIST_ID_KEY);
+    localStorage.removeItem(IMAGE_FLAG_KEY);
+  };
+
+  // Now safe to use getInitialFormData for all state initializations
+  const initialFormData = getInitialFormData();
+
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [imageError, setImageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [currentStep, setCurrentStep] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [savingProgress, setSavingProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [status, setStatus] = useState(initialFormData.status || "ACTIVE");
+  const [artistFieldTouched, setArtistFieldTouched] = useState(false);
+  const [expiresAt, setExpiresAt] = useState(initialFormData.expiresAt || "");
+  // Track if the monthly upload limit input has been manually changed
+  const [monthlyLimitTouched, setMonthlyLimitTouched] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiLimitTouched, setAiLimitTouched] = useState(false);
+  // Add state for editArtistUsageStats
+  const [editArtistUsageStats, setEditArtistUsageStats] = useState(null);
+  // Add a ref to skip the next persist after reset
+  const skipNextPersist = useRef(false);
+  const isInitialLoad = useRef(true);
+
   // Debug log
   console.log(
     "ArtworkForm: isSuperAdmin",
@@ -156,32 +329,10 @@ export default function ArtworkForm({
   // Only fetch monthly upload count for artists creating new artwork
   const shouldFetchUploadCount = isArtist && !isSuperAdmin && !initialData; // Only for artists (not admins) creating new artwork
 
-  const {
-    data: remainingQuota,
-    isLoading: loadingRemainingQuota,
-    error: remainingQuotaError,
-  } = useRemainingQuota({ enabled: shouldFetchUploadCount });
-
-  const monthlyUploadCount = remainingQuota?.monthlyUploads?.used ?? 0;
-  const monthlyUploadLimit = remainingQuota?.monthlyUploads?.limit ?? 10;
-  const loadingMonthlyUpload = loadingRemainingQuota;
-  const monthlyUploadError = remainingQuotaError;
-
-  // For admins: fetch selected artist's upload count
-  let selectedArtistUploadData,
-    loadingSelectedArtistUpload,
-    selectedArtistUploadError;
-
-  // Only fetch if we have a valid artistId and are in the right conditions
+  // Compute once and reuse: shouldFetchArtistUploadCount
   const shouldFetchArtistUploadCount = Boolean(
     isSuperAdmin && !initialData && artistId && artistId.trim() !== ""
   );
-
-  console.log(
-    "Debug - shouldFetchArtistUploadCount:",
-    shouldFetchArtistUploadCount
-  );
-  console.log("Debug - artistId:", artistId, "type:", typeof artistId);
 
   // Replace the old query with the new one for super admin
   const artistUsageQuery = trpc.artwork.getArtistUsageStats
@@ -199,6 +350,10 @@ export default function ArtworkForm({
       )
     : { data: undefined, isLoading: false, error: undefined };
 
+  // Fix: Declare these variables before assignment
+  let selectedArtistUploadData,
+    loadingSelectedArtistUpload,
+    selectedArtistUploadError;
   if (shouldFetchArtistUploadCount) {
     selectedArtistUploadData = artistUsageStatsQuery?.data;
     loadingSelectedArtistUpload = artistUsageStatsQuery?.isLoading || false;
@@ -221,64 +376,11 @@ export default function ArtworkForm({
   const selectedArtistAiLimit =
     selectedArtistUploadData?.aiDescriptionDailyLimit ?? 5;
 
-  // Form state
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
-  const [imageRemoved, setImageRemoved] = useState(false);
-  const [imageError, setImageError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [currentStep, setCurrentStep] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [savingProgress, setSavingProgress] = useState(0);
-  const [error, setError] = useState(null);
-  const [status, setStatus] = useState(initialData?.status || "ACTIVE");
-  const [artistFieldTouched, setArtistFieldTouched] = useState(false);
-  const [expiresAt, setExpiresAt] = useState(() => {
-    if (!initialData && isSuperAdmin) {
-      // 30 days from now, formatted for datetime-local
-      const now = new Date();
-      const future = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      return toDatetimeLocalValue(future);
-    }
-    return "";
-  });
-
-  // Track if the monthly upload limit input has been manually changed
-  const [monthlyLimitTouched, setMonthlyLimitTouched] = useState(false);
-
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
-
-  const [aiLimitTouched, setAiLimitTouched] = useState(false);
-
-  // Add state for editArtistUsageStats
-  const [editArtistUsageStats, setEditArtistUsageStats] = useState(null);
-
-  // Use tRPC for backend limits
-  const { data: backendLimits = { monthlyUpload: 10, aiDescriptionDaily: 5 } } =
-    useBackendLimits();
-  // Only fetch remaining quota for artists
-  const { data: quotaData } = useRemainingQuota({ enabled: isArtist });
-  const aiLimit = quotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
-  const aiRemaining = quotaData?.ai?.remaining ?? aiLimit;
-
-  const utils = trpc.useContext();
-  const generateAIDescriptionMutation =
-    trpc.ai.generateAIDescription.useMutation();
-
   useEffect(() => {
     if (initialData?.expiresAt) {
       setExpiresAt(toDatetimeLocalValue(initialData.expiresAt));
     }
   }, [initialData]);
-
-  // Local storage keys - make them user-specific
-  const userId = user?.id || "anonymous";
-  const FORM_DATA_KEY = `artwork_form_data_${userId}`;
-  const DIMENSIONS_KEY = `artwork_dimensions_${userId}`;
-  const ARTIST_ID_KEY = `artwork_artist_id_${userId}`;
-  const IMAGE_FLAG_KEY = `artwork_form_has_image_${userId}`;
 
   // Material and style options
   const materialOptions = [
@@ -326,127 +428,6 @@ export default function ArtworkForm({
     return yupResolver(validationSchema);
   }, [validationSchema]);
 
-  // Get initial form data
-  const getInitialFormData = () => {
-    if (initialData) {
-      // Parse dimensions for edit mode
-      let width = "",
-        height = "";
-      if (initialData.dimensions) {
-        const match = initialData.dimensions.match(
-          /(\d+(?:\.\d+)?)cm × (\d+(?:\.\d+)?)cm/
-        );
-        if (match) {
-          width = match[1];
-          height = match[2];
-        }
-      }
-
-      return {
-        title: initialData.title || "",
-        material: initialData.material || "",
-        style: initialData.style || "",
-        description: initialData.description || "",
-        price: initialData.price || "",
-        year: initialData.year || new Date().getFullYear(),
-        featured: initialData.featured || false,
-        sold: initialData.sold || false,
-        carousel: initialData.carousel || false,
-        monthlyUploadLimit:
-          initialData.monthlyUploadLimit ?? backendLimits.monthlyUpload,
-        aiDescriptionDailyLimit:
-          initialData.aiDescriptionDailyLimit ??
-          backendLimits.aiDescriptionDaily,
-        artistId: "", // No artist selection for edit mode
-        width: width,
-        height: height,
-        dimensions: initialData.dimensions || "",
-        expiresAt: initialData.expiresAt
-          ? new Date(initialData.expiresAt)
-          : null,
-      };
-    }
-
-    // Try to restore from localStorage (only for new artwork, excluding image data)
-    const savedData = localStorage.getItem(FORM_DATA_KEY);
-    const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
-
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        // Remove image-related data from saved data
-        const { image, imageFile, imagePreview, ...cleanData } = parsedData;
-        return {
-          ...cleanData,
-          artistId: savedArtistId || "", // Include saved artist ID
-          aiDescriptionDailyLimit:
-            parsedData.aiDescriptionDailyLimit ??
-            backendLimits.aiDescriptionDaily,
-        };
-      } catch (error) {
-        console.error("Error parsing saved form data:", error);
-      }
-    }
-
-    return {
-      title: "",
-      material: "",
-      style: "",
-      description: "",
-      price: "",
-      year: new Date().getFullYear(),
-      featured: false,
-      sold: false,
-      carousel: false,
-      monthlyUploadLimit: backendLimits.monthlyUpload,
-      aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
-      artistId: savedArtistId || "", // Include saved artist ID
-      width: "",
-      height: "",
-      dimensions: "",
-    };
-  };
-
-  // Get initial dimensions
-  const getInitialDimensions = () => {
-    if (initialData?.dimensions) {
-      const match = initialData.dimensions.match(
-        /(\d+(?:\.\d+)?)cm × (\d+(?:\.\d+)?)cm/
-      );
-      if (match) {
-        return { width: match[1], height: match[2] };
-      }
-    }
-
-    // Try to restore from localStorage
-    const savedDimensions = localStorage.getItem(DIMENSIONS_KEY);
-    if (savedDimensions) {
-      try {
-        return JSON.parse(savedDimensions);
-      } catch (error) {
-        console.error("Error parsing saved dimensions:", error);
-      }
-    }
-
-    return { width: "", height: "" };
-  };
-
-  // Get initial image preview
-  function getInitialImagePreview() {
-    if (initialData?.url) {
-      return initialData.url;
-    }
-    return null;
-  }
-
-  // Clear persisted data
-  const clearPersisted = () => {
-    localStorage.removeItem(FORM_DATA_KEY);
-    localStorage.removeItem(DIMENSIONS_KEY);
-    localStorage.removeItem(ARTIST_ID_KEY);
-    localStorage.removeItem(IMAGE_FLAG_KEY);
-  };
-
   // Initialize form with React Hook Form
   const {
     control,
@@ -459,7 +440,7 @@ export default function ArtworkForm({
   } = useForm({
     resolver: customResolver,
     mode: "onSubmit",
-    defaultValues: getInitialFormData(),
+    defaultValues: initialFormData,
     context: { initialData },
   });
 
@@ -523,13 +504,20 @@ export default function ArtworkForm({
 
   // Persist form data, dimensions, and artist ID on change (Add mode only)
   useEffect(() => {
-    // Only persist data if the form is dirty (i.e., has been modified by the user)
-    // This prevents the form from overwriting localStorage with empty values on reset.
-    if (!initialData && isDirty) {
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      return;
+    }
+    // Always persist data on any change (add mode only)
+    if (!initialData) {
       // Include artistId in the form data being saved, but exclude image data
       const formDataToSave = {
         ...watchedValues,
         artistId: watchedValues.artistId || artistId, // Use form value or prop value
+        status, // Save status
+        monthlyUploadLimit: watchedValues.monthlyUploadLimit, // Save monthly upload limit
+        aiDescriptionDailyLimit: watchedValues.aiDescriptionDailyLimit, // Save AI limit
+        expiresAt: watchedValues.expiresAt, // Save expiresAt from form state
       };
 
       // Remove image-related data before saving to localStorage
@@ -551,7 +539,7 @@ export default function ArtworkForm({
     FORM_DATA_KEY,
     DIMENSIONS_KEY,
     ARTIST_ID_KEY,
-    isDirty,
+    status,
   ]);
 
   // Check if form has data but no image (for page refresh notification)
@@ -675,7 +663,9 @@ export default function ArtworkForm({
     setValue("monthlyUploadLimit", value);
   };
 
+  // Update monthlyUploadLimit when selected artist changes (for super admin add mode)
   useEffect(() => {
+    if (isInitialLoad.current) return;
     if (
       isSuperAdmin &&
       !initialData &&
@@ -698,7 +688,30 @@ export default function ArtworkForm({
   // Reset touched state when selected artist changes
   useEffect(() => {
     setMonthlyLimitTouched(false);
-  }, [selectedArtistUploadLimit]);
+    setAiLimitTouched(false);
+  }, [artistId]);
+
+  // Update aiDescriptionDailyLimit when selected artist changes (for super admin add mode)
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    if (
+      isSuperAdmin &&
+      !initialData &&
+      selectedArtistAiLimit !== undefined &&
+      selectedArtistAiLimit !== null &&
+      !aiLimitTouched
+    ) {
+      setValue("aiDescriptionDailyLimit", selectedArtistAiLimit, {
+        shouldValidate: true,
+      });
+    }
+  }, [
+    isSuperAdmin,
+    initialData,
+    selectedArtistAiLimit,
+    setValue,
+    aiLimitTouched,
+  ]);
 
   // Get field error class
   const getFieldErrorClass = (fieldName) => {
@@ -710,7 +723,7 @@ export default function ArtworkForm({
   // Handle expiry date change
   const handleExpiryDateChange = (e) => {
     const newDate = e.target.value;
-    setExpiresAt(newDate);
+    setValue("expiresAt", newDate, { shouldValidate: true });
 
     if (newDate) {
       const selectedDate = new Date(newDate);
@@ -913,6 +926,7 @@ export default function ArtworkForm({
       setImageLoaded(false);
       if (isSuperAdmin && setArtistId) setArtistId("");
       clearPersisted();
+      skipNextPersist.current = true;
     }
   };
 
@@ -940,46 +954,6 @@ export default function ArtworkForm({
 
   // Check if we should show the image preview
   const shouldShowPreview = imagePreview && !imageRemoved;
-
-  // Update monthlyUploadLimit when selected artist changes (for super admin add mode)
-  useEffect(() => {
-    if (
-      isSuperAdmin &&
-      !initialData &&
-      selectedArtistUploadLimit !== undefined &&
-      selectedArtistUploadLimit !== null
-    ) {
-      setValue("monthlyUploadLimit", selectedArtistUploadLimit, {
-        shouldValidate: true,
-      });
-    }
-  }, [isSuperAdmin, initialData, selectedArtistUploadLimit, setValue]);
-
-  // Update aiDescriptionDailyLimit when selected artist changes (for super admin add mode)
-  useEffect(() => {
-    if (
-      isSuperAdmin &&
-      !initialData &&
-      selectedArtistAiLimit !== undefined &&
-      selectedArtistAiLimit !== null &&
-      !aiLimitTouched
-    ) {
-      setValue("aiDescriptionDailyLimit", selectedArtistAiLimit, {
-        shouldValidate: true,
-      });
-    }
-  }, [
-    isSuperAdmin,
-    initialData,
-    selectedArtistAiLimit,
-    setValue,
-    aiLimitTouched,
-  ]);
-
-  // Reset touched state when selected artist changes
-  useEffect(() => {
-    setAiLimitTouched(false);
-  }, [selectedArtistAiLimit]);
 
   // Add a handler for the AI limit field
   const handleAiLimitChange = (e) => {
@@ -1317,6 +1291,8 @@ export default function ArtworkForm({
                       if (isSuperAdmin && setArtistId) {
                         setArtistId(e.target.value);
                       }
+                      // Signal that the user has interacted, ending the initial load phase.
+                      isInitialLoad.current = false;
                     }}
                   >
                     <option value="" className="font-sans">
@@ -1937,7 +1913,7 @@ export default function ArtworkForm({
               type="datetime-local"
               id="expiresAt"
               name="expiresAt"
-              value={expiresAt || ""}
+              value={watchedValues.expiresAt || ""}
               onChange={handleExpiryDateChange}
               className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
                 "expiresAt"
@@ -2063,6 +2039,10 @@ export default function ArtworkForm({
           <button
             type="button"
             onClick={() => {
+              // Compute default expiresAt for reset
+              const defaultExpiresAt = isSuperAdmin
+                ? getDefaultExpiresAt()
+                : "";
               // Reset form data
               reset({
                 title: "",
@@ -2077,6 +2057,11 @@ export default function ArtworkForm({
                 monthlyUploadLimit: backendLimits.monthlyUpload,
                 aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
                 artistId: "",
+                status: "ACTIVE",
+                expiresAt: defaultExpiresAt,
+                width: "",
+                height: "",
+                dimensions: "",
               });
 
               // Reset other state
@@ -2087,6 +2072,7 @@ export default function ArtworkForm({
               setImageError("");
               setImageLoaded(false);
               setArtistFieldTouched(false);
+              setStatus("ACTIVE");
 
               // Clear artist selection
               if (isSuperAdmin && setArtistId) {
@@ -2095,6 +2081,7 @@ export default function ArtworkForm({
 
               // Clear localStorage
               clearPersisted();
+              skipNextPersist.current = true;
 
               // Scroll to top
               window.scrollTo({
