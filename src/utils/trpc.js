@@ -25,40 +25,6 @@ export const trpcClient = trpc.createClient({
   ],
 });
 
-// Helper for monthly upload count
-export function useMonthlyUploadCount(enabled = true) {
-  return trpc.useQuery(["artwork.getMonthlyUploadCount"], {
-    enabled: enabled,
-  });
-}
-
-// Helper for getting a specific artist's monthly upload count (for admins)
-export function useArtistMonthlyUploadCount(artistId, enabled = true) {
-  // Extra validation to prevent any invalid values
-  const isValidArtistId =
-    artistId &&
-    typeof artistId === "string" &&
-    artistId.trim() !== "" &&
-    artistId.length > 0;
-
-  // Only create the query if we have a valid artistId
-  if (!isValidArtistId) {
-    return {
-      data: undefined,
-      isLoading: false,
-      error: undefined,
-      refetch: () => {},
-    };
-  }
-
-  return trpc.useQuery(
-    ["artwork.getArtistMonthlyUploadCount", { artistId: artistId.trim() }],
-    {
-      enabled: enabled && isValidArtistId,
-    }
-  );
-}
-
 // Helper for getting a specific artist's usage stats (for admins)
 export function useArtistUsageStats(artistId, enabled = true) {
   const isValidArtistId =
@@ -103,10 +69,9 @@ export function useStylesSearch(params, options = {}) {
  * Utility to upload an image file directly to Cloudinary using a backend-provided signature
  */
 export async function uploadToCloudinary(file) {
-  // Get signature from backend
-  const sigRes = await fetch(baseUrl + "/api/artwork/cloudinary-signature");
+  // Get signature from backend via tRPC client
   const { signature, timestamp, apiKey, cloudName, folder } =
-    await sigRes.json();
+    await trpcClient.misc.getCloudinarySignature.query();
 
   const formData = new FormData();
   formData.append("file", file);
@@ -124,4 +89,14 @@ export async function uploadToCloudinary(file) {
   );
   if (!res.ok) throw new Error("Cloudinary upload failed");
   return await res.json(); // contains secure_url, public_id, etc.
+}
+
+// Helper for backend config limits (tRPC)
+export function useBackendLimits() {
+  return trpc.misc.getConfigLimits.useQuery();
+}
+
+// Helper for remaining AI quota (tRPC)
+export function useRemainingQuota(options = {}) {
+  return trpc.misc.getRemainingQuota.useQuery(undefined, options);
 }

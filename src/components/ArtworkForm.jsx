@@ -5,15 +5,15 @@ import * as yup from "yup";
 import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
-import { getPreviewUrl } from "../config/cloudinary"; // Keep this for image preview
+// import { getPreviewUrl } from "../config/cloudinary"; // Keep this for image preview
 import { useAuth } from "../contexts/AuthContext";
-import { trpc } from "../utils/trpc";
 import {
-  useMonthlyUploadCount,
-  // useArtistMonthlyUploadCount,
+  trpc,
+  useRemainingQuota,
+  useBackendLimits,
+  baseUrl,
 } from "../utils/trpc";
 import { toDatetimeLocalValue } from "../utils/formatters";
-import { baseUrl } from "../utils/trpc";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -155,19 +155,17 @@ export default function ArtworkForm({
   );
   // Only fetch monthly upload count for artists creating new artwork
   const shouldFetchUploadCount = isArtist && !isSuperAdmin && !initialData; // Only for artists (not admins) creating new artwork
-  let monthlyUploadData, loadingMonthlyUpload, monthlyUploadError;
-  if (shouldFetchUploadCount) {
-    const query = useMonthlyUploadCount(true);
-    monthlyUploadData = query.data;
-    loadingMonthlyUpload = query.isLoading;
-    monthlyUploadError = query.error;
-  } else {
-    monthlyUploadData = undefined;
-    loadingMonthlyUpload = false;
-    monthlyUploadError = undefined;
-  }
-  const monthlyUploadCount = monthlyUploadData?.count ?? 0;
-  const monthlyUploadLimit = monthlyUploadData?.limit ?? 10;
+
+  const {
+    data: remainingQuota,
+    isLoading: loadingRemainingQuota,
+    error: remainingQuotaError,
+  } = useRemainingQuota({ enabled: shouldFetchUploadCount });
+
+  const monthlyUploadCount = remainingQuota?.monthlyUploads?.used ?? 0;
+  const monthlyUploadLimit = remainingQuota?.monthlyUploads?.limit ?? 10;
+  const loadingMonthlyUpload = loadingRemainingQuota;
+  const monthlyUploadError = remainingQuotaError;
 
   // For admins: fetch selected artist's upload count
   let selectedArtistUploadData,
@@ -252,22 +250,22 @@ export default function ArtworkForm({
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
 
-  const [aiTitleLoading, setAiTitleLoading] = useState(false);
-  const [aiTitleError, setAiTitleError] = useState("");
-
-  const [aiRemaining, setAiRemaining] = useState(null);
-  const [aiLimitReached, setAiLimitReached] = useState(false);
-
   const [aiLimitTouched, setAiLimitTouched] = useState(false);
-
-  const [aiLimit, setAiLimit] = useState(null);
 
   // Add state for editArtistUsageStats
   const [editArtistUsageStats, setEditArtistUsageStats] = useState(null);
-  const [loadingEditArtistUsageStats, setLoadingEditArtistUsageStats] =
-    useState(false);
-  const [editArtistUsageStatsError, setEditArtistUsageStatsError] =
-    useState(null);
+
+  // Use tRPC for backend limits
+  const { data: backendLimits = { monthlyUpload: 10, aiDescriptionDaily: 5 } } =
+    useBackendLimits();
+  // Only fetch remaining quota for artists
+  const { data: quotaData } = useRemainingQuota({ enabled: isArtist });
+  const aiLimit = quotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
+  const aiRemaining = quotaData?.ai?.remaining ?? aiLimit;
+
+  const utils = trpc.useContext();
+  const generateAIDescriptionMutation =
+    trpc.ai.generateAIDescription.useMutation();
 
   useEffect(() => {
     if (initialData?.expiresAt) {
@@ -354,8 +352,11 @@ export default function ArtworkForm({
         featured: initialData.featured || false,
         sold: initialData.sold || false,
         carousel: initialData.carousel || false,
-        monthlyUploadLimit: initialData.monthlyUploadLimit ?? 10,
-        aiDescriptionDailyLimit: initialData.aiDescriptionDailyLimit ?? 5,
+        monthlyUploadLimit:
+          initialData.monthlyUploadLimit ?? backendLimits.monthlyUpload,
+        aiDescriptionDailyLimit:
+          initialData.aiDescriptionDailyLimit ??
+          backendLimits.aiDescriptionDaily,
         artistId: "", // No artist selection for edit mode
         width: width,
         height: height,
@@ -378,7 +379,9 @@ export default function ArtworkForm({
         return {
           ...cleanData,
           artistId: savedArtistId || "", // Include saved artist ID
-          aiDescriptionDailyLimit: parsedData.aiDescriptionDailyLimit ?? 5,
+          aiDescriptionDailyLimit:
+            parsedData.aiDescriptionDailyLimit ??
+            backendLimits.aiDescriptionDaily,
         };
       } catch (error) {
         console.error("Error parsing saved form data:", error);
@@ -395,8 +398,8 @@ export default function ArtworkForm({
       featured: false,
       sold: false,
       carousel: false,
-      monthlyUploadLimit: 10,
-      aiDescriptionDailyLimit: 5,
+      monthlyUploadLimit: backendLimits.monthlyUpload,
+      aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
       artistId: savedArtistId || "", // Include saved artist ID
       width: "",
       height: "",
@@ -728,7 +731,6 @@ export default function ArtworkForm({
   const handleAIDescription = async () => {
     setAiError("");
     setAiLoading(true);
-    setAiLimitReached(false);
     try {
       // Use imageFile (local file) or fallback to imagePreview (base64) or initialData.url
       let imageData = null;
@@ -760,28 +762,14 @@ export default function ArtworkForm({
         return;
       }
 
-      const response = await fetch(baseUrl + "/api/ai/generate-description", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ imageData }),
+      const data = await generateAIDescriptionMutation.mutateAsync({
+        imageData,
       });
-      const data = await response.json();
-      if (response.status === 429) {
-        setAiError(data.error || "Daily AI description limit reached.");
-        setAiLimitReached(true);
-        setAiRemaining(0);
-        return;
+      if (data?.description) {
+        setValue("description", data.description, { shouldValidate: true });
       }
-      if (!response.ok)
-        throw new Error(data.error || "Failed to generate description.");
-      setValue("description", data.description, { shouldValidate: true });
-      if (typeof data.remaining === "number") {
-        setAiRemaining(data.remaining);
-        setAiLimitReached(data.remaining === 0);
-      }
+      // Invalidate quota so it refetches
+      utils.misc.getRemainingQuota.invalidate();
     } catch (err) {
       setAiError(err.message || "Failed to generate description.");
     } finally {
@@ -839,9 +827,11 @@ export default function ArtworkForm({
       );
       // For super admin, always include monthlyUploadLimit and aiDescriptionDailyLimit
       if (isSuperAdmin) {
-        const limitValue = data.monthlyUploadLimit ?? 10;
+        const limitValue =
+          data.monthlyUploadLimit ?? backendLimits.monthlyUpload;
         submitData.set("monthlyUploadLimit", limitValue);
-        const aiLimitValue = data.aiDescriptionDailyLimit ?? 5;
+        const aiLimitValue =
+          data.aiDescriptionDailyLimit ?? backendLimits.aiDescriptionDaily;
         submitData.set("aiDescriptionDailyLimit", aiLimitValue);
       }
 
@@ -965,27 +955,6 @@ export default function ArtworkForm({
     }
   }, [isSuperAdmin, initialData, selectedArtistUploadLimit, setValue]);
 
-  useEffect(() => {
-    async function fetchQuota() {
-      try {
-        const response = await fetch(baseUrl + "/api/ai/remaining-quota", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        const data = await response.json();
-        if (typeof data.remaining === "number") {
-          setAiRemaining(data.remaining);
-          setAiLimitReached(data.remaining === 0);
-        }
-        if (typeof data.limit === "number") {
-          setAiLimit(data.limit);
-        }
-      } catch (err) {
-        // Optionally handle error
-      }
-    }
-    fetchQuota();
-  }, []);
-
   // Update aiDescriptionDailyLimit when selected artist changes (for super admin add mode)
   useEffect(() => {
     if (
@@ -1030,8 +999,6 @@ export default function ArtworkForm({
         initialData &&
         (initialData.userId || initialData.artistId)
       ) {
-        setLoadingEditArtistUsageStats(true);
-        setEditArtistUsageStatsError(null);
         try {
           const artistId = initialData.userId || initialData.artistId;
           const response = await fetch(
@@ -1048,9 +1015,7 @@ export default function ArtworkForm({
           // TRPC returns { result: { data: ... } }
           setEditArtistUsageStats(json?.result?.data ?? null);
         } catch (err) {
-          setEditArtistUsageStatsError(err);
-        } finally {
-          setLoadingEditArtistUsageStats(false);
+          console.error("Error fetching artist usage stats:", err);
         }
       }
     }
@@ -1482,7 +1447,8 @@ export default function ArtworkForm({
                 </span>
                 /
                 <span className="font-semibold">
-                  {editArtistUsageStats.aiDescriptionDailyLimit ?? 5}
+                  {editArtistUsageStats.aiDescriptionDailyLimit ??
+                    backendLimits.aiDescriptionDaily}
                 </span>{" "}
                 used today
               </span>
@@ -1494,7 +1460,8 @@ export default function ArtworkForm({
                 </span>
                 /
                 <span className="font-semibold">
-                  {selectedArtistUploadData.aiDescriptionDailyLimit ?? 5}
+                  {selectedArtistUploadData.aiDescriptionDailyLimit ??
+                    backendLimits.aiDescriptionDaily}
                 </span>{" "}
                 used today
               </span>
@@ -1529,15 +1496,11 @@ export default function ArtworkForm({
               className="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-fit whitespace-nowrap"
               onClick={handleAIDescription}
               disabled={
-                aiLoading ||
-                aiLimitReached ||
-                !(imageFile || imagePreview || initialData?.url)
+                aiLoading || !(imageFile || imagePreview || initialData?.url)
               }
               title={
                 !(imageFile || imagePreview || initialData?.url)
                   ? "Please upload an image first to generate AI description"
-                  : aiLimitReached
-                  ? "Daily AI limit reached"
                   : "Generate description using AI"
               }
             >
@@ -1593,20 +1556,9 @@ export default function ArtworkForm({
           {aiError && (
             <p className="mt-1 text-sm text-red-600 font-sans">{aiError}</p>
           )}
-          {aiTitleError && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
-              {aiTitleError}
-            </p>
-          )}
           {errors.description && (
             <p className="mt-1 text-sm text-red-600 font-sans">
               {errors.description.message}
-            </p>
-          )}
-          {aiLimitReached && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
-              You have reached your daily AI description limit. Please try again
-              tomorrow or contact admin.
             </p>
           )}
         </div>
@@ -1929,7 +1881,7 @@ export default function ArtworkForm({
                   {...field}
                   type="number"
                   id="monthlyUploadLimit"
-                  placeholder="Default is 10. Leave blank or set to 10 for standard limit."
+                  placeholder={`Default is ${backendLimits.monthlyUpload}. Leave blank or set to ${backendLimits.monthlyUpload} for standard limit.`}
                   min={1}
                   max={1000}
                   onChange={handleMonthlyLimitChange}
@@ -1959,7 +1911,7 @@ export default function ArtworkForm({
                   {...field}
                   type="number"
                   id="aiDescriptionDailyLimit"
-                  placeholder="Default is 5 or set any other."
+                  placeholder={`Default is ${backendLimits.aiDescriptionDaily} or set any other.`}
                   min={1}
                   max={100}
                   onChange={handleAiLimitChange}
@@ -2122,8 +2074,8 @@ export default function ArtworkForm({
                 featured: false,
                 sold: false,
                 carousel: false,
-                monthlyUploadLimit: 10,
-                aiDescriptionDailyLimit: 5,
+                monthlyUploadLimit: backendLimits.monthlyUpload,
+                aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
                 artistId: "",
               });
 
