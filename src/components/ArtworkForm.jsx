@@ -85,7 +85,13 @@ const createValidationSchema = (
         // For all other cases (new artwork or edit mode with removed image), require image
         return !!value;
       }),
-    expiresAt: yup.date().nullable().optional(),
+    expiresAt: isSuperAdmin
+      ? yup
+          .date()
+          .nullable()
+          .typeError("Expiry date must be a valid date")
+          .optional()
+      : yup.mixed().notRequired(),
   });
 };
 
@@ -140,9 +146,15 @@ export default function ArtworkForm({
   // 1. Call all hooks that provide data needed by helpers
   const { data: backendLimits = { monthlyUpload: 10, aiDescriptionDaily: 5 } } =
     useBackendLimits();
-  const { data: quotaData } = useRemainingQuota({ enabled: isArtist });
-  const aiLimit = quotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
-  const aiRemaining = quotaData?.ai?.remaining ?? aiLimit;
+  // Use the correct quota hook for both AI and monthly upload quotas (single call)
+  const {
+    data: artistQuotaData,
+    isLoading: loadingMonthlyUpload,
+    error: monthlyUploadError,
+  } = useRemainingQuota({ enabled: isArtist });
+  const aiLimit =
+    artistQuotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
+  const aiRemaining = artistQuotaData?.ai?.remaining ?? aiLimit;
   const utils = trpc.useContext();
   const generateAIDescriptionMutation =
     trpc.ai.generateAIDescription.useMutation();
@@ -328,6 +340,10 @@ export default function ArtworkForm({
   );
   // Only fetch monthly upload count for artists creating new artwork
   const shouldFetchUploadCount = isArtist && !isSuperAdmin && !initialData; // Only for artists (not admins) creating new artwork
+
+  const monthlyUploadCount = artistQuotaData?.monthlyUploads?.used ?? 0;
+  const monthlyUploadLimit =
+    artistQuotaData?.monthlyUploads?.limit ?? backendLimits.monthlyUpload;
 
   // Compute once and reuse: shouldFetchArtistUploadCount
   const shouldFetchArtistUploadCount = Boolean(
@@ -931,14 +947,6 @@ export default function ArtworkForm({
   };
 
   // Scroll to top if validation fails on submit
-  const onInvalid = (errors) => {
-    if (Object.keys(errors).length > 0) {
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    }
-  };
 
   // Get the current step label for display
   const getStepLabel = () => {
@@ -997,10 +1005,30 @@ export default function ArtworkForm({
   }, [isSuperAdmin, initialData]);
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmitForm, onInvalid)}
-      className="space-y-6 font-sans"
-    >
+    <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6 font-sans">
+      {/* Error Summary at the top */}
+      {/* {showErrorSummary && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start">
+            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="ml-3">
+              <h3 className="text-sm font-semibold text-red-800 font-sans mb-1">
+                Please fix the following errors:
+              </h3>
+              <ul className="list-disc pl-5 text-sm text-red-700 font-sans">
+                {Object.entries(errors).map(([field, err]) => (
+                  <li key={field}>
+                    {err.message ||
+                      (err[0] && err[0].message) ||
+                      "Invalid value"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )} */}
+
       {/* Show artist name above image label in edit mode for admins */}
       {isSuperAdmin && initialData && initialData.artistName && (
         <div className="flex justify-center mb-2">
@@ -1472,10 +1500,22 @@ export default function ArtworkForm({
               className="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-fit whitespace-nowrap"
               onClick={handleAIDescription}
               disabled={
-                aiLoading || !(imageFile || imagePreview || initialData?.url)
+                aiLoading ||
+                !(
+                  imageFile ||
+                  imagePreview ||
+                  (initialData?.url && !imageRemoved)
+                ) ||
+                (isArtist && aiRemaining <= 0)
               }
               title={
-                !(imageFile || imagePreview || initialData?.url)
+                isArtist && aiRemaining <= 0
+                  ? "You have reached your daily AI description limit"
+                  : !(
+                      imageFile ||
+                      imagePreview ||
+                      (initialData?.url && !imageRemoved)
+                    )
                   ? "Please upload an image first to generate AI description"
                   : "Generate description using AI"
               }
@@ -1523,11 +1563,22 @@ export default function ArtworkForm({
                 </>
               )}
             </button>
-            {!(imageFile || imagePreview || initialData?.url) && !aiLoading && (
-              <span className="text-xs text-gray-500 font-sans break-words max-w-[70vw]">
-                💡 Upload an image first to use AI description generation
+            {isArtist && aiRemaining <= 0 && !aiLoading && (
+              <span className="text-xs text-red-500 font-sans break-words max-w-[70vw]">
+                🚫 You have reached your daily AI description limit
               </span>
             )}
+            {!(
+              imageFile ||
+              imagePreview ||
+              (initialData?.url && !imageRemoved)
+            ) &&
+              aiRemaining > 0 &&
+              !aiLoading && (
+                <span className="text-xs text-gray-500 font-sans break-words max-w-[70vw]">
+                  💡 Upload an image first to use AI description generation
+                </span>
+              )}
           </div>
           {aiError && (
             <p className="mt-1 text-sm text-red-600 font-sans">{aiError}</p>
@@ -2016,10 +2067,15 @@ export default function ArtworkForm({
       )}
 
       {/* Submit and Reset Button */}
-      <div className="pt-4 flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row items-center gap-4">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={
+            isSubmitting ||
+            (isArtist &&
+              !isSuperAdmin &&
+              monthlyUploadCount >= monthlyUploadLimit)
+          }
           className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
         >
           {isSubmitting ? (
@@ -2094,6 +2150,16 @@ export default function ArtworkForm({
             Reset Form
           </button>
         )}
+
+        {/* Show message if artist reached monthly upload limit */}
+        {isArtist &&
+          !isSuperAdmin &&
+          monthlyUploadCount >= monthlyUploadLimit && (
+            <span className="text-xs text-red-500 font-sans break-words sm:max-w-[30vw] mt-1 block">
+              🚫 You have reached your monthly upload limit. You cannot upload
+              more artwork this month.
+            </span>
+          )}
       </div>
     </form>
   );
