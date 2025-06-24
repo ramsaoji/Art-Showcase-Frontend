@@ -1903,65 +1903,67 @@ export default function ArtworkForm({
         )}
 
         {/* Checkboxes */}
-        <div className="col-span-2 flex flex-wrap gap-6">
-          {isSuperAdmin && (
-            <label className="flex items-center space-x-3">
-              <Controller
-                name="featured"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="checkbox"
-                    checked={field.value}
-                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                )}
-              />
-              <span className="text-sm font-medium text-gray-700 font-sans">
-                Featured Artwork
-              </span>
-            </label>
-          )}
-          {isSuperAdmin && (
-            <label className="flex items-center space-x-3">
-              <Controller
-                name="sold"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="checkbox"
-                    checked={field.value}
-                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                )}
-              />
-              <span className="text-sm font-medium text-gray-700 font-sans">
-                Mark as Sold
-              </span>
-            </label>
-          )}
-          {isSuperAdmin && (
-            <label className="flex items-center space-x-3">
-              <Controller
-                name="carousel"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="checkbox"
-                    checked={field.value || false}
-                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                )}
-              />
-              <span className="text-sm font-medium text-gray-700 font-sans">
-                Show in Carousel
-              </span>
-            </label>
-          )}
-        </div>
+        {isSuperAdmin && (
+          <div className="col-span-2 flex flex-wrap gap-6 my-2">
+            {isSuperAdmin && (
+              <label className="flex items-center space-x-3">
+                <Controller
+                  name="featured"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      type="checkbox"
+                      checked={field.value}
+                      className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                  )}
+                />
+                <span className="text-sm font-medium text-gray-700 font-sans">
+                  Featured Artwork
+                </span>
+              </label>
+            )}
+            {isSuperAdmin && (
+              <label className="flex items-center space-x-3">
+                <Controller
+                  name="sold"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      type="checkbox"
+                      checked={field.value}
+                      className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                  )}
+                />
+                <span className="text-sm font-medium text-gray-700 font-sans">
+                  Mark as Sold
+                </span>
+              </label>
+            )}
+            {isSuperAdmin && (
+              <label className="flex items-center space-x-3">
+                <Controller
+                  name="carousel"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      type="checkbox"
+                      checked={field.value || false}
+                      className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                  )}
+                />
+                <span className="text-sm font-medium text-gray-700 font-sans">
+                  Show in Carousel
+                </span>
+              </label>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Progress Indicators */}
