@@ -13,6 +13,11 @@ const schema = yup.object().shape({
   email: yup
     .string()
     .email("Please enter a valid email")
+    .test(
+      "no-dot-before-at",
+      "Email cannot have a dot right before @",
+      (value) => !value || !/\.@/.test(value)
+    )
     .required("Email is required"),
   password: yup.string().required("Password is required"),
 });
@@ -64,12 +69,28 @@ export default function Login() {
       await login(data.email, data.password);
       // Navigation is handled by the useEffect above
     } catch (err) {
-      // Set form-level error for server-side issues (e.g., wrong password)
-      setError("root.serverError", {
-        type: "manual",
-        message:
-          err.message || "Failed to sign in. Please check your credentials.",
-      });
+      let parsed;
+      try {
+        parsed = JSON.parse(err.message);
+      } catch {
+        // fallback
+      }
+      if (Array.isArray(parsed)) {
+        parsed.forEach((e) => {
+          if (e.path && e.path[0]) {
+            setError(e.path[0], {
+              type: "server",
+              message: e.message,
+            });
+          }
+        });
+      } else {
+        setError("root.serverError", {
+          type: "manual",
+          message:
+            err.message || "Failed to sign in. Please check your credentials.",
+        });
+      }
     }
   };
 
