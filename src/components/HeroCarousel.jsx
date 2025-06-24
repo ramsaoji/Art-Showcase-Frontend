@@ -2,7 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { Link } from "react-router-dom";
-import { ArrowRightIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
 import Loader from "./ui/Loader";
 import { trpc } from "../utils/trpc"; // Adjust import path as needed
 
@@ -135,6 +140,42 @@ export default function HeroCarousel() {
       {/* Background gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
+      {/* Left/Right Arrow Navigation */}
+      {images.length > 1 && (
+        <>
+          {/* Left Arrow */}
+          <button
+            aria-label="Previous image"
+            onClick={() =>
+              setCurrentImageIndex(
+                currentImageIndex === 0
+                  ? images.length - 1
+                  : currentImageIndex - 1
+              )
+            }
+            className="hidden lg:flex absolute left-2 lg:left-6 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/70 text-white rounded-full p-2 lg:p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+            style={{ backdropFilter: "blur(2px)" }}
+          >
+            <ChevronLeftIcon className="h-6 w-6 sm:h-8 sm:w-8" />
+          </button>
+          {/* Right Arrow */}
+          <button
+            aria-label="Next image"
+            onClick={() =>
+              setCurrentImageIndex(
+                currentImageIndex === images.length - 1
+                  ? 0
+                  : currentImageIndex + 1
+              )
+            }
+            className="hidden lg:flex absolute right-2 lg:right-6 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/70 text-white rounded-full p-2 lg:p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+            style={{ backdropFilter: "blur(2px)" }}
+          >
+            <ChevronRightIcon className="h-6 w-6 sm:h-8 sm:w-8" />
+          </button>
+        </>
+      )}
+
       {/* Image carousel */}
       <div className="relative h-full">
         <AnimatePresence mode="wait">
@@ -198,9 +239,9 @@ export default function HeroCarousel() {
         {/* Gradient overlay for better text visibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent z-10" />
 
-        {/* Centered Hero Text */}
+        {/* Centered Hero Text and Navigation Dots */}
         <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-4 sm:px-6">
-          <div className="relative max-w-7xl mx-auto">
+          <div className="relative max-w-7xl mx-auto w-full flex flex-col items-center justify-center">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -233,59 +274,24 @@ export default function HeroCarousel() {
                 <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
               </Link>
             </motion.div>
-          </div>
-        </div>
 
-        {/* <div className="absolute inset-0 z-20 flex flex-col justify-center sm:justify-center md:justify-center px-4 sm:px-6">
-          <div className="relative mx-auto max-w-7xl -mt-16 sm:mt-0">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="font-artistic text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-4 sm:mb-8 leading-tight tracking-wide"
-            >
-              Welcome to{" "}
-              <span className="italic block sm:inline">Art Showcase</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="font-sans text-base sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-10 max-w-2xl leading-relaxed tracking-wide"
-            >
-              Discover unique artworks from talented artists around the world
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              <Link
-                to="/gallery"
-                className="inline-flex items-center px-6 sm:px-8 py-2.5 sm:py-3.5 border-2 border-white/20 backdrop-blur-sm rounded-full text-white font-sans text-base sm:text-lg font-medium hover:bg-white/10 transition-colors duration-300"
-              >
-                Explore Gallery
-                <ArrowRightIcon className="ml-2 sm:ml-3 h-4 sm:h-5 w-4 sm:w-5" />
-              </Link>
-            </motion.div>
+            {/* Navigation dots */}
+            <div className="mt-8 sm:mt-10 flex space-x-2 sm:space-x-3">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`w-2 sm:w-3 h-2 sm:h-3 rounded-full transition-all duration-300 ${
+                    index === currentImageIndex
+                      ? "bg-white scale-100"
+                      : "bg-white/50 scale-75 hover:scale-90 hover:bg-white/70"
+                  }`}
+                >
+                  <span className="sr-only">Go to slide {index + 1}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div> */}
-
-        {/* Navigation dots */}
-        <div className="absolute bottom-14 sm:bottom-24 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2 sm:space-x-3">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentImageIndex(index)}
-              className={`w-2 sm:w-3 h-2 sm:h-3 rounded-full transition-all duration-300 ${
-                index === currentImageIndex
-                  ? "bg-white scale-100"
-                  : "bg-white/50 scale-75 hover:scale-90 hover:bg-white/70"
-              }`}
-            >
-              <span className="sr-only">Go to slide {index + 1}</span>
-            </button>
-          ))}
         </div>
 
         {/* Image details overlay */}
@@ -311,6 +317,17 @@ export default function HeroCarousel() {
           </div>
         </div>
       </div>
+
+      {/* Down Arrow Scroll Indicator */}
+      <motion.div
+        initial={{ y: 0 }}
+        animate={{ y: [0, 12, 0] }}
+        transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+        className="absolute left-0 right-0 bottom-6 z-30 flex flex-col items-center justify-center"
+      >
+        <ChevronDownIcon className="h-8 w-8 text-white/80 drop-shadow-lg animate-bounce-slow" />
+        <span className="sr-only">Scroll down</span>
+      </motion.div>
     </div>
   );
 }
