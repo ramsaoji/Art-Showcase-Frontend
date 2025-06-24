@@ -847,8 +847,9 @@ export default function ArtworkForm({
         submitData.set("status", status);
       }
 
-      if (isSuperAdmin && expiresAt) {
-        const iso = new Date(expiresAt).toISOString();
+      // Use the value from the form data, not local state
+      if (isSuperAdmin && data.expiresAt) {
+        const iso = new Date(data.expiresAt).toISOString();
         submitData.set("expiresAt", iso);
       }
 
