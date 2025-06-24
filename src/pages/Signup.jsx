@@ -14,6 +14,11 @@ const schema = yup.object().shape({
   email: yup
     .string()
     .email("Please enter a valid email address")
+    .test(
+      "no-dot-before-at",
+      "Email cannot have a dot right before @",
+      (value) => !value || !/\.@/.test(value)
+    )
     .required("Email is required"),
   password: yup
     .string()
@@ -46,11 +51,27 @@ export default function Signup() {
       // You can show a success message here, maybe navigate to login or show a pending approval message
     },
     onError: (err) => {
-      // Set form-level error for server-side issues (e.g., email already exists)
-      setFormError("root.serverError", {
-        type: "manual",
-        message: err.message || "Registration failed",
-      });
+      let parsed;
+      try {
+        parsed = JSON.parse(err.message);
+      } catch {
+        // fallback
+      }
+      if (Array.isArray(parsed)) {
+        parsed.forEach((e) => {
+          if (e.path && e.path[0]) {
+            setFormError(e.path[0], {
+              type: "server",
+              message: e.message,
+            });
+          }
+        });
+      } else {
+        setFormError("root.serverError", {
+          type: "manual",
+          message: err.message || "Registration failed",
+        });
+      }
     },
   });
 
