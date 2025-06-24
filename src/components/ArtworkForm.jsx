@@ -1966,7 +1966,7 @@ export default function ArtworkForm({
 
       {/* Progress Indicators */}
       {isSubmitting && (
-        <div className="space-y-4 pt-4">
+        <div className="!-mt-2">
           {currentStep === "uploading" && (
             <ProgressBar
               progress={uploadProgress}
