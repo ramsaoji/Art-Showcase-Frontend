@@ -10,7 +10,6 @@ export default function AddArtwork() {
   const { isSuperAdmin, user } = useAuth();
   const [error, setError] = useState(null);
   const [artistId, setArtistId] = useState("");
-  const [shouldLoadArtists, setShouldLoadArtists] = useState(false);
 
   // Create user-specific localStorage key
   const ARTIST_ID_KEY = `artwork_artist_id_${user?.id || "anonymous"}`;
@@ -20,20 +19,6 @@ export default function AddArtwork() {
     setArtistId(id);
     localStorage.setItem(ARTIST_ID_KEY, id || "");
   };
-
-  // Fetch all artists for admin - only when shouldLoadArtists is true
-  const { data, isLoading: loadingArtists } = trpc.user.listUsers.useQuery(
-    undefined,
-    { enabled: isSuperAdmin && shouldLoadArtists }
-  );
-
-  const artists = (
-    data?.users?.filter((u) => u.role === "ARTIST") || []
-  ).filter((a) => a.approved && a.active);
-
-  // Find the selected artist object (for super admin)
-  const selectedArtist =
-    isSuperAdmin && artistId ? artists.find((a) => a.id === artistId) : null;
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
@@ -121,21 +106,13 @@ export default function AddArtwork() {
 
   // Restore artistId from localStorage on mount
   useEffect(() => {
-    if (isSuperAdmin && artists.length > 0) {
+    if (isSuperAdmin) {
       const saved = localStorage.getItem(ARTIST_ID_KEY);
-      if (saved && artists.some((a) => a.id === saved)) {
+      if (saved) {
         setArtistId(saved);
       }
-      // If the saved artistId is not in the list, clear it
-      if (saved && !artists.some((a) => a.id === saved)) {
-        setArtistId("");
-        localStorage.removeItem(ARTIST_ID_KEY);
-      }
     }
-  }, [isSuperAdmin, artists, ARTIST_ID_KEY]);
-
-  // Debug: Log artist selection
-  useEffect(() => {}, [artistId, selectedArtist, artists]);
+  }, [isSuperAdmin, ARTIST_ID_KEY]);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
@@ -188,12 +165,8 @@ export default function AddArtwork() {
           <div className="p-6 sm:p-8">
             <ArtworkForm
               onSubmit={handleSubmit}
-              artists={artists}
-              loadingArtists={loadingArtists}
               artistId={artistId}
               setArtistId={handleSetArtistId}
-              selectedArtist={selectedArtist}
-              setShouldLoadArtists={setShouldLoadArtists}
             />
           </div>
         </motion.div>

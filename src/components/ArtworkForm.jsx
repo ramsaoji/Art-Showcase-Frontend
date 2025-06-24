@@ -14,6 +14,7 @@ import {
   baseUrl,
 } from "../utils/trpc";
 import { toDatetimeLocalValue } from "../utils/formatters";
+import ArtistSelect from "./ArtistSelect";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -37,7 +38,6 @@ function ProgressBar({ progress, label }) {
 const createValidationSchema = (
   isSuperAdmin,
   initialData,
-  artists,
   artistId,
   imageRemoved
 ) => {
@@ -134,12 +134,9 @@ async function compressImageToBase64(file, maxSize = 1024, quality = 0.7) {
 export default function ArtworkForm({
   onSubmit,
   initialData = null,
-  artists = [],
-  loadingArtists = false,
   artistId = "",
   setArtistId = () => {},
   selectedArtist = null,
-  setShouldLoadArtists = () => {},
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
 
@@ -433,11 +430,10 @@ export default function ArtworkForm({
     return createValidationSchema(
       isSuperAdmin,
       initialData,
-      artists,
       artistId,
       imageRemoved
     );
-  }, [isSuperAdmin, initialData, artists, artistId, imageRemoved]);
+  }, [isSuperAdmin, initialData, artistId, imageRemoved]);
 
   // Custom resolver that handles dynamic validation by passing a reactive context
   const customResolver = useMemo(() => {
@@ -499,24 +495,6 @@ export default function ArtworkForm({
       }
     }
   }, [initialData, isSuperAdmin, setArtistId, setValue, ARTIST_ID_KEY]);
-
-  // Additional effect to handle artist restoration after artists are loaded
-  useEffect(() => {
-    if (!initialData && isSuperAdmin && artists.length > 0) {
-      const savedArtistId = localStorage.getItem(ARTIST_ID_KEY);
-      if (savedArtistId && !watchedValues.artistId) {
-        setValue("artistId", savedArtistId, { shouldValidate: true });
-        setArtistFieldTouched(true);
-      }
-    }
-  }, [
-    artists,
-    initialData,
-    isSuperAdmin,
-    setValue,
-    watchedValues.artistId,
-    ARTIST_ID_KEY,
-  ]);
 
   // Persist form data, dimensions, and artist ID on change (Add mode only)
   useEffect(() => {
@@ -1292,78 +1270,24 @@ export default function ArtworkForm({
             >
               Select Artist <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <Controller
-                name="artistId"
-                control={control}
-                render={({ field }) => (
-                  <select
-                    {...field}
-                    id="artistSelect"
-                    className={`block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${getFieldErrorClass(
-                      "artistId"
-                    )}`}
-                    onFocus={() => {
-                      if (artists.length === 0 && !loadingArtists) {
-                        setShouldLoadArtists(true);
-                      }
-                    }}
-                    // onBlur={() => {
-                    //   setArtistFieldTouched(true);
-                    //   trigger("artistId");
-                    // }}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      trigger("artistId");
-                      // Also update the parent component's artistId state for localStorage
-                      if (isSuperAdmin && setArtistId) {
-                        setArtistId(e.target.value);
-                      }
-                      // Signal that the user has interacted, ending the initial load phase.
-                      isInitialLoad.current = false;
-                    }}
-                  >
-                    <option value="" className="font-sans">
-                      Select an artist
-                    </option>
-                    {loadingArtists ? (
-                      <option value="" disabled className="font-sans">
-                        Loading artists...
-                      </option>
-                    ) : (
-                      artists &&
-                      artists
-                        .filter((artist) => artist.approved && artist.active)
-                        .map((artist) => (
-                          <option
-                            key={artist.id}
-                            value={artist.id}
-                            className="font-sans"
-                          >
-                            {artist.artistName || artist.email} ({artist.email})
-                          </option>
-                        ))
-                    )}
-                  </select>
-                )}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg
-                  className="w-5 h-5 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 9l4 4 4-4"
-                  />
-                </svg>
-              </div>
-            </div>
+            <Controller
+              name="artistId"
+              control={control}
+              render={({ field }) => (
+                <ArtistSelect
+                  value={field.value}
+                  onChange={(id) => {
+                    field.onChange(id);
+                    trigger("artistId");
+                    if (isSuperAdmin && setArtistId) {
+                      setArtistId(id);
+                    }
+                    isInitialLoad.current = false;
+                  }}
+                  error={!!errors.artistId}
+                />
+              )}
+            />
             {errors.artistId && (isSubmitted || artistFieldTouched) && (
               <p className="mt-1 text-sm text-red-600 font-sans">
                 {errors.artistId?.message || "Artist is required"}

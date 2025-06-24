@@ -34,6 +34,7 @@ export default function ArtistApprovals() {
       setSuccess("Artist approved!");
       refetch();
       utils.user.listUsers.invalidate();
+      utils.user.listArtistsPublic.invalidate();
     },
     onError: (err) => setError(err.message),
   });
@@ -55,6 +56,7 @@ export default function ArtistApprovals() {
       setSuccess("User deleted successfully!");
       refetch();
       utils.user.listUsers.invalidate();
+      utils.user.listArtistsPublic.invalidate();
     },
     onError: (err) => setError(err.message),
   });
@@ -198,22 +200,22 @@ export default function ArtistApprovals() {
               <table className="min-w-[600px] w-full text-left font-sans border-separate border-spacing-y-2">
                 <thead>
                   <tr>
-                    <th className="py-3 px-4 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap">
+                    <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
                       Artist Name
                     </th>
-                    <th className="font-sans text-gray-700 text-sm font-semibold whitespace-nowrap">
+                    <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
                       Email
                     </th>
-                    <th className="font-sans text-gray-700 text-sm font-semibold whitespace-nowrap">
+                    <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-center">
                       Artworks
                     </th>
-                    <th className="font-sans text-gray-700 text-sm font-semibold whitespace-nowrap">
+                    <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
                       Active
                     </th>
-                    <th className="font-sans text-gray-700 text-sm font-semibold whitespace-nowrap">
+                    <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
                       Approved
                     </th>
-                    <th className="font-sans text-gray-700 text-sm font-semibold whitespace-nowrap">
+                    <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
                       Actions
                     </th>
                   </tr>
@@ -232,42 +234,52 @@ export default function ArtistApprovals() {
                           key={artist.id}
                           className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
                         >
-                          <td className="py-3 px-4 font-sans align-middle rounded-l-xl text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate">
+                          <td
+                            className="px-4 py-3 font-sans align-middle text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate text-left"
+                            title={artist.artistName}
+                          >
                             {artist.artistName}
                           </td>
-                          <td className="font-sans align-middle text-gray-700 whitespace-nowrap max-w-[200px] truncate">
+                          <td
+                            className="px-4 py-3 font-sans align-middle text-gray-700 whitespace-nowrap max-w-[200px] truncate text-left"
+                            title={artist.email}
+                          >
                             {artist.email}
                           </td>
-                          <td className="font-sans align-middle text-gray-700 text-center">
+                          <td className="px-4 py-3 font-sans align-middle text-gray-700 text-center">
                             {artist.artworksCount ?? 0}
                           </td>
-                          <td className="font-sans align-middle">
-                            <span
-                              className={`px-2.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold font-sans align-middle inline-block ${
-                                artist.active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {artist.active ? "Active" : "Inactive"}
-                            </span>
+                          <td className="px-4 py-3 font-sans align-middle text-left">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block ${
+                                  artist.active
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {artist.active ? "Active" : "Inactive"}
+                              </span>
+                            </div>
                           </td>
-                          <td className="font-sans align-middle">
-                            <span
-                              className={`px-2.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold font-sans align-middle inline-block ${
-                                artist.approved
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
-                              {artist.approved ? "Approved" : "Pending"}
-                            </span>
+                          <td className="px-4 py-3 font-sans align-middle text-left">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block ${
+                                  artist.approved
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                                }`}
+                              >
+                                {artist.approved ? "Approved" : "Pending"}
+                              </span>
+                            </div>
                           </td>
-                          <td className="font-sans align-middle rounded-r-xl">
-                            <div className="flex flex-wrap gap-2">
+                          <td className="px-4 py-3 font-sans align-middle whitespace-normal min-w-[120px] text-left">
+                            <div className="flex items-center gap-2 justify-start">
                               {!artist.approved && (
                                 <button
-                                  className="px-2 py-1.5 sm:px-4 sm:py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-sans transition-all duration-200 focus:ring-2 focus:ring-green-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
+                                  className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-sans transition-all duration-200 focus:ring-2 focus:ring-green-300 border-none outline-none shadow-sm hover:shadow-md text-xs font-semibold"
                                   onClick={() => handleApprove(artist.id)}
                                   disabled={approveMutation.isLoading}
                                 >
@@ -275,7 +287,7 @@ export default function ArtistApprovals() {
                                 </button>
                               )}
                               <button
-                                className={`px-2 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans transition-all duration-200 focus:ring-2 focus:ring-indigo-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
+                                className={`min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 focus:ring-2 focus:ring-indigo-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
                                   artist.active
                                     ? "bg-amber-300 text-amber-900 hover:bg-amber-400"
                                     : "bg-green-500 text-white hover:bg-green-600"
@@ -293,7 +305,7 @@ export default function ArtistApprovals() {
                               </button>
                               {canDelete && (
                                 <button
-                                  className="px-2 py-1.5 sm:px-4 sm:py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-sans transition-all duration-200 focus:ring-2 focus:ring-red-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
+                                  className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-sans font-semibold transition-all duration-200 focus:ring-2 focus:ring-red-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
                                   onClick={() => handleDeleteUserClick(artist)}
                                   disabled={
                                     deleteUserMutation.isLoading ||
@@ -349,8 +361,10 @@ export default function ArtistApprovals() {
             </div>
           </>
         ) : (
-          <div className="text-gray-400 font-sans text-center py-16 text-lg">
-            No artists found.
+          <div className="flex justify-center py-16">
+            <p className="text-base text-gray-500 font-sans">
+              No artists found.
+            </p>
           </div>
         )}
       </div>
