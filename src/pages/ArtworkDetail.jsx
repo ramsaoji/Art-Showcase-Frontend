@@ -378,7 +378,7 @@ export default function ArtworkDetail() {
               </div>
 
               {/* Purchase Request Button - below details, above back link */}
-              {!user && (
+              {!isOwner && !artwork.sold && (
                 <div className="border-t border-gray-100 py-4 flex flex-col items-start">
                   <button
                     className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
