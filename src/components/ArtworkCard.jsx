@@ -376,23 +376,25 @@ export default function ArtworkCard({
       </div>
 
       {/* Purchase Request Button - only for public (not authenticated) users */}
-      <div className="border-t border-gray-100 px-4 py-4 bg-white flex flex-col items-end">
-        {!user && !safeArtwork.sold ? (
-          <button
-            className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            onClick={() => setShowPurchaseModal(true)}
-          >
-            Request to Purchase
-          </button>
-        ) : !user && safeArtwork.sold ? (
-          <button
-            className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-gray-400 text-white font-sans font-semibold shadow cursor-not-allowed opacity-80"
-            disabled
-          >
-            Artwork Sold
-          </button>
-        ) : null}
-      </div>
+      {!user && (
+        <div className="border-t border-gray-100 px-4 py-4 bg-white flex flex-col items-end">
+          {!safeArtwork.sold ? (
+            <button
+              className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={() => setShowPurchaseModal(true)}
+            >
+              Request to Purchase
+            </button>
+          ) : (
+            <button
+              className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-gray-400 text-white font-sans font-semibold shadow cursor-not-allowed opacity-80"
+              disabled
+            >
+              Artwork Sold
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Action Buttons - Fixed position at bottom */}
       {(isSuperAdmin || (isArtist && isOwner)) && (
