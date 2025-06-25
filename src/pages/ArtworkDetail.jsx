@@ -11,6 +11,7 @@ import Badge from "../components/Badge";
 import Loader from "../components/ui/Loader";
 import { trackArtworkView, trackShare } from "../services/analytics";
 import { useAuth } from "../contexts/AuthContext";
+import PurchaseRequestModal from "../components/PurchaseRequestModal";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
@@ -19,6 +20,7 @@ export default function ArtworkDetail() {
   const { isSuperAdmin, isArtist, user } = useAuth();
   // const [imageLoading, setImageLoading] = useState(true);
   const [highQualityLoaded, setHighQualityLoaded] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   // Use tRPC query to fetch artworks
   const {
@@ -375,12 +377,24 @@ export default function ArtworkDetail() {
                 </motion.div>
               </div>
 
+              {/* Purchase Request Button - below details, above back link */}
+              {!user && (
+                <div className="border-t border-gray-100 py-4 flex flex-col items-start">
+                  <button
+                    className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={() => setShowPurchaseModal(true)}
+                  >
+                    Request to Purchase
+                  </button>
+                </div>
+              )}
+
               {/* Back to gallery link */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="mt-8 pt-6 border-t border-gray-200"
+                className="pt-6 border-t border-gray-200"
               >
                 <Link
                   to="/gallery"
@@ -416,6 +430,13 @@ export default function ArtworkDetail() {
           animate={true}
         />
       )}
+
+      <PurchaseRequestModal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        artworkId={artwork.id}
+        artworkTitle={artwork.title}
+      />
     </div>
   );
 }

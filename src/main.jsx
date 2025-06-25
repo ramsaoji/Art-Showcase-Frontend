@@ -1,11 +1,12 @@
 import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, Route } from "react-router-dom";
 import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
 import { trpc, trpcClient } from "./utils/trpc";
 import PageLoader from "./components/ui/PageLoader";
+import VerifyEmail from "./pages/VerifyEmail";
 
 // Performance monitoring
 const reportWebVitals = (metric) => {
@@ -45,6 +46,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <BrowserRouter>
+            {/* <Route path="/verify-email" element={<VerifyEmail />} /> Removed, now handled in App.jsx */}
             <Suspense fallback={<PageLoader />}>
               <App />
             </Suspense>

@@ -279,6 +279,20 @@ export default function Navbar() {
 
                               <Menu.Item>
                                 {({ active }) => (
+                                  <Link
+                                    to="/change-password"
+                                    className={classNames(
+                                      active ? "bg-gray-50" : "",
+                                      "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-sans"
+                                    )}
+                                  >
+                                    Change Password
+                                  </Link>
+                                )}
+                              </Menu.Item>
+
+                              <Menu.Item>
+                                {({ active }) => (
                                   <button
                                     onClick={handleLogout}
                                     className={classNames(
@@ -406,36 +420,37 @@ export default function Navbar() {
                   </Link>
                 ))}
               </div>
-              {user ? (
-                <>
-                  {(isSuperAdmin || isArtist) && (
-                    <Link
-                      to="/add-artwork"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="block px-4 py-3 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 mt-2"
-                    >
-                      Add Artwork
-                    </Link>
-                  )}
+
+              {/* Mobile: Add Artwork, Change Password, and Sign Out */}
+              <div className="pt-4 pb-3 border-t border-gray-200 px-2">
+                {(isSuperAdmin || isArtist) && (
+                  <Link
+                    to="/add-artwork"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-center px-4 py-3 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 mb-3"
+                  >
+                    Add Artwork
+                  </Link>
+                )}
+                <div className="space-y-1">
+                  <Link
+                    to="/change-password"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-2 py-2 rounded-lg text-base font-sans text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-200"
+                  >
+                    Change Password
+                  </Link>
                   <button
                     onClick={() => {
-                      setIsMobileMenuOpen(false);
                       handleLogout();
+                      setIsMobileMenuOpen(false);
                     }}
-                    className="block w-full px-4 py-3 text-base font-sans font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 mt-2 mb-4"
+                    className="block w-full text-left px-2 py-2 rounded-lg text-base font-sans text-red-600 hover:bg-red-50 transition-colors duration-200"
                   >
                     Sign out
                   </button>
-                </>
-              ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-4 py-3 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 mt-2 mb-4"
-                >
-                  Login
-                </Link>
-              )}
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -15,6 +15,7 @@ import { trackArtworkInteraction } from "../services/analytics";
 import Badge from "./Badge";
 import Loader from "./ui/Loader";
 import { useAuth } from "../contexts/AuthContext";
+import PurchaseRequestModal from "./PurchaseRequestModal";
 
 export default function ImageModal({
   isOpen,
@@ -31,9 +32,12 @@ export default function ImageModal({
 
   // Reset loading and error states when image changes
   useEffect(() => {
-    setIsLoading(true);
-    setHasError(false);
-  }, [image?.url, image?.public_id, image?.cloudinary_public_id]);
+    if (image) {
+      setIsLoading(true);
+      setHasError(false);
+      setHighQualityLoaded(false);
+    }
+  }, [image?.id, image?.public_id, image?.cloudinary_public_id]);
 
   const handleImageLoad = () => {
     setIsLoading(false);
@@ -84,15 +88,20 @@ export default function ImageModal({
   // Preload high quality image when modal opens
   useEffect(() => {
     if (isOpen && image) {
+      setHighQualityLoaded(false);
       const highQualityImg = new Image();
       highQualityImg.src = getHighQualityImageUrl();
       highQualityImg.onload = () => {
         setHighQualityLoaded(true);
       };
+      highQualityImg.onerror = () => {
+        // If high quality fails, keep using preview
+        console.warn("High quality image failed to load, using preview");
+      };
     } else {
       setHighQualityLoaded(false);
     }
-  }, [isOpen, image]);
+  }, [isOpen, image?.id, image?.public_id, image?.cloudinary_public_id]);
 
   // Determine if the current user is the owner (artist) of this artwork
   const isOwner = user && image?.userId && user.id === image.userId;
@@ -103,12 +112,26 @@ export default function ImageModal({
     (isArtist && isOwner) ||
     (image?.status && image.status !== "ACTIVE");
 
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+
+  const handleImageModalClose = () => {
+    // Don't close the image modal if purchase modal is open
+    if (showPurchaseModal) {
+      return;
+    }
+    handleClose();
+  };
+
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="fixed inset-0 z-50" onClose={onClose}>
-        <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4">
+    <Transition.Root show={isOpen} as="div">
+      <Dialog
+        as="div"
+        className="fixed inset-0 z-50"
+        onClose={handleImageModalClose}
+      >
+        <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 md:p-6">
           <Transition.Child
-            as={Fragment}
+            as="div"
             enter="ease-out duration-300"
             enterFrom="opacity-0"
             enterTo="opacity-100"
@@ -120,7 +143,7 @@ export default function ImageModal({
           </Transition.Child>
 
           <Transition.Child
-            as={Fragment}
+            as="div"
             enter="ease-out duration-300"
             enterFrom="opacity-0 scale-95"
             enterTo="opacity-100 scale-100"
@@ -132,10 +155,10 @@ export default function ImageModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="relative w-full max-w-7xl max-h-[85vh] sm:h-[85vh] flex flex-col lg:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
+              className="relative w-full max-w-7xl h-[90vh] sm:h-[90vh] md:h-[90vh] flex flex-col md:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
             >
               {/* Image Section */}
-              <div className="relative flex-1 flex items-center justify-center bg-gray-50/50 min-h-[35vh] max-h-[50vh] sm:min-h-[40vh] sm:max-h-[55vh] lg:min-h-[70vh] lg:max-h-none">
+              <div className="relative flex h-2/5 w-full items-center justify-center bg-gray-50/50 md:h-full md:flex-1">
                 {isLoading && !hasError && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader size="large" />
@@ -149,38 +172,32 @@ export default function ImageModal({
                   </div>
                 ) : (
                   <div className="relative w-full h-full flex items-center justify-center p-4">
-                    {/* Progressive image loading - first load preview, then high quality */}
+                    {/* Single image with progressive loading */}
                     <img
-                      src={getPreviewImageUrl()}
+                      src={
+                        highQualityLoaded
+                          ? getHighQualityImageUrl()
+                          : getPreviewImageUrl()
+                      }
                       alt={image?.title}
-                      className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${
-                        isLoading
-                          ? "opacity-0"
-                          : highQualityLoaded
-                          ? "opacity-0"
-                          : "opacity-100"
-                      } ${image?.sold ? "opacity-90" : ""} absolute`}
+                      className={`max-w-full max-h-full object-contain transition-opacity duration-500 ${
+                        isLoading ? "opacity-0" : "opacity-100"
+                      } ${image?.sold ? "opacity-90" : ""}`}
                       onLoad={handleImageLoad}
                       onError={handleImageError}
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                        width: "auto",
+                        height: "auto",
+                        objectFit: "contain",
+                      }}
                     />
-
-                    {/* High quality image that loads after preview */}
-                    {!isLoading && !hasError && (
-                      <img
-                        src={getHighQualityImageUrl()}
-                        alt={image?.title}
-                        className={`max-w-full max-h-full object-contain transition-opacity duration-500 ${
-                          highQualityLoaded ? "opacity-100" : "opacity-0"
-                        } ${image?.sold ? "opacity-90" : ""}`}
-                        onLoad={() => setHighQualityLoaded(true)}
-                        onError={handleImageError}
-                      />
-                    )}
                   </div>
                 )}
 
                 {/* Badges overlay */}
-                <div className="absolute top-4 right-6 z-30 flex gap-2 flex-row items-center">
+                <div className="absolute top-2 right-2 z-30 flex flex-row items-center gap-1 sm:top-4 sm:right-6 sm:gap-2 md:top-4 md:right-6 md:gap-2">
                   {image?.featured && (
                     <Badge type="featured" variant="overlay">
                       <span className="inline-flex items-center">
@@ -233,9 +250,9 @@ export default function ImageModal({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onPrevious}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 hover:text-gray-600 z-20 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg transition-all duration-200 hover:bg-white hover:shadow-xl"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-800 shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-gray-600 hover:shadow-xl sm:left-4 sm:p-3 md:left-4 md:p-3"
                   >
-                    <ChevronLeftIcon className="h-6 w-6" />
+                    <ChevronLeftIcon className="h-5 w-5 sm:h-6 md:h-6" />
                   </motion.button>
                 )}
 
@@ -244,31 +261,31 @@ export default function ImageModal({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onNext}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-800 hover:text-gray-600 z-20 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg transition-all duration-200 hover:bg-white hover:shadow-xl"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-800 shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-gray-600 hover:shadow-xl sm:right-4 sm:p-3 md:right-4 md:p-3"
                   >
-                    <ChevronRightIcon className="h-6 w-6" />
+                    <ChevronRightIcon className="h-5 w-5 sm:h-6 md:h-6" />
                   </motion.button>
                 )}
               </div>
 
               {/* Details Section */}
-              <div className="relative flex-shrink-0 w-full lg:w-96 xl:w-[28rem] bg-white/95 flex flex-col max-h-[45vh] sm:max-h-[50vh] lg:max-h-full">
+              <div className="relative h-3/5 w-full flex-shrink-0 bg-white/95 flex flex-col md:h-full md:w-80 lg:w-96 xl:w-[28rem]">
                 {/* Close button */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={handleClose}
-                  className="absolute right-4 top-4 z-10 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-all duration-200"
+                  onClick={handleImageModalClose}
+                  className="absolute right-2 top-2 z-10 rounded-full bg-gray-100 p-1.5 text-gray-500 transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 sm:right-4 sm:top-4 sm:p-2 md:right-4 md:top-4 md:p-2"
                 >
-                  <XMarkIcon className="h-5 w-5" />
+                  <XMarkIcon className="h-4 w-4 sm:h-5 md:h-5" />
                 </motion.button>
 
                 {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 pr-12 sm:pr-16 overscroll-contain bg-white">
+                <div className="flex-1 overflow-y-auto overscroll-contain bg-white p-4 pr-12 sm:p-6 sm:pr-16 md:p-6 md:pr-16">
                   <motion.h2
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="font-artistic text-2xl lg:text-3xl font-bold text-gray-900 mb-3 tracking-wide"
+                    className="font-artistic text-2xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 tracking-wide"
                   >
                     {image?.title}
                   </motion.h2>
@@ -279,7 +296,7 @@ export default function ImageModal({
                     transition={{ delay: 0.1 }}
                     className="mb-6"
                   >
-                    <p className="font-artistic text-2xl lg:text-3xl text-indigo-600 font-bold tracking-wide">
+                    <p className="font-artistic text-2xl md:text-2xl lg:text-3xl text-indigo-600 font-bold tracking-wide">
                       {image?.price ? formatPrice(image.price) : ""}
                     </p>
                   </motion.div>
@@ -378,11 +395,29 @@ export default function ImageModal({
                     </div>
                   </motion.div>
                 </div>
+
+                {/* Purchase Request Button - always at the bottom of details */}
+                {!image?.sold && !user && (
+                  <div className="flex justify-center sm:justify-end border-t border-gray-200 p-4">
+                    <button
+                      className="w-full rounded-xl bg-indigo-600 px-6 py-3 font-sans font-semibold text-white shadow transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      onClick={() => setShowPurchaseModal(true)}
+                    >
+                      Request to Purchase
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </Transition.Child>
         </div>
       </Dialog>
+      <PurchaseRequestModal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        artworkId={image?.id}
+        artworkTitle={image?.title}
+      />
     </Transition.Root>
   );
 }

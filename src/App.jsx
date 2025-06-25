@@ -6,6 +6,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { trackPageView } from "./services/analytics";
 import Loader from "./components/ui/Loader";
 import Home from "./pages/Home";
+import VerifyEmail from "./pages/VerifyEmail";
 
 // Lazy load page components
 const Gallery = lazy(() => import("./pages/Gallery"));
@@ -17,6 +18,7 @@ const Login = lazy(() => import("./pages/Login"));
 const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ArtistApprovals = lazy(() => import("./pages/admin/ArtistApprovals"));
+const ChangePassword = lazy(() => import("./pages/user/ChangePassword"));
 
 // Analytics wrapper component
 function AnalyticsWrapper({ children }) {
@@ -96,6 +98,7 @@ function App() {
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/gallery" element={<Gallery />} />
@@ -128,6 +131,14 @@ function App() {
                         <ArtistApprovals />
                       </ProtectedRoute>
                     </Suspense>
+                  }
+                />
+                <Route
+                  path="/change-password"
+                  element={
+                    <ProtectedRoute>
+                      <ChangePassword />
+                    </ProtectedRoute>
                   }
                 />
               </Route>

@@ -9,6 +9,7 @@ import useOptimizedImage from "../hooks/useOptimizedImage";
 import ArtworkActions from "./ArtworkActions";
 import Badge from "./Badge";
 import { useAuth } from "../contexts/AuthContext";
+import PurchaseRequestModal from "./PurchaseRequestModal";
 
 export default function ArtworkCard({
   artwork,
@@ -24,6 +25,7 @@ export default function ArtworkCard({
   const imageRef = useRef(null);
   const descriptionRef = useRef(null);
   const { isSuperAdmin, isArtist, user } = useAuth();
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   // Use our custom hook for optimized image loading
   const {
@@ -373,6 +375,18 @@ export default function ArtworkCard({
         </div>
       </div>
 
+      {/* Purchase Request Button - only for public (not authenticated) users */}
+      {!safeArtwork.sold && !user && (
+        <div className="border-t border-gray-100 px-4 py-4 bg-white flex flex-col items-end">
+          <button
+            className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={() => setShowPurchaseModal(true)}
+          >
+            Request to Purchase
+          </button>
+        </div>
+      )}
+
       {/* Action Buttons - Fixed position at bottom */}
       {(isSuperAdmin || (isArtist && isOwner)) && (
         <div className="p-4 sm:p-6 border-t border-gray-100 flex-shrink-0 bg-white rounded-b-2xl">
@@ -385,6 +399,13 @@ export default function ArtworkCard({
           </div>
         </div>
       )}
+
+      <PurchaseRequestModal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        artworkId={artwork.id}
+        artworkTitle={safeArtwork.title}
+      />
     </motion.div>
   );
 }

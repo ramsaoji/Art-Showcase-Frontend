@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { trackFormSubmission } from "../services/analytics";
+import { trpcClient } from "../utils/trpc";
+import Loader from "../components/ui/Loader";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +11,8 @@ const Contact = () => {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,13 +22,26 @@ const Contact = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    // Track form submission
-    trackFormSubmission("contact", {
-      has_name: !!formData.name,
-      has_email: !!formData.email,
-      message_length: formData.message.length,
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      // Track form submission
+      trackFormSubmission("contact", {
+        has_name: !!formData.name,
+        has_email: !!formData.email,
+        message_length: formData.message.length,
+      });
+      await trpcClient.misc.sendContactMessage.mutate(formData);
+      setSubmitted(true);
+    } catch (err) {
+      setError(
+        err?.message || "Failed to send message. Please try again later."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,29 +95,16 @@ const Contact = () => {
                   </p>
                 </motion.div>
               ) : (
-                <form
-                  action="https://formsubmit.co/myofficial@techness.in"
-                  method="POST"
-                  className="space-y-6"
-                  onSubmit={handleSubmit}
-                >
+                <form className="space-y-6" onSubmit={handleSubmit}>
                   {/* Honeypot */}
                   <input
                     type="text"
                     name="_honey"
                     style={{ display: "none" }}
                   />
-
-                  {/* Disable Captcha */}
-                  <input type="hidden" name="_captcha" value="false" />
-
-                  {/* Success page */}
-                  <input
-                    type="hidden"
-                    name="_next"
-                    value={window.location.href}
-                  />
-
+                  {error && (
+                    <div className="text-red-600 text-sm mb-2">{error}</div>
+                  )}
                   <div>
                     <label
                       htmlFor="name"
@@ -117,9 +121,9 @@ const Contact = () => {
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
                       placeholder="Your name"
+                      disabled={loading}
                     />
                   </div>
-
                   <div>
                     <label
                       htmlFor="email"
@@ -136,9 +140,9 @@ const Contact = () => {
                       required
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
                       placeholder="email@example.com"
+                      disabled={loading}
                     />
                   </div>
-
                   <div>
                     <label
                       htmlFor="message"
@@ -155,15 +159,23 @@ const Contact = () => {
                       rows="4"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200 resize-none"
                       placeholder="Your message here..."
+                      disabled={loading}
                     ></textarea>
                   </div>
-
                   <div>
                     <button
                       type="submit"
-                      className="w-full px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="w-full px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center gap-2"
+                      disabled={loading}
                     >
-                      Send Message
+                      {loading ? (
+                        <>
+                          <Loader size="small" className="mr-2" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Message"
+                      )}
                     </button>
                   </div>
                 </form>

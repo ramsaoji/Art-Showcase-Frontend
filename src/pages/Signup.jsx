@@ -34,6 +34,8 @@ export default function Signup() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupRole, setSignupRole] = useState("");
 
   const {
     register,
@@ -48,7 +50,8 @@ export default function Signup() {
   const registerMutation = trpc.user.register.useMutation({
     onSuccess: () => {
       reset();
-      // You can show a success message here, maybe navigate to login or show a pending approval message
+      setSignupSuccess(true);
+      setSignupRole("ARTIST");
     },
     onError: (err) => {
       let parsed;
@@ -136,7 +139,11 @@ export default function Signup() {
               {registerMutation.isSuccess && (
                 <Alert
                   type="success"
-                  message="Registration successful! Your account is pending approval by an admin."
+                  message={
+                    signupRole === "ARTIST"
+                      ? "Registration successful! Please check your email and click the verification link to activate your account."
+                      : "Registration successful!"
+                  }
                 />
               )}
               {errors.root?.serverError && (
