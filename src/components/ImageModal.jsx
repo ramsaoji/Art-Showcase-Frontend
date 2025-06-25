@@ -129,7 +129,7 @@ export default function ImageModal({
         className="fixed inset-0 z-50"
         onClose={handleImageModalClose}
       >
-        <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 md:p-6">
+        <div className="fixed inset-0 flex items-center justify-center p-4 md:p-6">
           <Transition.Child
             as="div"
             enter="ease-out duration-300"
@@ -155,7 +155,7 @@ export default function ImageModal({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="relative w-full max-w-7xl h-[90vh] sm:h-[90vh] md:h-[90vh] flex flex-col md:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
+              className="relative w-full max-w-7xl h-[90vh] flex flex-col md:flex-row bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl border border-white/20"
             >
               {/* Image Section */}
               <div className="relative flex h-2/5 w-full items-center justify-center bg-gray-50/50 md:h-full md:flex-1">

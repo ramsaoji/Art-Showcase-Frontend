@@ -99,8 +99,11 @@ export default function Navbar() {
   // Dynamically build navigation array
   const navLinks = [
     ...navigation,
-    ...(isSuperAdmin
-      ? [{ name: "Artist Approvals", href: "/admin", icon: "✔️" }]
+    ...((isSuperAdmin || isArtist) && user
+      ? [{ name: "Add Artwork", href: "/add-artwork" }]
+      : []),
+    ...(isSuperAdmin && user
+      ? [{ name: "Artist Approvals", href: "/admin" }]
       : []),
   ];
 
@@ -155,50 +158,65 @@ export default function Navbar() {
 
                 {/* Desktop Navigation (lg+) */}
                 <div className="hidden lg:flex items-center h-full min-w-0 pr-8">
-                  {navLinks.map((item, index) => (
-                    <motion.div
-                      key={item.name}
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className={classNames(
-                        "flex items-center flex-shrink",
-                        index === 0 ? "ml-0" : "ml-1 lg:ml-2"
-                      )}
-                    >
-                      <Link
-                        to={item.href}
+                  {navLinks
+                    .filter((item) => item.name !== "Add Artwork")
+                    .map((item, index) => (
+                      <motion.div
+                        key={item.name}
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
                         className={classNames(
-                          "relative group px-2 lg:px-3 py-2.5 text-sm lg:text-base font-sans tracking-wide transition-all duration-300 flex items-center whitespace-nowrap h-auto",
-                          (
-                            item.href === "/admin"
-                              ? location.pathname.startsWith("/admin")
-                              : location.pathname === item.href
-                          )
-                            ? "text-indigo-600 font-semibold"
-                            : "text-gray-700 group-hover:text-indigo-600"
+                          "flex items-center flex-shrink",
+                          index === 0 ? "ml-0" : "ml-1 lg:ml-2"
                         )}
                       >
-                        <span className="whitespace-nowrap relative z-10">
-                          {item.name}
-                        </span>
-                        <div className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 scale-95 opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-300" />
-                        {(item.href === "/admin"
-                          ? location.pathname.startsWith("/admin")
-                          : location.pathname === item.href) && (
-                          <motion.div
-                            layoutId="navbar-active"
-                            className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 rounded-lg"
-                            transition={{
-                              type: "spring",
-                              bounce: 0.2,
-                              duration: 0.6,
-                            }}
-                          />
-                        )}
-                      </Link>
-                    </motion.div>
-                  ))}
+                        <Link
+                          to={item.href}
+                          className={
+                            item.name === "Add Artwork"
+                              ? classNames(
+                                  "inline-flex items-center px-3 lg:px-4 py-1.5 lg:py-2 text-sm lg:text-base font-sans font-medium rounded-full text-white shadow-sm transition-all duration-300 whitespace-nowrap",
+                                  location.pathname === item.href
+                                    ? "bg-indigo-700 ring-2 ring-offset-2 ring-indigo-500"
+                                    : "bg-indigo-600 hover:bg-indigo-700"
+                                )
+                              : classNames(
+                                  "relative group px-2 lg:px-3 py-2.5 text-sm lg:text-base font-sans tracking-wide transition-all duration-300 flex items-center whitespace-nowrap h-auto",
+                                  (
+                                    item.href === "/admin"
+                                      ? location.pathname.startsWith("/admin")
+                                      : location.pathname === item.href
+                                  )
+                                    ? "text-indigo-600 font-semibold"
+                                    : "text-gray-700 group-hover:text-indigo-600"
+                                )
+                          }
+                        >
+                          <span className="whitespace-nowrap relative z-10">
+                            {item.name}
+                          </span>
+                          {item.name !== "Add Artwork" && (
+                            <>
+                              <div className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 scale-95 opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-300" />
+                              {(item.href === "/admin"
+                                ? location.pathname.startsWith("/admin")
+                                : location.pathname === item.href) && (
+                                <motion.div
+                                  layoutId="navbar-active"
+                                  className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 rounded-lg"
+                                  transition={{
+                                    type: "spring",
+                                    bounce: 0.2,
+                                    duration: 0.6,
+                                  }}
+                                />
+                              )}
+                            </>
+                          )}
+                        </Link>
+                      </motion.div>
+                    ))}
                 </div>
               </div>
 
@@ -362,98 +380,107 @@ export default function Navbar() {
           </div>
         </motion.div>
 
-        {/* Mobile menu panel */}
-        {isMobileMenuOpen && (
-          <div
-            ref={mobileMenuRef}
-            className="lg:hidden bg-white absolute left-0 right-0 top-full z-50 shadow-2xl border-t border-gray-100"
-          >
-            <div className="container mx-auto px-2">
-              {/* User profile section for authenticated users */}
-              {user && (
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="flex items-center space-x-3">
-                    {user.photoURL || user.avatar ? (
-                      <img
-                        className="h-10 w-10 rounded-full object-cover ring-2 ring-indigo-200"
-                        src={user.photoURL || user.avatar}
-                        alt={getUserDisplayName()}
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium font-sans text-sm ring-2 ring-indigo-200">
-                        {getUserInitials()}
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              className="lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl shadow-lg border-t border-gray-200/50"
+              ref={mobileMenuRef}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <div className="space-y-1 px-4 pt-4 pb-6">
+                {user && (
+                  <>
+                    <div className="px-1 py-2 mb-2">
+                      <div className="flex items-center space-x-3">
+                        {user.photoURL || user.avatar ? (
+                          <img
+                            className="h-10 w-10 rounded-full object-cover ring-2 ring-indigo-200"
+                            src={user.photoURL || user.avatar}
+                            alt={getUserDisplayName()}
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium font-sans text-sm ring-2 ring-indigo-200">
+                            {getUserInitials()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate font-sans">
+                            {getUserDisplayName()}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate font-sans">
+                            {user.email}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate font-sans">
-                        {getUserDisplayName()}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate font-sans">
-                        {user.email}
-                      </p>
-                      {(isSuperAdmin || isArtist) && (
-                        <p className="text-xs text-indigo-600 font-medium font-sans">
-                          {isSuperAdmin ? "Admin" : "Artist"}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-2 pb-3 space-y-1">
+                    <div className="border-t border-gray-200/80 my-4" />
+                  </>
+                )}
                 {navLinks.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={classNames(
-                      "block px-2 py-2 rounded-lg font-sans text-base transition-all duration-200",
-                      location.pathname === item.href ||
-                        (item.href === "/admin" &&
-                          location.pathname.startsWith("/admin"))
-                        ? "text-indigo-700 font-semibold bg-indigo-50"
-                        : "text-gray-700 hover:text-indigo-700 hover:bg-indigo-50"
-                    )}
+                    className={
+                      item.name === "Add Artwork"
+                        ? classNames(
+                            "block rounded-full px-3 py-2 text-base font-medium font-sans text-white text-left",
+                            location.pathname === item.href
+                              ? "bg-indigo-700"
+                              : "bg-indigo-600 hover:bg-indigo-700"
+                          )
+                        : classNames(
+                            "block rounded-md px-3 py-2 text-base font-medium font-sans",
+                            location.pathname === item.href
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          )
+                    }
                   >
-                    <span className="whitespace-nowrap">{item.name}</span>
+                    {item.name}
                   </Link>
                 ))}
-              </div>
 
-              {/* Mobile: Add Artwork, Change Password, and Sign Out */}
-              <div className="pt-4 pb-3 border-t border-gray-200 px-2">
-                {(isSuperAdmin || isArtist) && (
-                  <Link
-                    to="/add-artwork"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block text-center px-4 py-3 text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 mb-3"
-                  >
-                    Add Artwork
-                  </Link>
+                <div className="border-t border-gray-200/80 !mt-4 !mb-2" />
+
+                {user ? (
+                  <>
+                    <Link
+                      to="/change-password"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
+                    >
+                      Change Password
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full text-left block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
+                    >
+                      Sign out
+                    </button>
+                  </>
+                ) : (
+                  <div className="pt-2">
+                    <Link
+                      to="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block w-full text-center rounded-full px-4 py-2 text-sm font-sans font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                    >
+                      Login
+                    </Link>
+                  </div>
                 )}
-                <div className="space-y-1">
-                  <Link
-                    to="/change-password"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block px-2 py-2 rounded-lg text-base font-sans text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-200"
-                  >
-                    Change Password
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="block w-full text-left px-2 py-2 rounded-lg text-base font-sans text-red-600 hover:bg-red-50 transition-colors duration-200"
-                  >
-                    Sign out
-                  </button>
-                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
     </div>
   );
