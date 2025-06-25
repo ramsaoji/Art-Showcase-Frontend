@@ -57,13 +57,28 @@ export default function Navbar() {
     }
   }, [isMobileMenuOpen]);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [location.pathname]);
+
   const handleLogout = async () => {
     try {
       await logout();
+      setIsMobileMenuOpen(false);
       navigate("/");
     } catch (error) {
       console.error("Failed to log out", error);
     }
+  };
+
+  const handleMobileNav = (href) => {
+    setIsMobileMenuOpen(false);
+    setTimeout(() => {
+      navigate(href);
+    }, 300); // Corresponds to the framer-motion exit transition
   };
 
   const handleLogoClick = (e) => {
@@ -421,10 +436,13 @@ export default function Navbar() {
                   </>
                 )}
                 {navLinks.map((item) => (
-                  <Link
+                  <a
                     key={item.name}
-                    to={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    href={item.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleMobileNav(item.href);
+                    }}
                     className={
                       item.name === "Add Artwork"
                         ? classNames(
@@ -442,25 +460,25 @@ export default function Navbar() {
                     }
                   >
                     {item.name}
-                  </Link>
+                  </a>
                 ))}
 
                 <div className="border-t border-gray-200/80 !mt-4 !mb-2" />
 
                 {user ? (
                   <>
-                    <Link
-                      to="/change-password"
-                      onClick={() => setIsMobileMenuOpen(false)}
+                    <a
+                      href="/change-password"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleMobileNav("/change-password");
+                      }}
                       className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
                     >
                       Change Password
-                    </Link>
+                    </a>
                     <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsMobileMenuOpen(false);
-                      }}
+                      onClick={handleLogout}
                       className="w-full text-left block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
                     >
                       Sign out
@@ -468,13 +486,16 @@ export default function Navbar() {
                   </>
                 ) : (
                   <div className="pt-2">
-                    <Link
-                      to="/login"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="block w-full text-center rounded-full px-4 py-2 text-sm font-sans font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                    <a
+                      href="/login"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleMobileNav("/login");
+                      }}
+                      className="block w-full text-center rounded-full px-4 py-2 text-base font-sans font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
                     >
                       Login
-                    </Link>
+                    </a>
                   </div>
                 )}
               </div>

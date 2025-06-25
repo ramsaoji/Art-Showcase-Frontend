@@ -71,8 +71,15 @@ export default function PurchaseRequestModal({
 
   // Focus the name input when modal opens
   useEffect(() => {
-    if (isOpen && nameInputRef.current) {
-      nameInputRef.current.focus();
+    if (isOpen) {
+      // Delay focus to allow the modal animation to complete smoothly.
+      const timer = setTimeout(() => {
+        if (nameInputRef.current) {
+          nameInputRef.current.focus();
+        }
+      }, 350); // A bit longer than the typical 300ms animation duration
+
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
