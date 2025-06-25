@@ -32,7 +32,7 @@ const Contact = () => {
     reset,
   } = useForm({
     resolver: yupResolver(schema),
-    mode: "onTouched",
+    // mode: "onTouched",
   });
 
   const onSubmit = async (data) => {

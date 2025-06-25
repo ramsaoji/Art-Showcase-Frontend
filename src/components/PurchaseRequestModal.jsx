@@ -45,7 +45,7 @@ export default function PurchaseRequestModal({
     reset,
   } = useForm({
     resolver: yupResolver(schema),
-    mode: "onTouched",
+    // mode: "onTouched",
   });
   const { ref: formRef, ...nameProps } = register("name");
 

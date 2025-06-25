@@ -37,6 +37,7 @@ export default function ChangePassword() {
     reset,
   } = useForm({
     resolver: yupResolver(schema),
+    // mode: "onTouched",
   });
 
   const changePasswordMutation = trpc.user.changePassword.useMutation({
@@ -124,7 +125,7 @@ export default function ChangePassword() {
               {/* Current Password */}
               <div>
                 <label className="block text-sm font-sans font-medium text-gray-700 mb-2">
-                  Current Password
+                  Current Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -156,7 +157,7 @@ export default function ChangePassword() {
               {/* New Password */}
               <div>
                 <label className="block text-sm font-sans font-medium text-gray-700 mb-2">
-                  New Password
+                  New Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -188,7 +189,7 @@ export default function ChangePassword() {
               {/* Confirm New Password */}
               <div>
                 <label className="block text-sm font-sans font-medium text-gray-700 mb-2">
-                  Confirm New Password
+                  Confirm New Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input

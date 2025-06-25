@@ -114,11 +114,11 @@ export default function Navbar() {
   // Dynamically build navigation array
   const navLinks = [
     ...navigation,
-    ...((isSuperAdmin || isArtist) && user
-      ? [{ name: "Add Artwork", href: "/add-artwork" }]
-      : []),
     ...(isSuperAdmin && user
       ? [{ name: "Artist Approvals", href: "/admin" }]
+      : []),
+    ...((isSuperAdmin || isArtist) && user
+      ? [{ name: "Add Artwork", href: "/add-artwork" }]
       : []),
   ];
 
@@ -316,7 +316,7 @@ export default function Navbar() {
                                     to="/change-password"
                                     className={classNames(
                                       active ? "bg-gray-50" : "",
-                                      "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-sans"
+                                      "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-sans font-medium"
                                     )}
                                   >
                                     Change Password
@@ -331,8 +331,8 @@ export default function Navbar() {
                                     className={classNames(
                                       active
                                         ? "bg-gray-50 text-red-600"
-                                        : "text-gray-700",
-                                      "block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 hover:text-red-600 transition-colors duration-200 font-sans"
+                                        : "text-red-500",
+                                      "block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 hover:text-red-600 transition-colors duration-200 font-sans font-medium"
                                     )}
                                   >
                                     Sign out
@@ -406,7 +406,7 @@ export default function Navbar() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <div className="space-y-1 px-4 pt-4 pb-6">
+              <div className="container mx-auto space-y-1 px-3 sm:px-4 pt-4 pb-6">
                 {user && (
                   <>
                     <div className="px-1 py-2 mb-2">
@@ -432,7 +432,7 @@ export default function Navbar() {
                         </div>
                       </div>
                     </div>
-                    <div className="border-t border-gray-200/80 my-4" />
+                    <div className="border-t border-gray-200/80 !mt-4 !mb-6" />
                   </>
                 )}
                 {navLinks.map((item) => (
@@ -446,10 +446,10 @@ export default function Navbar() {
                     className={
                       item.name === "Add Artwork"
                         ? classNames(
-                            "block rounded-full px-3 py-2 text-base font-medium font-sans text-white text-left",
+                            "block rounded-md px-3 py-2 text-base font-medium font-sans text-left",
                             location.pathname === item.href
-                              ? "bg-indigo-700"
-                              : "bg-indigo-600 hover:bg-indigo-700"
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-indigo-600 hover:text-indigo-700"
                           )
                         : classNames(
                             "block rounded-md px-3 py-2 text-base font-medium font-sans",
@@ -479,7 +479,7 @@ export default function Navbar() {
                     </a>
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
+                      className="w-full text-left block rounded-md px-3 py-2 text-base font-medium text-red-500 hover:bg-red-50 hover:text-red-600 font-sans"
                     >
                       Sign out
                     </button>
