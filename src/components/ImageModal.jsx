@@ -246,39 +246,33 @@ export default function ImageModal({
 
                 {/* Navigation buttons */}
                 {hasPrevious && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={onPrevious}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-800 shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-gray-600 hover:shadow-xl sm:left-4 sm:p-3 md:left-4 md:p-3"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 m-2 w-10 h-10 flex items-center justify-center rounded-full aspect-square p-0 bg-white/90 text-gray-800 shadow-lg backdrop-blur-sm transition-colors duration-200 hover:bg-white hover:text-gray-600 hover:shadow-xl sm:left-4 sm:m-4 md:left-4 md:m-4"
                   >
                     <ChevronLeftIcon className="h-5 w-5 sm:h-6 md:h-6" />
-                  </motion.button>
+                  </button>
                 )}
 
                 {hasNext && (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={onNext}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-800 shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-gray-600 hover:shadow-xl sm:right-4 sm:p-3 md:right-4 md:p-3"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 m-2 w-10 h-10 flex items-center justify-center rounded-full aspect-square p-0 bg-white/90 text-gray-800 shadow-lg backdrop-blur-sm transition-colors duration-200 hover:bg-white hover:text-gray-600 hover:shadow-xl sm:right-4 sm:m-4 md:right-4 md:m-4"
                   >
                     <ChevronRightIcon className="h-5 w-5 sm:h-6 md:h-6" />
-                  </motion.button>
+                  </button>
                 )}
               </div>
 
               {/* Details Section */}
               <div className="relative h-3/5 w-full flex-shrink-0 bg-white/95 flex flex-col md:h-full md:w-80 lg:w-96 xl:w-[28rem]">
                 {/* Close button */}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={handleImageModalClose}
-                  className="absolute right-2 top-2 z-10 rounded-full bg-gray-100 p-1.5 text-gray-500 transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 sm:right-4 sm:top-4 sm:p-2 md:right-4 md:top-4 md:p-2"
+                  className="absolute right-2 top-2 z-10 w-10 h-10 flex items-center justify-center rounded-full aspect-square p-0 bg-gray-100 text-gray-500 transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 hover:!translate-y-0 sm:right-4 sm:top-4 md:right-4 md:top-4"
                 >
                   <XMarkIcon className="h-4 w-4 sm:h-5 md:h-5" />
-                </motion.button>
+                </button>
 
                 {/* Scrollable content */}
                 <div className="flex-1 overflow-y-auto overscroll-contain bg-white p-4 pr-12 sm:p-6 sm:pr-16 md:p-6 md:pr-16">
