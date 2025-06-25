@@ -391,7 +391,7 @@ export default function ImageModal({
                 </div>
 
                 {/* Purchase Request Button - always at the bottom of details */}
-                {!image?.sold && !user && (
+                {!user && !image?.sold ? (
                   <div className="flex justify-center sm:justify-end border-t border-gray-200 p-4">
                     <button
                       className="w-full rounded-xl bg-indigo-600 px-6 py-3 font-sans font-semibold text-white shadow transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
@@ -400,7 +400,16 @@ export default function ImageModal({
                       Request to Purchase
                     </button>
                   </div>
-                )}
+                ) : !user && image?.sold ? (
+                  <div className="flex justify-center sm:justify-end border-t border-gray-200 p-4">
+                    <button
+                      className="w-full rounded-xl bg-gray-400 px-6 py-3 font-sans font-semibold text-white shadow cursor-not-allowed opacity-80 sm:w-auto"
+                      disabled
+                    >
+                      Artwork Sold
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </motion.div>
           </Transition.Child>

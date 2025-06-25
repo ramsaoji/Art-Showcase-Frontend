@@ -378,7 +378,7 @@ export default function ArtworkDetail() {
               </div>
 
               {/* Purchase Request Button - below details, above back link */}
-              {!isOwner && !artwork.sold && (
+              {!isOwner && !artwork.sold ? (
                 <div className="border-t border-gray-100 py-4 flex flex-col items-start">
                   <button
                     className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -387,7 +387,16 @@ export default function ArtworkDetail() {
                     Request to Purchase
                   </button>
                 </div>
-              )}
+              ) : !isOwner && artwork.sold ? (
+                <div className="border-t border-gray-100 py-4 flex flex-col items-start">
+                  <button
+                    className="w-full sm:w-auto max-w-60 px-6 py-2 rounded-xl bg-gray-400 text-white font-sans font-semibold shadow cursor-not-allowed opacity-80"
+                    disabled
+                  >
+                    Artwork Sold
+                  </button>
+                </div>
+              ) : null}
 
               {/* Back to gallery link */}
               <motion.div
