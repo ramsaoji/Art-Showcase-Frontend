@@ -1,46 +1,55 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { trackFormSubmission } from "../services/analytics";
 import { trpcClient } from "../utils/trpc";
 import Loader from "../components/ui/Loader";
 
+const schema = yup.object().shape({
+  name: yup.string().required("Name is required"),
+  email: yup
+    .string()
+    .email("Please enter a valid email address")
+    .test(
+      "no-dot-before-at",
+      "Email cannot have a dot right before @",
+      (value) => !value || !/\.@/.test(value)
+    )
+    .required("Email is required"),
+  message: yup.string().required("Message is required"),
+});
+
 const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [serverError, setServerError] = useState("");
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: "onTouched",
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  const onSubmit = async (data) => {
+    setServerError("");
     try {
-      // Track form submission
       trackFormSubmission("contact", {
-        has_name: !!formData.name,
-        has_email: !!formData.email,
-        message_length: formData.message.length,
+        has_name: !!data.name,
+        has_email: !!data.email,
+        message_length: data.message.length,
       });
-      await trpcClient.misc.sendContactMessage.mutate(formData);
+      await trpcClient.misc.sendContactMessage.mutate(data);
       setSubmitted(true);
+      reset();
     } catch (err) {
-      setError(
+      setServerError(
         err?.message || "Failed to send message. Please try again later."
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -95,15 +104,17 @@ const Contact = () => {
                   </p>
                 </motion.div>
               ) : (
-                <form className="space-y-6" onSubmit={handleSubmit}>
+                <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
                   {/* Honeypot */}
                   <input
                     type="text"
                     name="_honey"
                     style={{ display: "none" }}
                   />
-                  {error && (
-                    <div className="text-red-600 text-sm mb-2">{error}</div>
+                  {serverError && (
+                    <div className="text-red-600 text-sm mb-2">
+                      {serverError}
+                    </div>
                   )}
                   <div>
                     <label
@@ -115,14 +126,20 @@ const Contact = () => {
                     <input
                       type="text"
                       id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
+                      {...register("name")}
+                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${
+                        errors.name
+                          ? "border-red-500 ring-red-500"
+                          : "border-gray-200 focus:ring-indigo-500 focus:border-transparent"
+                      }`}
                       placeholder="Your name"
-                      disabled={loading}
+                      disabled={isSubmitting}
                     />
+                    {errors.name && (
+                      <p className="text-red-500 text-base font-sans mt-1">
+                        {errors.name.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label
@@ -134,14 +151,20 @@ const Contact = () => {
                     <input
                       type="email"
                       id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
+                      {...register("email")}
+                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${
+                        errors.email
+                          ? "border-red-500 ring-red-500"
+                          : "border-gray-200 focus:ring-indigo-500 focus:border-transparent"
+                      }`}
                       placeholder="email@example.com"
-                      disabled={loading}
+                      disabled={isSubmitting}
                     />
+                    {errors.email && (
+                      <p className="text-red-500 text-base font-sans mt-1">
+                        {errors.email.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label
@@ -152,23 +175,29 @@ const Contact = () => {
                     </label>
                     <textarea
                       id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      required
+                      {...register("message")}
                       rows="4"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200 resize-none"
+                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 resize-none ${
+                        errors.message
+                          ? "border-red-500 ring-red-500"
+                          : "border-gray-200 focus:ring-indigo-500 focus:border-transparent"
+                      }`}
                       placeholder="Your message here..."
-                      disabled={loading}
+                      disabled={isSubmitting}
                     ></textarea>
+                    {errors.message && (
+                      <p className="text-red-500 text-base font-sans mt-1">
+                        {errors.message.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <button
                       type="submit"
                       className="w-full px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center gap-2"
-                      disabled={loading}
+                      disabled={isSubmitting}
                     >
-                      {loading ? (
+                      {isSubmitting ? (
                         <>
                           <Loader size="small" className="mr-2" />
                           Sending...

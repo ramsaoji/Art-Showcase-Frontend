@@ -1,10 +1,31 @@
 import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Loader from "./ui/Loader";
 import Alert from "./Alert";
 import { trpc } from "../utils/trpc";
+
+const schema = yup.object().shape({
+  name: yup.string().required("Name is required"),
+  email: yup
+    .string()
+    .email("Please enter a valid email address")
+    .test(
+      "no-dot-before-at",
+      "Email cannot have a dot right before @",
+      (value) => !value || !/\.@/.test(value)
+    )
+    .required("Email is required"),
+  phone: yup
+    .string()
+    .matches(/^\+?\d{7,15}$/, "Enter a valid phone number")
+    .required("Phone number is required"),
+  address: yup.string().required("Address is required"),
+});
 
 export default function PurchaseRequestModal({
   isOpen,
@@ -12,17 +33,21 @@ export default function PurchaseRequestModal({
   artworkId,
   artworkTitle,
 }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-  });
-  const [touched, setTouched] = useState({});
   const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
   const nameInputRef = useRef(null);
+  const scrollableContentRef = useRef(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+    reset,
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: "onTouched",
+  });
+  const { ref: formRef, ...nameProps } = register("name");
 
   const purchaseRequest = trpc.artwork.purchaseRequest.useMutation();
 
@@ -36,9 +61,13 @@ export default function PurchaseRequestModal({
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
+      // Reset form when modal is opened
+      reset();
+      setSuccess("");
+      setServerError("");
       return () => document.removeEventListener("keydown", handleEscape);
     }
-  }, [isOpen]);
+  }, [isOpen, reset]);
 
   // Focus the name input when modal opens
   useEffect(() => {
@@ -47,51 +76,35 @@ export default function PurchaseRequestModal({
     }
   }, [isOpen]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setTouched({ ...touched, [e.target.name]: true });
-  };
-
-  const validate = () => {
-    return (
-      form.name.trim() &&
-      /^\S+@\S+\.\S+$/.test(form.email) &&
-      /^\+?\d{7,15}$/.test(form.phone.replace(/\s/g, "")) &&
-      form.address.trim()
-    );
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setTouched({ name: true, email: true, phone: true, address: true });
-    setError("");
+  const onSubmit = async (data) => {
+    setServerError("");
     setSuccess("");
-    if (!validate()) return;
-    setLoading(true);
     try {
       await purchaseRequest.mutateAsync({
         artworkId,
-        customerName: form.name,
-        customerEmail: form.email,
-        customerPhone: form.phone,
-        customerAddress: form.address,
+        customerName: data.name,
+        customerEmail: data.email,
+        customerPhone: data.phone,
+        customerAddress: data.address,
       });
       setSuccess(
         "Your purchase request has been submitted! Check your inbox or spam folder for confirmation."
       );
-      setForm({ name: "", email: "", phone: "", address: "" });
-      setTouched({});
+      reset();
+      if (scrollableContentRef.current) {
+        scrollableContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } catch (err) {
-      setError(err.message || "Failed to submit request. Please try again.");
-    } finally {
-      setLoading(false);
+      setServerError(
+        err.message || "Failed to submit request. Please try again."
+      );
+      if (scrollableContentRef.current) {
+        scrollableContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
 
   const closeModal = () => {
-    setError("");
-    setSuccess("");
-    setTouched({});
     onClose();
   };
 
@@ -143,13 +156,19 @@ export default function PurchaseRequestModal({
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-6 sm:px-8 pb-6">
+        <div
+          className="flex-1 overflow-y-auto px-6 sm:px-8 pb-6"
+          ref={scrollableContentRef}
+        >
           {success && (
             <Alert type="success" message={success} className="mb-4" />
           )}
-          {error && <Alert type="error" message={error} className="mb-4" />}
+          {serverError && (
+            <Alert type="error" message={serverError} className="mb-4" />
+          )}
           <form
-            onSubmit={handleSubmit}
+            id="purchase-form"
+            onSubmit={handleSubmit(onSubmit)}
             className="space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
@@ -159,22 +178,22 @@ export default function PurchaseRequestModal({
               </label>
               <input
                 type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
+                {...nameProps}
                 onClick={(e) => e.stopPropagation()}
-                ref={nameInputRef}
+                ref={(e) => {
+                  formRef(e);
+                  nameInputRef.current = e;
+                }}
                 className={`block w-full border rounded-xl shadow-sm py-3 px-4 font-sans focus:ring-2 focus:border-transparent focus:outline-none ${
-                  touched.name && !form.name.trim()
+                  errors.name
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-200 focus:ring-indigo-500"
                 }`}
                 placeholder="Your full name"
-                required
               />
-              {touched.name && !form.name.trim() && (
-                <p className="text-sm text-red-600 mt-1 font-sans">
-                  Name is required.
+              {errors.name && (
+                <p className="text-base text-red-600 mt-1 font-sans">
+                  {errors.name.message}
                 </p>
               )}
             </div>
@@ -184,21 +203,18 @@ export default function PurchaseRequestModal({
               </label>
               <input
                 type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
+                {...register("email")}
                 onClick={(e) => e.stopPropagation()}
                 className={`block w-full border rounded-xl shadow-sm py-3 px-4 font-sans focus:ring-2 focus:border-transparent focus:outline-none ${
-                  touched.email && !/^\S+@\S+\.\S+$/.test(form.email)
+                  errors.email
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-200 focus:ring-indigo-500"
                 }`}
                 placeholder="you@email.com"
-                required
               />
-              {touched.email && !/^\S+@\S+\.\S+$/.test(form.email) && (
-                <p className="text-sm text-red-600 mt-1 font-sans">
-                  Enter a valid email address.
+              {errors.email && (
+                <p className="text-base text-red-600 mt-1 font-sans">
+                  {errors.email.message}
                 </p>
               )}
             </div>
@@ -208,47 +224,39 @@ export default function PurchaseRequestModal({
               </label>
               <input
                 type="tel"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
+                {...register("phone")}
                 onClick={(e) => e.stopPropagation()}
                 className={`block w-full border rounded-xl shadow-sm py-3 px-4 font-sans focus:ring-2 focus:border-transparent focus:outline-none ${
-                  touched.phone &&
-                  !/^\+?\d{7,15}$/.test(form.phone.replace(/\s/g, ""))
+                  errors.phone
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-200 focus:ring-indigo-500"
                 }`}
                 placeholder="e.g. +919876543210"
-                required
               />
-              {touched.phone &&
-                !/^\+?\d{7,15}$/.test(form.phone.replace(/\s/g, "")) && (
-                  <p className="text-sm text-red-600 mt-1 font-sans">
-                    Enter a valid phone number.
-                  </p>
-                )}
+              {errors.phone && (
+                <p className="text-base text-red-600 mt-1 font-sans">
+                  {errors.phone.message}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
                 Address <span className="text-red-500">*</span>
               </label>
               <textarea
-                name="address"
-                value={form.address}
-                onChange={handleChange}
+                {...register("address")}
                 onClick={(e) => e.stopPropagation()}
                 className={`block w-full border rounded-xl shadow-sm py-3 px-4 font-sans focus:ring-2 focus:border-transparent focus:outline-none resize-none ${
-                  touched.address && !form.address.trim()
+                  errors.address
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-200 focus:ring-indigo-500"
                 }`}
                 placeholder="Your address"
                 rows={2}
-                required
               />
-              {touched.address && !form.address.trim() && (
-                <p className="text-sm text-red-600 mt-1 font-sans">
-                  Address is required.
+              {errors.address && (
+                <p className="text-base text-red-600 mt-1 font-sans">
+                  {errors.address.message}
                 </p>
               )}
             </div>
@@ -260,14 +268,11 @@ export default function PurchaseRequestModal({
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="submit"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSubmit(e);
-              }}
+              form="purchase-form"
               className="w-full sm:w-auto min-w-[160px] px-6 py-2 rounded-full bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              disabled={loading || !validate()}
+              disabled={!isValid || isSubmitting}
             >
-              {loading ? (
+              {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Submitting...
@@ -283,7 +288,7 @@ export default function PurchaseRequestModal({
                 closeModal();
               }}
               className="w-full sm:w-auto px-6 py-2 rounded-full bg-white border border-gray-300 text-gray-700 font-sans font-semibold shadow hover:bg-gray-50 transition-colors"
-              disabled={loading}
+              disabled={isSubmitting}
             >
               Cancel
             </button>
