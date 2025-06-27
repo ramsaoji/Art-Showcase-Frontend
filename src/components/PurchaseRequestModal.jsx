@@ -8,6 +8,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import Loader from "./ui/Loader";
 import Alert from "./Alert";
 import { trpc } from "../utils/trpc";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 const schema = yup.object().shape({
   name: yup.string().required("Name is required"),
@@ -22,7 +23,7 @@ const schema = yup.object().shape({
     .required("Email is required"),
   phone: yup
     .string()
-    .matches(/^\+?\d{7,15}$/, "Enter a valid phone number")
+    .matches(/^\d{10}$/, "Enter a valid 10-digit phone number")
     .required("Phone number is required"),
   address: yup.string().required("Address is required"),
 });
@@ -49,7 +50,12 @@ export default function PurchaseRequestModal({
   });
   const { ref: formRef, ...nameProps } = register("name");
 
-  const purchaseRequest = trpc.artwork.purchaseRequest.useMutation();
+  const purchaseRequest = trpc.artwork.purchaseRequest.useMutation({
+    onError: (err) => {
+      console.error("Purchase request failed:", err);
+      setServerError(getFriendlyErrorMessage(err));
+    },
+  });
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -102,9 +108,9 @@ export default function PurchaseRequestModal({
         scrollableContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (err) {
-      setServerError(
-        err.message || "Failed to submit request. Please try again."
-      );
+      // The onError handler of the mutation will be called, but this is a fallback.
+      console.error("Purchase request submission failed:", err);
+      setServerError(getFriendlyErrorMessage(err));
       if (scrollableContentRef.current) {
         scrollableContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -136,11 +142,11 @@ export default function PurchaseRequestModal({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="relative w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl border border-white/20 z-[70] max-h-[85vh] flex flex-col"
+        className="relative w-full max-w-xl mx-auto bg-white rounded-2xl shadow-2xl border border-white/20 z-[70] max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header - Fixed */}
-        <div className="flex-shrink-0 px-6 py-4 relative">
+        <div className="flex-shrink-0 px-6 py-6 relative">
           {/* Close button - positioned like ImageModal */}
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -167,11 +173,11 @@ export default function PurchaseRequestModal({
           className="flex-1 overflow-y-auto px-6 sm:px-8 pb-6"
           ref={scrollableContentRef}
         >
-          {success && (
-            <Alert type="success" message={success} className="mb-4" />
-          )}
-          {serverError && (
-            <Alert type="error" message={serverError} className="mb-4" />
+          {(success || serverError) && (
+            <div className="mb-4">
+              {success && <Alert type="success" message={success} />}
+              {serverError && <Alert type="error" message={serverError} />}
+            </div>
           )}
           <form
             id="purchase-form"
@@ -233,12 +239,13 @@ export default function PurchaseRequestModal({
                 type="tel"
                 {...register("phone")}
                 onClick={(e) => e.stopPropagation()}
+                maxLength={10}
                 className={`block w-full border rounded-xl shadow-sm py-3 px-4 font-sans focus:ring-2 focus:border-transparent focus:outline-none ${
                   errors.phone
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-200 focus:ring-indigo-500"
                 }`}
-                placeholder="e.g. +919876543210"
+                placeholder="e.g. 9876543210"
               />
               {errors.phone && (
                 <p className="text-base text-red-600 mt-1 font-sans">
@@ -271,13 +278,13 @@ export default function PurchaseRequestModal({
         </div>
 
         {/* Fixed Button Section */}
-        <div className="flex-shrink-0 border-t border-gray-100 px-6 sm:px-8 py-4">
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-shrink-0 border-t border-gray-100 px-6 sm:px-8 py-4 sm:py-6">
+          <div className="flex flex-row gap-3">
             <button
               type="submit"
               form="purchase-form"
-              className="w-full sm:w-auto min-w-[160px] px-6 py-2 rounded-full bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              disabled={!isValid || isSubmitting}
+              className="flex-1 min-w-0 px-4 py-2 rounded-full bg-indigo-600 text-white font-sans font-semibold shadow hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap text-base"
+              disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
@@ -294,7 +301,7 @@ export default function PurchaseRequestModal({
                 e.stopPropagation();
                 closeModal();
               }}
-              className="w-full sm:w-auto px-6 py-2 rounded-full bg-white border border-gray-300 text-gray-700 font-sans font-semibold shadow hover:bg-gray-50 transition-colors"
+              className="flex-1 min-w-0 px-4 py-2 rounded-full bg-white border border-gray-300 text-gray-700 font-sans font-semibold shadow hover:bg-gray-50 transition-colors whitespace-nowrap text-base"
               disabled={isSubmitting}
             >
               Cancel

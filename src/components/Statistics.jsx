@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { trpc } from "../utils/trpc";
 import { useAuth } from "../contexts/AuthContext";
+import Alert from "./Alert";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 // import Loader from "./ui/Loader";
 
 // Custom INR Icon component
@@ -29,7 +31,7 @@ const StatCard = memo(({ icon: Icon, label, value, subtext, delay }) => (
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.5, delay }}
-    className="relative p-6 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-shadow duration-300"
+    className="relative p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-shadow duration-300"
   >
     <div className="absolute -top-4 left-6">
       <div className="p-3 bg-indigo-600/90 backdrop-blur-sm rounded-xl shadow-lg">
@@ -73,7 +75,8 @@ const SkeletonCard = ({ delay }) => (
 StatCard.displayName = "StatCard";
 
 export default function Statistics() {
-  const { data, isLoading, error } = trpc.artwork.getArtworkStats.useQuery();
+  const { data, isLoading, error, refetch } =
+    trpc.artwork.getArtworkStats.useQuery();
   const { isSuperAdmin, isArtist } = useAuth();
   const {
     totalArtworksCount = 0,
@@ -158,7 +161,7 @@ export default function Statistics() {
 
   if (isLoading) {
     return (
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-10 sm:py-20 overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">
@@ -190,14 +193,14 @@ export default function Statistics() {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-xl font-sans text-sm"
-          >
-            {error.message ||
-              "An unexpected error occurred while fetching statistics."}
-          </motion.div>
+          <Alert
+            type="error"
+            message={
+              getFriendlyErrorMessage(error) ||
+              "An unexpected error occurred while fetching statistics."
+            }
+            onRetry={refetch}
+          />
         </div>
       </section>
     );
@@ -206,7 +209,7 @@ export default function Statistics() {
   if (allZero) return null;
 
   return (
-    <section className="relative py-20 overflow-hidden">
+    <section className="relative py-10 sm:py-20 overflow-hidden bg-white/80">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">

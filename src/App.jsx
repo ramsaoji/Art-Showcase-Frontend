@@ -63,15 +63,23 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
+      let friendlyMessage =
+        "We're sorry, but an unexpected error occurred. Please try refreshing the page.";
+      if (
+        this.state.error &&
+        this.state.error.message &&
+        this.state.error.message.includes(
+          "Failed to fetch dynamically imported module"
+        )
+      ) {
+        friendlyMessage =
+          "You appear to be offline or the page failed to load. Please check your internet connection and try again.";
+      }
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 text-red-800 p-4">
           <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
-          <p className="text-center mb-4">
-            We're sorry, but an unexpected error occurred. Please try refreshing
-            the page.
-          </p>
-          {this.state.error && (
+          <p className="text-center mb-4">{friendlyMessage}</p>
+          {import.meta.env.DEV && this.state.error && (
             <details className="text-sm text-red-600 bg-red-100 p-2 rounded w-full max-w-md overflow-auto">
               <summary>Error Details</summary>
               <pre className="whitespace-pre-wrap break-all">

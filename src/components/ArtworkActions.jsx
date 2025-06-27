@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import ConfirmationDialog from "./ConfirmationDialog";
 import { motion } from "framer-motion";
 import Alert from "./Alert";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 export default function ArtworkActions({ artworkId, onDelete, artwork }) {
   const { isSuperAdmin, user } = useAuth();
@@ -38,7 +39,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
       setError(null);
     },
     onError: (error) => {
-      setError("Failed to delete artwork. Please try again.");
+      setError(getFriendlyErrorMessage(error));
     },
   });
 
@@ -50,7 +51,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
       setIsStatusUpdating(false);
     },
     onError: (error) => {
-      setError("Failed to update status. Please try again.");
+      setError(getFriendlyErrorMessage(error));
       setIsStatusUpdating(false);
     },
   });
@@ -73,11 +74,8 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
     try {
       await deleteArtworkMutation.mutateAsync({ id: artworkId });
     } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete artwork. Please try again."
-      );
+      console.error("Delete artwork failed:", error);
+      setError(getFriendlyErrorMessage(error));
     } finally {
       setIsDeleting(false);
     }
@@ -106,7 +104,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
       console.log("Artwork status update payload:", payload);
       await updateArtworkMutation.mutateAsync(payload);
     } catch (err) {
-      setError("Failed to update status. Please try again.");
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsStatusUpdating(false);
     }
@@ -199,7 +197,11 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         isDeleting={isDeleting}
       />
 
-      {error && <Alert type="error" message={error} className="mt-3" />}
+      {error && (
+        <div className="my-4">
+          <Alert type="error" message={error} />
+        </div>
+      )}
     </>
   );
 }

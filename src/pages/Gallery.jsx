@@ -1,8 +1,12 @@
 import ImageModal from "../components/ImageModal";
+import { motion } from "framer-motion";
 import useGallery from "../hooks/useGallery";
 import GalleryHeader from "../components/gallery/GalleryHeader";
 import GalleryFilters from "../components/gallery/GalleryFilters";
 import GalleryGrid from "../components/gallery/GalleryGrid";
+import Alert from "../components/Alert";
+import { getFriendlyErrorMessage } from "../utils/formatters";
+import ScrollToTopButton from "../components/ScrollToTopButton";
 
 export default function Gallery() {
   const {
@@ -59,24 +63,21 @@ export default function Gallery() {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-xl mx-auto">
-          <div className="mb-8 bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-xl font-sans text-sm">
-            Error loading artworks:{" "}
-            {error?.message || "Unknown error occurred."}
-            <br />
-            <button
-              onClick={handleManualRefetch}
-              className="mt-2 px-4 py-2 bg-red-100 hover:bg-red-200 rounded"
-            >
-              Retry
-            </button>
-          </div>
+          <Alert
+            type="error"
+            message={
+              getFriendlyErrorMessage(error) ||
+              "There was an issue fetching the gallery. Please try again."
+            }
+            onRetry={handleManualRefetch}
+          />
         </div>
       </section>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="relative min-h-screen bg-white/50">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
@@ -86,62 +87,69 @@ export default function Gallery() {
           <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
         </div>
       </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center"
+      >
+        <div className="relative container mx-auto px-4 sm:px-8 py-12">
+          {/* Header Section with Search */}
+          <GalleryHeader
+            searchInput={searchInput}
+            handleSearchInput={handleSearchInput}
+            clearSearch={clearSearch}
+            isSearching={isSearching}
+          />
+          {/* <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 p-6 sm:p-8"> */}
+          {/* Filters and Sort Section */}
+          <GalleryFilters
+            filters={filters}
+            sortBy={sortBy}
+            materials={materials}
+            artists={artists}
+            styles={styles}
+            handleFilterChange={handleFilterChange}
+            handleSortChange={handleSortChange}
+            handleResetAllFilters={handleResetAllFilters}
+            isMobileFiltersOpen={isMobileFiltersOpen}
+            setIsMobileFiltersOpen={setIsMobileFiltersOpen}
+            isArtistsLoading={isArtistsLoading}
+            isArtistFilterLoading={isArtistFilterLoading}
+            isMaterialsLoading={isMaterialsLoading}
+            isStylesLoading={isStylesLoading}
+            hasMoreArtists={hasMoreArtists}
+            hasMoreMaterials={hasMoreMaterials}
+            hasMoreStyles={hasMoreStyles}
+            handleArtistSearch={handleArtistSearch}
+            handleMaterialSearch={handleMaterialSearch}
+            handleStyleSearch={handleStyleSearch}
+            loadMoreArtists={loadMoreArtists}
+            loadMoreMaterials={loadMoreMaterials}
+            loadMoreStyles={loadMoreStyles}
+            artistSearch={artistSearch}
+            materialSearch={materialSearch}
+            styleSearch={styleSearch}
+            markDropdownOpened={markDropdownOpened}
+          />
 
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header Section with Search */}
-        <GalleryHeader
-          searchInput={searchInput}
-          handleSearchInput={handleSearchInput}
-          clearSearch={clearSearch}
-          isSearching={isSearching}
-        />
+          {/* Gallery Grid with Artworks */}
 
-        {/* Filters and Sort Section */}
-        <GalleryFilters
-          filters={filters}
-          sortBy={sortBy}
-          materials={materials}
-          artists={artists}
-          styles={styles}
-          handleFilterChange={handleFilterChange}
-          handleSortChange={handleSortChange}
-          handleResetAllFilters={handleResetAllFilters}
-          isMobileFiltersOpen={isMobileFiltersOpen}
-          setIsMobileFiltersOpen={setIsMobileFiltersOpen}
-          isArtistsLoading={isArtistsLoading}
-          isArtistFilterLoading={isArtistFilterLoading}
-          isMaterialsLoading={isMaterialsLoading}
-          isStylesLoading={isStylesLoading}
-          hasMoreArtists={hasMoreArtists}
-          hasMoreMaterials={hasMoreMaterials}
-          hasMoreStyles={hasMoreStyles}
-          handleArtistSearch={handleArtistSearch}
-          handleMaterialSearch={handleMaterialSearch}
-          handleStyleSearch={handleStyleSearch}
-          loadMoreArtists={loadMoreArtists}
-          loadMoreMaterials={loadMoreMaterials}
-          loadMoreStyles={loadMoreStyles}
-          artistSearch={artistSearch}
-          materialSearch={materialSearch}
-          styleSearch={styleSearch}
-          markDropdownOpened={markDropdownOpened}
-        />
-
-        {/* Gallery Grid with Artworks */}
-        <GalleryGrid
-          isCardsLoading={isCardsLoading}
-          allArtworks={allArtworks}
-          pageData={pageData}
-          hasMore={hasMore}
-          loadMore={loadMore}
-          handleImageClick={handleImageClick}
-          handleDelete={handleDelete}
-          handleResetAllFilters={handleResetAllFilters}
-          searchQuery={searchQuery}
-          filters={filters}
-        />
-      </div>
-
+          <GalleryGrid
+            isCardsLoading={isCardsLoading}
+            allArtworks={allArtworks}
+            pageData={pageData}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            handleImageClick={handleImageClick}
+            handleDelete={handleDelete}
+            handleResetAllFilters={handleResetAllFilters}
+            searchQuery={searchQuery}
+            filters={filters}
+          />
+        </div>
+        {/* </div> */}
+      </motion.div>
       {/* Image Modal */}
       {selectedImage && (
         <ImageModal
@@ -177,6 +185,7 @@ export default function Gallery() {
           }
         />
       )}
+      <ScrollToTopButton />
     </div>
   );
 }

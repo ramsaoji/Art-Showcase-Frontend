@@ -617,7 +617,7 @@ export default function GalleryFilters({
               {/* Active Status Filter Section */}
               {(isSuperAdmin || isArtist) && (
                 <div className="mb-4">
-                  <h3 className="text-sm font-sans font-semibold text-gray-900 mb-2">
+                  <h3 className="text-sm font-sans font-semibold text-gray-900 my-2">
                     Active Status
                   </h3>
                   <div className="space-y-2">
@@ -646,7 +646,7 @@ export default function GalleryFilters({
               )}
               {/* Availability Filter Section */}
               <div className="mb-4">
-                <h3 className="text-sm font-sans font-semibold text-gray-900 mb-2">
+                <h3 className="text-sm font-sans font-semibold text-gray-900 my-2">
                   Availability
                 </h3>
                 <div className="space-y-2">
@@ -1171,7 +1171,7 @@ export default function GalleryFilters({
           {filters.featured !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Featured:</span>{" "}
-              <span className="font-semibold">
+              <span className="truncate font-semibold max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]">
                 {filters.featured === "featured"
                   ? "Featured Only"
                   : "Non-Featured"}
@@ -1187,7 +1187,7 @@ export default function GalleryFilters({
           {filters.artist !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Artist:</span>{" "}
-              <span className="font-semibold">
+              <span className="truncate font-semibold max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]">
                 {Array.isArray(artists) &&
                   (() => {
                     const found = artists.find((a) => a.id === filters.artist);
@@ -1215,7 +1215,9 @@ export default function GalleryFilters({
           {filters.material !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Material:</span>{" "}
-              <span className="font-semibold">{filters.material}</span>
+              <span className="truncate font-semibold max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]">
+                {filters.material}
+              </span>
               <button
                 onClick={() => handleFilterChange("material", "all")}
                 className="ml-2 hover:text-indigo-900"
@@ -1227,7 +1229,9 @@ export default function GalleryFilters({
           {filters.style !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Style:</span>{" "}
-              <span className="font-semibold">{filters.style}</span>
+              <span className="truncate font-semibold max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]">
+                {filters.style}
+              </span>
               <button
                 onClick={() => handleFilterChange("style", "all")}
                 className="ml-2 hover:text-indigo-900"
@@ -1239,7 +1243,7 @@ export default function GalleryFilters({
           {filters.availability !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Status:</span>{" "}
-              <span className="font-semibold">
+              <span className="truncate font-semibold max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]">
                 {filters.availability === "available" ? "Available" : "Sold"}
               </span>
               <button
@@ -1253,7 +1257,7 @@ export default function GalleryFilters({
           {filters.status !== "all" && (
             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
               <span className="mr-1">Status:</span>{" "}
-              <span className="font-semibold">
+              <span className="truncate font-semibold max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]">
                 {filters.status === "ACTIVE"
                   ? "Active"
                   : filters.status === "INACTIVE"

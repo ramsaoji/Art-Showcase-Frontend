@@ -13,6 +13,8 @@ import {
   trackArtworkInteraction,
   trackUserAction,
 } from "../services/analytics";
+import { getFriendlyErrorMessage } from "../utils/formatters";
+import ScrollToTopButton from "../components/ScrollToTopButton";
 
 // Lazy load the Statistics component
 const Statistics = lazy(() => import("../components/Statistics"));
@@ -60,14 +62,14 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-white/40">
       {/* Hero Section */}
       <div className="relative">
         <HeroCarousel />
       </div>
 
       {/* Featured Artworks Section */}
-      <section className="relative py-20 sm:py-32 overflow-hidden">
+      <section className="relative py-10 sm:py-20 overflow-hidden bg-white/50">
         {/* Background decorative elements */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white/95" />
@@ -79,8 +81,8 @@ export default function Home() {
           <div className="absolute left-0 bottom-0 w-96 h-96 bg-gradient-to-tr from-amber-500/10 to-pink-500/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center text-center mb-16 sm:mb-20">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ">
+          <div className="flex flex-col items-center text-center mb-16 sm:mb-20 ">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -187,11 +189,14 @@ export default function Home() {
               </div>
             </div>
           ) : error ? (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-xl mx-auto">
               <Alert
                 type="error"
-                message={error.message || "Failed to load featured artworks"}
-                className="text-center py-8"
+                message={
+                  getFriendlyErrorMessage(error) ||
+                  "Failed to load featured artworks"
+                }
+                onRetry={refetch}
               />
             </div>
           ) : featuredArtworks.length === 0 ? (
@@ -217,112 +222,6 @@ export default function Home() {
                 initial="hidden"
                 animate="show"
               >
-                {/* Background decorative elements */}
-                <div className="absolute inset-0 overflow-hidden">
-                  {/* Large gradient orbs */}
-                  <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-amber-500/10 to-pink-500/10 blur-3xl" />
-                  <div className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] rounded-full bg-gradient-to-tl from-indigo-500/10 to-purple-500/10 blur-3xl" />
-
-                  {/* Animated floating elements */}
-                  <motion.div
-                    className="absolute top-1/3 left-1/4 w-32 h-32"
-                    animate={{
-                      y: [-20, 20, -20],
-                      rotate: [0, 45, 0],
-                    }}
-                    transition={{
-                      duration: 8,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <div className="w-full h-full rounded-full bg-gradient-to-r from-indigo-500/5 to-purple-500/5 blur-2xl" />
-                  </motion.div>
-
-                  <motion.div
-                    className="absolute bottom-1/3 right-1/4 w-40 h-40"
-                    animate={{
-                      y: [20, -20, 20],
-                      rotate: [0, -45, 0],
-                    }}
-                    transition={{
-                      duration: 10,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <div className="w-full h-full rounded-full bg-gradient-to-r from-amber-500/5 to-pink-500/5 blur-2xl" />
-                  </motion.div>
-
-                  {/* Decorative patterns */}
-                  <svg
-                    className="absolute top-1/2 left-0 w-40 h-40 text-indigo-500/5"
-                    viewBox="0 0 100 100"
-                  >
-                    <pattern
-                      id="grid"
-                      x="0"
-                      y="0"
-                      width="20"
-                      height="20"
-                      patternUnits="userSpaceOnUse"
-                    >
-                      <path
-                        d="M 20 0 L 0 0 0 20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1"
-                      />
-                    </pattern>
-                    <rect width="100" height="100" fill="url(#grid)" />
-                  </svg>
-
-                  <svg
-                    className="absolute bottom-0 right-0 w-40 h-40 text-amber-500/5"
-                    viewBox="0 0 100 100"
-                  >
-                    <pattern
-                      id="dots"
-                      x="0"
-                      y="0"
-                      width="10"
-                      height="10"
-                      patternUnits="userSpaceOnUse"
-                    >
-                      <circle cx="5" cy="5" r="1" fill="currentColor" />
-                    </pattern>
-                    <rect width="100" height="100" fill="url(#dots)" />
-                  </svg>
-
-                  {/* Animated lines */}
-                  <motion.div
-                    className="absolute top-0 left-1/2 w-[1px] h-32 bg-gradient-to-b from-indigo-500/0 via-indigo-500/10 to-indigo-500/0"
-                    animate={{
-                      scaleY: [1, 1.5, 1],
-                      opacity: [0.3, 0.6, 0.3],
-                    }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                    }}
-                  />
-                  <motion.div
-                    className="absolute bottom-0 left-1/3 w-[1px] h-40 bg-gradient-to-b from-amber-500/0 via-amber-500/10 to-amber-500/0"
-                    animate={{
-                      scaleY: [1, 1.3, 1],
-                      opacity: [0.2, 0.5, 0.2],
-                    }}
-                    transition={{
-                      duration: 5,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                    }}
-                  />
-                </div>
-
                 <AnimatePresence>
                   {featuredArtworks.map((artwork, index) => (
                     <motion.div
@@ -422,6 +321,7 @@ export default function Home() {
           }
         />
       )}
+      <ScrollToTopButton />
     </div>
   );
 }

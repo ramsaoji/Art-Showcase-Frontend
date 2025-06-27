@@ -36,7 +36,16 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative mt-8">
+    <footer className="relative bg-white pt-2">
+      {/* Decorative top border */}
+      <div className="absolute top-0 left-0 right-0 z-10">
+        <div className="h-[2px] bg-gradient-to-r from-transparent via-indigo-300 to-transparent" />
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-4">
+          <div className="w-8 sm:w-16 h-[2px] bg-gradient-to-r from-transparent to-indigo-300" />
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-indigo-400" />
+          <div className="w-8 sm:w-16 h-[2px] bg-gradient-to-l from-transparent to-indigo-300" />
+        </div>
+      </div>
       {/* Background with subtle gradient */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-white via-white to-indigo-50/20" />
@@ -86,9 +95,9 @@ export default function Footer() {
       <div className="relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Top decorative line */}
-          <div className="absolute inset-x-0 top-0 flex justify-center">
+          {/* <div className="absolute inset-x-0 top-0 flex justify-center">
             <div className="w-48 h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent" />
-          </div>
+          </div> */}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Brand Section */}
@@ -132,6 +141,7 @@ export default function Footer() {
                   { name: "Gallery", path: "/gallery" },
                   { name: "About Us", path: "/about" },
                   { name: "Contact", path: "/contact" },
+                  { name: "Sign Up", path: "/signup" },
                 ].map((link) => (
                   <li key={link.path}>
                     <Link

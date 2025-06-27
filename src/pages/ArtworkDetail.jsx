@@ -5,7 +5,11 @@ import { ShareIcon, PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { getOptimizedImageUrl, getPreviewUrl } from "../config/cloudinary";
-import { formatPrice, formatLocalDateTime } from "../utils/formatters";
+import {
+  formatPrice,
+  formatLocalDateTime,
+  getFriendlyErrorMessage,
+} from "../utils/formatters";
 import Alert from "../components/Alert";
 import Badge from "../components/Badge";
 import Loader from "../components/ui/Loader";
@@ -27,6 +31,7 @@ export default function ArtworkDetail() {
     data: artwork,
     isLoading,
     error,
+    refetch,
   } = trpc.artwork.getArtworkById.useQuery({ id }, { enabled: !!id });
 
   useEffect(() => {
@@ -79,7 +84,16 @@ export default function ArtworkDetail() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Alert type="error" message={error} className="max-w-md mx-auto" />
+        <div className="max-w-xl mx-auto w-full">
+          <Alert
+            type="error"
+            message={
+              getFriendlyErrorMessage(error) ||
+              "Could not load artwork details. Please try again."
+            }
+            onRetry={refetch}
+          />
+        </div>
       </div>
     );
   }
@@ -87,17 +101,18 @@ export default function ArtworkDetail() {
   if (!artwork) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <Alert
-          type="warning"
-          message="Artwork not found. The artwork might have been removed or is no longer available."
-          className="max-w-md mx-auto"
-        />
+        <div className="max-w-xl mx-auto w-full">
+          <Alert
+            type="warning"
+            message="Artwork not found. The artwork might have been removed or is no longer available."
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white">
+    <div className="relative min-h-[calc(100vh-5rem)] bg-white/50">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
@@ -112,7 +127,7 @@ export default function ArtworkDetail() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden"
+          className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden"
         >
           <div className="flex flex-col lg:flex-row">
             {/* Image Section */}

@@ -4,6 +4,7 @@ import ArtworkForm from "../components/ArtworkForm";
 import { motion } from "framer-motion";
 import { trpc, uploadToCloudinary } from "../utils/trpc";
 import { useAuth } from "../contexts/AuthContext";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 export default function AddArtwork() {
   const navigate = useNavigate();
@@ -36,8 +37,8 @@ export default function AddArtwork() {
         }
         navigate("/gallery");
       },
-      onError: (error) => {
-        setError(error.message || "Failed to save artwork. Please try again.");
+      onError: (err) => {
+        setError(getFriendlyErrorMessage(err));
       },
     }
   );
@@ -56,6 +57,14 @@ export default function AddArtwork() {
       }
       // Upload to Cloudinary first
       const cloudinaryResult = await uploadToCloudinary(imageFile);
+
+      if (!cloudinaryResult || !cloudinaryResult.secure_url) {
+        setError(
+          getFriendlyErrorMessage({ message: "Cloudinary upload failed" })
+        );
+        return;
+      }
+
       // Prepare data for tRPC mutation
       const artworkData = {
         title: formData.get("title"),
@@ -100,7 +109,8 @@ export default function AddArtwork() {
       setArtistId("");
       localStorage.removeItem(ARTIST_ID_KEY);
     } catch (err) {
-      setError(err.message || "Failed to save artwork. Please try again.");
+      console.error("Artwork submission failed:", err);
+      setError(getFriendlyErrorMessage(err));
     }
   };
 
@@ -115,7 +125,7 @@ export default function AddArtwork() {
   }, [isSuperAdmin, ARTIST_ID_KEY]);
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
+    <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 bg-white/50">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
@@ -136,10 +146,10 @@ export default function AddArtwork() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <h2 className="font-artistic text-4xl sm:text-5xl font-bold text-gray-900 tracking-wide mb-4">
-            Add New Artwork
+          <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
+            Add Artwork
           </h2>
-          <p className="font-sans text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
             Share your masterpiece with the world. Fill in the details below to
             add a new artwork to the gallery.
           </p>
@@ -160,7 +170,7 @@ export default function AddArtwork() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/50 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
+          className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
         >
           <div className="p-6 sm:p-8">
             <ArtworkForm

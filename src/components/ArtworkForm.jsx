@@ -15,6 +15,7 @@ import {
 } from "../utils/trpc";
 import { toDatetimeLocalValue } from "../utils/formatters";
 import ArtistSelect from "./ArtistSelect";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -148,6 +149,7 @@ export default function ArtworkForm({
     data: artistQuotaData,
     isLoading: loadingMonthlyUpload,
     error: monthlyUploadError,
+    refetch: refetchMonthlyUpload,
   } = useRemainingQuota({ enabled: isArtist });
   const aiLimit =
     artistQuotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
@@ -778,7 +780,8 @@ export default function ArtworkForm({
       // Invalidate quota so it refetches
       utils.misc.getRemainingQuota.invalidate();
     } catch (err) {
-      setAiError(err.message || "Failed to generate description.");
+      console.error("AI description error:", err);
+      setAiError(getFriendlyErrorMessage(err));
     } finally {
       setAiLoading(false);
     }
@@ -896,7 +899,7 @@ export default function ArtworkForm({
       submissionSuccessful = true;
     } catch (error) {
       console.error("Error submitting artwork:", error);
-      setError("Failed to submit artwork. Please try again.");
+      setError(getFriendlyErrorMessage(error));
       window.scrollTo({
         top: 0,
         behavior: "smooth",
@@ -931,7 +934,9 @@ export default function ArtworkForm({
   const getStepLabel = () => {
     switch (currentStep) {
       case "uploading":
-        return imageFile ? "Uploading new image..." : "Processing...";
+        if (imageFile) return "Uploading new image...";
+        if (initialData) return "Updating artwork...";
+        return "Processing...";
       case "saving":
         return initialData ? "Updating artwork..." : "Saving artwork...";
       default:
@@ -1019,40 +1024,28 @@ export default function ArtworkForm({
 
       {/* Page refresh notification */}
       {hasFormDataButNoImage && !imageRemoved && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-amber-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-amber-800 font-sans">
-                Form data restored
-              </h3>
-              <div className="mt-2 text-sm text-amber-700 font-sans">
-                <p>
-                  Your form data was saved from your previous session, but the
-                  image was lost during page refresh. Please upload your image
-                  again to continue.
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="my-4">
+          <Alert
+            type="warning"
+            message={
+              <>
+                <h3 className="font-semibold">Form data restored</h3>
+                <div className="mt-1">
+                  <p>
+                    Your form data was saved from your previous session, but the
+                    image was lost during page refresh. Please upload your image
+                    again to continue.
+                  </p>
+                </div>
+              </>
+            }
+          />
         </div>
       )}
 
       {/* Monthly Upload Count Display - Only for Artists */}
       {shouldFetchUploadCount && (
-        <div className="mb-6">
+        <div className="my-4">
           {loadingMonthlyUpload ? (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <div className="flex items-center">
@@ -1066,6 +1059,7 @@ export default function ArtworkForm({
             <Alert
               type="error"
               message={`Failed to load upload count: ${monthlyUploadError.message}`}
+              onRetry={refetchMonthlyUpload}
             />
           ) : (
             <Alert
@@ -1090,7 +1084,7 @@ export default function ArtworkForm({
 
       {/* For admins: fetch selected artist's upload count */}
       {isSuperAdmin && !initialData && shouldFetchArtistUploadCount && (
-        <div className="mb-6">
+        <div className="my-4">
           {loadingSelectedArtistUpload ? (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <div className="flex items-center">
@@ -1104,6 +1098,7 @@ export default function ArtworkForm({
             <Alert
               type="error"
               message={`Failed to load selected artist's upload count: ${selectedArtistUploadError.message}`}
+              onRetry={refetchSelectedArtistUpload}
             />
           ) : (
             <Alert
@@ -1244,17 +1239,13 @@ export default function ArtworkForm({
         )}
 
         {imageError && (
-          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
-            <p className="text-sm text-red-700 font-sans">{imageError}</p>
+          <div className="my-4">
+            <Alert type="error" message={imageError} />
           </div>
         )}
         {errors.image && (
-          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
-            <p className="text-sm text-red-700 font-sans">
-              {errors.image.message}
-            </p>
+          <div className="my-4">
+            <Alert type="error" message={errors.image.message} />
           </div>
         )}
         {/* Show image required error when form has data but no image, or when validation fails */}
@@ -1290,9 +1281,11 @@ export default function ArtworkForm({
               )}
             />
             {errors.artistId && (isSubmitted || artistFieldTouched) && (
-              <p className="mt-1 text-sm text-red-600 font-sans">
-                {errors.artistId?.message || "Artist is required"}
-              </p>
+              <div className="mt-2">
+                <p className="text-sm text-red-600 mt-1 font-sans">
+                  {errors.artistId?.message || "Artist is required"}
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -1321,7 +1314,7 @@ export default function ArtworkForm({
             )}
           />
           {errors.title && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
+            <p className="text-sm text-red-600 mt-1 font-sans">
               {errors.title.message}
             </p>
           )}
@@ -1353,7 +1346,7 @@ export default function ArtworkForm({
             )}
           />
           {errors.price && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
+            <p className="text-sm text-red-600 mt-1 font-sans">
               {errors.price.message}
             </p>
           )}
@@ -1506,10 +1499,12 @@ export default function ArtworkForm({
               )}
           </div>
           {aiError && (
-            <p className="mt-1 text-sm text-red-600 font-sans">{aiError}</p>
+            <div className="mt-2">
+              <p className="text-sm text-red-600 mt-1 font-sans">{aiError}</p>
+            </div>
           )}
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
+            <p className="text-sm text-red-600 mt-1 font-sans">
               {errors.description.message}
             </p>
           )}
@@ -1550,7 +1545,7 @@ export default function ArtworkForm({
                 )}
               />
               {errors.width && (
-                <p className="mt-1 text-sm text-red-600 font-sans">
+                <p className="text-sm text-red-600 mt-1 font-sans">
                   {errors.width.message}
                 </p>
               )}
@@ -1584,7 +1579,7 @@ export default function ArtworkForm({
                 )}
               />
               {errors.height && (
-                <p className="mt-1 text-sm text-red-600 font-sans">
+                <p className="text-sm text-red-600 mt-1 font-sans">
                   {errors.height.message}
                 </p>
               )}
@@ -1649,7 +1644,7 @@ export default function ArtworkForm({
             </div>
           </div>
           {errors.material && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
+            <p className="text-sm text-red-600 mt-1 font-sans">
               {errors.material.message}
             </p>
           )}
@@ -1702,7 +1697,7 @@ export default function ArtworkForm({
             </div>
           </div>
           {errors.style && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
+            <p className="text-sm text-red-600 mt-1 font-sans">
               {errors.style.message}
             </p>
           )}
@@ -1734,7 +1729,7 @@ export default function ArtworkForm({
             )}
           />
           {errors.year && (
-            <p className="mt-1 text-sm text-red-600 font-sans">
+            <p className="text-sm text-red-600 mt-1 font-sans">
               {errors.year.message}
             </p>
           )}
@@ -1808,10 +1803,13 @@ export default function ArtworkForm({
             {expiresAt &&
               new Date(expiresAt) < new Date() &&
               (status === "ACTIVE" || status === "INACTIVE") && (
-                <p className="mt-1 text-sm text-red-600 font-sans">
-                  Cannot set status to Active or Inactive with a past expiry
-                  date. Please change the expiry date or select Expired status.
-                </p>
+                <div className="mt-2">
+                  <p className="text-sm text-red-600 mt-1 font-sans">
+                    Cannot set status to Active or Inactive with a past expiry
+                    date. Please change the expiry date or select Expired
+                    status.
+                  </p>
+                </div>
               )}
           </div>
         )}
@@ -1896,7 +1894,7 @@ export default function ArtworkForm({
               )}`}
             />
             {errors.expiresAt && (
-              <p className="mt-1 text-sm text-red-600 font-sans">
+              <p className="text-sm text-red-600 mt-1 font-sans">
                 {errors.expiresAt.message}
               </p>
             )}
@@ -1987,9 +1985,8 @@ export default function ArtworkForm({
 
       {/* Error Display */}
       {error && (
-        <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <ExclamationCircleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />
-          <p className="text-sm text-red-700 font-sans">{error}</p>
+        <div className="my-4">
+          <Alert type="error" message={error} />
         </div>
       )}
 

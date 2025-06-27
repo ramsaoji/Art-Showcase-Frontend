@@ -127,7 +127,7 @@ export default function ArtworkCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className={`group relative bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:shadow-[0_0_25px_rgba(67,56,202,0.15)] transition-all duration-300 
+      className={`group relative bg-white/90 rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:shadow-[0_0_25px_rgba(67,56,202,0.15)] transition-all duration-300 
         h-[680px] flex flex-col justify-between overflow-hidden`}
     >
       {/* Status Indicators */}
@@ -230,12 +230,12 @@ export default function ArtworkCard({
                 />
               </picture>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-100 transition-all duration-300" />
           </>
         )}
 
         {/* Overlay Content */}
-        <div className="absolute inset-0 p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <div className="absolute inset-0 p-4 flex flex-col justify-end opacity-100 transition-all duration-300">
           <div className="flex gap-2 justify-center flex-wrap">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -248,12 +248,18 @@ export default function ArtworkCard({
             >
               Quick View
             </motion.button>
-            <Link
-              to={`/artwork/${safeArtwork.id}`}
-              className="flex-1 min-w-[120px] max-w-[140px] px-4 py-2 text-sm font-sans font-medium text-white bg-indigo-500/80 backdrop-blur-sm rounded-lg hover:bg-indigo-600/80 transition-colors text-center shadow-lg"
+            <motion.div
+              className="flex-1 min-w-[120px] max-w-[140px]"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              View Details
-            </Link>
+              <Link
+                to={`/artwork/${safeArtwork.id}`}
+                className="block w-full h-full px-4 py-2 text-sm font-sans font-medium text-white bg-indigo-500/80 backdrop-blur-sm rounded-lg hover:bg-indigo-600/80 transition-colors text-center shadow-lg"
+              >
+                View Details
+              </Link>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -277,7 +283,7 @@ export default function ArtworkCard({
                 className="block group/title"
               >
                 <h3
-                  className="font-artistic text-2xl font-bold text-gray-900 tracking-wide group-hover/title:text-indigo-600 transition-colors leading-tight truncate whitespace-nowrap overflow-hidden"
+                  className="font-artistic text-2xl font-bold text-left text-gray-900 tracking-wide group-hover/title:text-indigo-600 transition-colors leading-tight truncate whitespace-nowrap overflow-hidden"
                   title={safeArtwork.title}
                 >
                   {safeArtwork.title}
@@ -312,7 +318,7 @@ export default function ArtworkCard({
           </div>
 
           {safeArtwork.description && (
-            <div className="mb-4">
+            <div className="mb-4 text-left">
               <p
                 ref={descriptionRef}
                 className={`font-sans text-base text-gray-600 leading-relaxed ${
@@ -409,12 +415,14 @@ export default function ArtworkCard({
         </div>
       )}
 
-      <PurchaseRequestModal
-        isOpen={showPurchaseModal}
-        onClose={() => setShowPurchaseModal(false)}
-        artworkId={artwork.id}
-        artworkTitle={safeArtwork.title}
-      />
+      {showPurchaseModal && (
+        <PurchaseRequestModal
+          isOpen={showPurchaseModal}
+          onClose={() => setShowPurchaseModal(false)}
+          artworkId={artwork.id}
+          artworkTitle={safeArtwork.title}
+        />
+      )}
     </motion.div>
   );
 }

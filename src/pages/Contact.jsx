@@ -6,6 +6,8 @@ import * as yup from "yup";
 import { trackFormSubmission } from "../services/analytics";
 import { trpcClient } from "../utils/trpc";
 import Loader from "../components/ui/Loader";
+import Alert from "../components/Alert";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 const schema = yup.object().shape({
   name: yup.string().required("Name is required"),
@@ -47,14 +49,13 @@ const Contact = () => {
       setSubmitted(true);
       reset();
     } catch (err) {
-      setServerError(
-        err?.message || "Failed to send message. Please try again later."
-      );
+      console.error("Contact form submission error:", err);
+      setServerError(getFriendlyErrorMessage(err));
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="relative min-h-screen bg-white/50">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 right-1/2 transform translate-x-1/2">
@@ -65,7 +66,7 @@ const Contact = () => {
         </div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -73,10 +74,10 @@ const Contact = () => {
             transition={{ duration: 0.5 }}
             className="text-center mb-12"
           >
-            <h1 className="font-artistic text-5xl sm:text-6xl font-bold text-gray-900 tracking-wide mb-4">
+            <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
               Get in Touch
             </h1>
-            <p className="text-xl font-sans text-gray-600 leading-relaxed">
+            <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
               Have a question or want to collaborate? We'd love to hear from
               you.
             </p>
@@ -86,7 +87,7 @@ const Contact = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-white/50 backdrop-blur-sm shadow-xl rounded-2xl overflow-hidden border border-gray-100"
+            className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl overflow-hidden border border-gray-100"
           >
             <div className="p-8">
               {submitted ? (
@@ -111,11 +112,7 @@ const Contact = () => {
                     name="_honey"
                     style={{ display: "none" }}
                   />
-                  {serverError && (
-                    <div className="text-red-600 text-sm mb-2">
-                      {serverError}
-                    </div>
-                  )}
+                  {serverError && <Alert type="error" message={serverError} />}
                   <div>
                     <label
                       htmlFor="name"
@@ -134,6 +131,7 @@ const Contact = () => {
                       }`}
                       placeholder="Your name"
                       disabled={isSubmitting}
+                      autoFocus
                     />
                     {errors.name && (
                       <p className="text-red-500 text-base font-sans mt-1">

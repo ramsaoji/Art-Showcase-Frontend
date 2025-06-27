@@ -4,6 +4,8 @@ import { trpc, uploadToCloudinary } from "../utils/trpc";
 import ArtworkForm from "../components/ArtworkForm";
 import Loader from "../components/ui/Loader";
 import { useAuth } from "../contexts/AuthContext";
+import Alert from "../components/Alert";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 export default function EditArtwork() {
   const { id } = useParams();
@@ -28,7 +30,7 @@ export default function EditArtwork() {
       enabled: !!id, // Only run query if ID exists
       onError: (error) => {
         console.error("Error loading artwork:", error);
-        setError("Failed to load artwork");
+        setError(getFriendlyErrorMessage(error));
       },
     }
   );
@@ -56,8 +58,8 @@ export default function EditArtwork() {
         utils.artwork.getArtworkById.invalidate({ id: artwork.id });
         navigate("/gallery");
       },
-      onError: (error) => {
-        setError(error.message || "Failed to update artwork");
+      onError: (err) => {
+        setError(getFriendlyErrorMessage(err));
       },
     }
   );
@@ -71,6 +73,12 @@ export default function EditArtwork() {
       let cloudinaryPublicId = undefined;
       if (imageFile && imageFile.size > 0) {
         const cloudinaryResult = await uploadToCloudinary(imageFile);
+        if (!cloudinaryResult || !cloudinaryResult.secure_url) {
+          setError(
+            getFriendlyErrorMessage({ message: "Cloudinary upload failed" })
+          );
+          return;
+        }
         imageUrl = cloudinaryResult.secure_url;
         cloudinaryPublicId = cloudinaryResult.public_id;
       }
@@ -109,8 +117,9 @@ export default function EditArtwork() {
         updateData.expiresAt = new Date(expiresAt);
       }
       await updateArtworkMutation.mutateAsync(updateData);
-    } catch (error) {
-      setError(error.message || "Failed to update artwork");
+    } catch (err) {
+      console.error("Artwork update failed:", err);
+      setError(getFriendlyErrorMessage(err));
     }
   };
 
@@ -124,21 +133,18 @@ export default function EditArtwork() {
   }
 
   // Error state
-  if (error || fetchError) {
+  if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-red-500 text-center">
-          <p className="text-xl font-semibold mb-2">Error</p>
-          <p>{error || fetchError?.message}</p>
-          <button
-            onClick={() => {
+      <div className="flex justify-center items-center min-h-screen p-4">
+        <div className="w-full max-w-xl">
+          <Alert
+            type="error"
+            message={error}
+            onRetry={() => {
               setError(null);
               refetch();
             }}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Retry
-          </button>
+          />
         </div>
       </div>
     );
@@ -171,7 +177,7 @@ export default function EditArtwork() {
   console.log("EditArtwork: artwork data passed to form", artwork);
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
+    <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 sm:py-16 bg-white/50">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
@@ -187,16 +193,16 @@ export default function EditArtwork() {
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="font-artistic text-4xl sm:text-5xl font-bold text-gray-900 tracking-wide mb-4">
+          <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
             Edit Artwork
           </h2>
-          <p className="font-sans text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
             Update your artwork details below. Make changes to your masterpiece
             and save to keep your gallery up to date.
           </p>
         </div>
 
-        <div className="bg-white/50 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100">
+        <div className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100">
           <div className="p-6 sm:p-8">
             <ArtworkForm
               initialData={artwork}

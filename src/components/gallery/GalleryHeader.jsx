@@ -8,10 +8,10 @@ export default function GalleryHeader({
 }) {
   return (
     <div className="max-w-3xl mx-auto text-center mb-10">
-      <h1 className="font-artistic text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 tracking-wide">
+      <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
         Art Gallery
       </h1>
-      <p className="font-sans text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+      <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
         Discover our curated collection of exceptional artworks from talented
         artists around the world
       </p>

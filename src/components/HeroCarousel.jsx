@@ -10,6 +10,8 @@ import {
 } from "@heroicons/react/24/outline";
 import Loader from "./ui/Loader";
 import { trpc } from "../utils/trpc"; // Adjust import path as needed
+import Alert from "./Alert";
+import { getFriendlyErrorMessage } from "../utils/formatters";
 
 export default function HeroCarousel() {
   const imageRef = useRef(null);
@@ -24,6 +26,7 @@ export default function HeroCarousel() {
     data: images = [],
     isLoading,
     error,
+    refetch,
   } = trpc.artwork.getArtworksForHeroCarousel.useQuery();
 
   const handleImageLoad = () => {
@@ -66,9 +69,22 @@ export default function HeroCarousel() {
     }
   }, [currentImageIndex, images, imagesLoaded]);
 
-  // Handle error state
+  // Show error alert if there is an error
   if (error) {
-    console.error("Error loading featured images:", error);
+    return (
+      <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden flex items-center justify-center p-4 w-full">
+        <div className="w-full max-w-md mx-auto">
+          <Alert
+            type="error"
+            message={
+              getFriendlyErrorMessage(error) ||
+              "Failed to load carousel images."
+            }
+            onRetry={refetch}
+          />
+        </div>
+      </div>
+    );
   }
 
   // Fallback content when no images are available

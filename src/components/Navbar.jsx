@@ -1,10 +1,9 @@
 import { Fragment, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Disclosure, Menu, Transition } from "@headlessui/react";
+import { Menu, Transition } from "@headlessui/react";
 import {
   Bars3Icon,
   XMarkIcon,
-  UserCircleIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
@@ -126,9 +125,9 @@ export default function Navbar() {
     <div className="fixed top-0 left-0 right-0 z-50">
       <nav className="relative">
         <motion.div
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          // initial={{ y: -100, opacity: 0 }}
+          // animate={{ y: 0, opacity: 1 }}
+          // transition={{ duration: 0.6, ease: "easeOut" }}
           className={classNames(
             "backdrop-blur-xl transition-all duration-500 relative",
             isScrolled
@@ -369,7 +368,7 @@ export default function Navbar() {
                   >
                     <Link
                       to="/login"
-                      className="hidden sm:inline-flex items-center px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 whitespace-nowrap"
+                      className="hidden lg:inline-flex items-center px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 whitespace-nowrap"
                     >
                       Login
                     </Link>
