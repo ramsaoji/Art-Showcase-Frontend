@@ -59,10 +59,10 @@ const Contact = () => {
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 right-1/2 transform translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
+          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
         </div>
         <div className="absolute left-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
+          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
         </div>
       </div>
 
@@ -192,7 +192,7 @@ const Contact = () => {
                   <div>
                     <button
                       type="submit"
-                      className="w-full px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center gap-2"
+                      className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center gap-2"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
@@ -239,10 +239,10 @@ const Contact = () => {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                <span className="font-medium group-hover:text-indigo-600 transition-colors">
+                <span className="font-medium group-hover:text-indigo-700 transition-colors">
                   art-showcase@techness.in
                 </span>
-                <div className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-indigo-300/0 via-indigo-300/50 to-indigo-300/0 scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
+                <div className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-indigo-400/0 via-indigo-400/50 to-indigo-400/0 scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
               </a>
             </div>
           </motion.div>

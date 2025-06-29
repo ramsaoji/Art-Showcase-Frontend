@@ -251,7 +251,7 @@ export default function ChangePassword() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-semibold rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-all duration-300 font-sans"
+                  className="w-full inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-semibold rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-all duration-300 font-sans"
                 >
                   {isSubmitting ? (
                     <Loader size="small" color="white" />

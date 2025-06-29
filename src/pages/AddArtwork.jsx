@@ -50,61 +50,34 @@ export default function AddArtwork() {
         setError("Artist is required when adding on behalf of an artist.");
         return;
       }
-      const imageFile = formData.get("image");
-      if (!imageFile || !(imageFile instanceof File)) {
-        setError("Image is required. Please upload an image.");
+      // Validate images
+      if (
+        !formData.images ||
+        !Array.isArray(formData.images) ||
+        formData.images.length === 0
+      ) {
+        setError("At least one image is required.");
         return;
       }
-      // Upload to Cloudinary first
-      const cloudinaryResult = await uploadToCloudinary(imageFile);
 
-      if (!cloudinaryResult || !cloudinaryResult.secure_url) {
-        setError(
-          getFriendlyErrorMessage({ message: "Cloudinary upload failed" })
+      // For superadmins, ensure imageUploadLimit is at least equal to the number of images
+      let imageUploadLimit = formData.imageUploadLimit;
+      if (isSuperAdmin) {
+        // Super admins can upload up to 1000 images, ensure the limit is at least equal to images
+        imageUploadLimit = Math.max(
+          formData.images.length,
+          formData.imageUploadLimit || backendLimits?.imageUpload || 1
         );
-        return;
+        if (imageUploadLimit > 1000) imageUploadLimit = 1000;
       }
 
       // Prepare data for tRPC mutation
       const artworkData = {
-        title: formData.get("title"),
-        price: parseFloat(formData.get("price")),
-        description: formData.get("description"),
-        dimensions: formData.get("dimensions"),
-        material: formData.get("material"),
-        style: formData.get("style"),
-        year: parseInt(formData.get("year")),
-        featured: formData.get("featured") === "true",
-        sold: formData.get("sold") === "true",
-        carousel: formData.get("carousel") === "true",
-        imageUrl: cloudinaryResult.secure_url,
-        cloudinaryPublicId: cloudinaryResult.public_id,
+        ...formData,
+        artistId: isSuperAdmin ? artistId : undefined,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        imageUploadLimit: isSuperAdmin ? imageUploadLimit : undefined,
       };
-      if (isSuperAdmin && artistId) {
-        artworkData.artistId = artistId;
-        const limit = formData.get("monthlyUploadLimit");
-        if (limit !== null && limit !== undefined && limit !== "") {
-          artworkData.monthlyUploadLimit = parseInt(limit);
-        }
-        const aiLimit = formData.get("aiDescriptionDailyLimit");
-        if (aiLimit !== null && aiLimit !== undefined && aiLimit !== "") {
-          artworkData.aiDescriptionDailyLimit = parseInt(aiLimit);
-        }
-      }
-      if (isSuperAdmin) {
-        const status = formData.get("status");
-        if (status) {
-          artworkData.status = status;
-          if (status === "EXPIRED") {
-            artworkData.expiredBy = "admin";
-          }
-        }
-      }
-      const expiresAt = formData.get("expiresAt");
-      if (isSuperAdmin && expiresAt) {
-        artworkData.expiresAt = new Date(expiresAt);
-      }
       await createArtworkMutation.mutateAsync(artworkData);
       setArtistId("");
       localStorage.removeItem(ARTIST_ID_KEY);
@@ -129,13 +102,13 @@ export default function AddArtwork() {
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
+          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
         </div>
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
+          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
         </div>
         <div className="absolute left-0 bottom-0">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-amber-100/20 to-pink-100/20 blur-3xl" />
+          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-indigo-400/8 via-indigo-500/8 to-indigo-600/8 blur-3xl" />
         </div>
       </div>
 

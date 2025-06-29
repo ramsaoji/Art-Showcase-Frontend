@@ -308,7 +308,12 @@ export default function GalleryFilters({
               leaveFrom="translate-y-0"
               leaveTo="translate-y-full"
             >
-              <Dialog.Panel className="relative flex flex-col w-full h-[90vh] mt-auto bg-white rounded-t-3xl px-4 pb-4">
+              <Dialog.Panel
+                className="relative flex flex-col w-full mt-auto bg-white rounded-t-3xl px-4 pb-4"
+                style={{
+                  height: "calc(100dvh - 5rem)",
+                }}
+              >
                 <div className="flex items-center justify-between py-4 border-b border-gray-200">
                   <Dialog.Title className="text-lg font-sans font-semibold text-gray-900">
                     Filters & Sort
@@ -931,7 +936,12 @@ export default function GalleryFilters({
               leaveFrom="translate-y-0 lg:scale-100"
               leaveTo="translate-y-full lg:scale-95"
             >
-              <Dialog.Panel className="relative flex flex-col w-full max-w-2xl h-[90vh] bg-white rounded-3xl px-4 pb-4">
+              <Dialog.Panel
+                className="relative flex flex-col w-full max-w-2xl bg-white rounded-3xl px-4 pb-4"
+                style={{
+                  height: "calc(100dvh - 5rem)",
+                }}
+              >
                 <div className="flex items-center justify-between py-4 border-b border-gray-200">
                   <Dialog.Title className="text-lg font-sans font-semibold text-gray-900">
                     Filters & Sort

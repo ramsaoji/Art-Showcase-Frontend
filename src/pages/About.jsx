@@ -7,10 +7,10 @@ export default function About() {
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-80 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
-          <div className="w-[90vw] max-w-[800px] h-[90vw] max-h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
+          <div className="w-[90vw] max-w-[800px] h-[90vw] max-h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
         </div>
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-60 sm:w-96 h-60 sm:h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
+          <div className="w-60 sm:w-96 h-60 sm:h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
         </div>
       </div>
 
@@ -44,13 +44,13 @@ export default function About() {
             >
               <Link
                 to="/gallery"
-                className="inline-flex items-center px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300"
+                className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300"
               >
                 Explore Gallery
               </Link>
               <Link
                 to="/contact"
-                className="inline-flex items-center text-base font-sans text-gray-600 hover:text-indigo-600 transition-colors duration-300"
+                className="inline-flex items-center text-base font-sans text-gray-600 hover:text-indigo-700 transition-colors duration-300"
               >
                 Contact Us <span className="ml-2">→</span>
               </Link>
@@ -63,7 +63,7 @@ export default function About() {
             className="flex-1 w-full mt-10 lg:mt-0"
           >
             <div className="relative rounded-2xl overflow-hidden shadow-xl mx-auto max-w-md lg:max-w-none">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10" />
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10" />
               <img
                 src="https://images.unsplash.com/photo-1544967082-d9d25d867d66?ixlib=rb-4.0.3"
                 alt="Gallery interior"
@@ -103,7 +103,7 @@ export default function About() {
             </div>
             <span className="hidden sm:block w-12 sm:w-16 h-[2px] bg-gradient-to-r from-transparent via-indigo-600/50 to-transparent rounded-full" />
             <motion.div
-              className="absolute -left-4 top-1/2 w-2 h-2 rounded-full bg-indigo-400/50"
+              className="absolute -left-4 top-1/2 w-2 h-2 rounded-full bg-indigo-500/50"
               animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
               transition={{
                 duration: 2,
@@ -112,7 +112,7 @@ export default function About() {
               }}
             />
             <motion.div
-              className="absolute -right-4 top-1/2 w-2 h-2 rounded-full bg-indigo-400/50"
+              className="absolute -right-4 top-1/2 w-2 h-2 rounded-full bg-indigo-500/50"
               animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
               transition={{
                 duration: 2,
@@ -196,7 +196,7 @@ export default function About() {
           viewport={{ once: true }}
           className="relative isolate overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 px-6 py-16 sm:py-20 lg:py-24 text-center shadow-2xl rounded-2xl"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10" />
           <h2 className="relative mx-auto max-w-2xl font-artistic text-3xl sm:text-4xl font-bold tracking-wide text-white mb-6 text-center">
             Join Our Art Community
           </h2>

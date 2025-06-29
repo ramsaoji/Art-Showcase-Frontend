@@ -192,8 +192,8 @@ export default function Navbar() {
                               ? classNames(
                                   "inline-flex items-center px-3 lg:px-4 py-1.5 lg:py-2 text-sm lg:text-base font-sans font-medium rounded-full text-white shadow-sm transition-all duration-300 whitespace-nowrap",
                                   location.pathname === item.href
-                                    ? "bg-indigo-700 ring-2 ring-offset-2 ring-indigo-500"
-                                    : "bg-indigo-600 hover:bg-indigo-700"
+                                    ? "bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 ring-2 ring-offset-2 ring-indigo-500"
+                                    : "bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800"
                                 )
                               : classNames(
                                   "relative group px-2 lg:px-3 py-2.5 text-sm lg:text-base font-sans tracking-wide transition-all duration-300 flex items-center whitespace-nowrap h-auto",
@@ -248,7 +248,7 @@ export default function Navbar() {
                         >
                           <Link
                             to="/add-artwork"
-                            className="inline-flex items-center px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 whitespace-nowrap"
+                            className="inline-flex items-center px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base font-sans font-medium rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 shadow-sm transition-all duration-300 whitespace-nowrap"
                           >
                             <span className="hidden sm:inline">
                               Add Artwork
@@ -273,7 +273,7 @@ export default function Navbar() {
                                 alt={getUserDisplayName()}
                               />
                             ) : (
-                              <div className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium text-xs sm:text-sm ring-2 ring-transparent group-hover:ring-indigo-200 transition-all duration-300 font-sans">
+                              <div className="h-7 w-7 sm:h-8 sm:w-8 lg:h-9 lg:w-9 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 flex items-center justify-center text-white font-medium text-xs sm:text-sm ring-2 ring-transparent group-hover:ring-indigo-200 transition-all duration-300 font-sans">
                                 {getUserInitials()}
                               </div>
                             )}
@@ -352,7 +352,7 @@ export default function Navbar() {
                             alt={getUserDisplayName()}
                           />
                         ) : (
-                          <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium font-sans text-sm ring-2 ring-indigo-200">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 flex items-center justify-center text-white font-medium font-sans text-sm ring-2 ring-indigo-200">
                             {getUserInitials()}
                           </div>
                         )}
@@ -368,7 +368,7 @@ export default function Navbar() {
                   >
                     <Link
                       to="/login"
-                      className="hidden lg:inline-flex items-center px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base font-sans font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition-all duration-300 whitespace-nowrap"
+                      className="hidden lg:inline-flex items-center px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base font-sans font-medium rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 shadow-sm transition-all duration-300 whitespace-nowrap"
                     >
                       Login
                     </Link>
@@ -417,7 +417,7 @@ export default function Navbar() {
                             alt={getUserDisplayName()}
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-medium font-sans text-sm ring-2 ring-indigo-200">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 flex items-center justify-center text-white font-medium font-sans text-sm ring-2 ring-indigo-200">
                             {getUserInitials()}
                           </div>
                         )}
@@ -491,7 +491,7 @@ export default function Navbar() {
                         e.preventDefault();
                         handleMobileNav("/login");
                       }}
-                      className="block w-full text-center rounded-full px-4 py-2 text-base font-sans font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                      className="block w-full text-center rounded-xl px-4 py-2 text-base font-sans font-medium bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300"
                     >
                       Login
                     </a>

@@ -110,10 +110,10 @@ export default function Login() {
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
+          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
         </div>
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
+          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
         </div>
       </div>
       <div className="relative">
@@ -219,7 +219,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={isSubmitting || authLoading}
-                    className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-indigo-600 text-white font-sans text-base hover:bg-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+                    className="w-full inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-indigo-500 disabled:hover:via-indigo-600 disabled:hover:to-indigo-700"
                   >
                     {isSubmitting ? (
                       <div className="flex items-center">
@@ -238,7 +238,7 @@ export default function Login() {
                 </span>
                 <Link
                   to="/signup"
-                  className="text-indigo-600 font-medium hover:underline font-sans"
+                  className="text-indigo-600 font-medium hover:text-indigo-700 hover:underline font-sans transition-colors duration-300"
                 >
                   Sign up as Artist
                 </Link>

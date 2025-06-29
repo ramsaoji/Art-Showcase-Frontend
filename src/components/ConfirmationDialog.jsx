@@ -86,7 +86,7 @@ export default function ConfirmationDialog({
                     type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="inline-flex w-full justify-center items-center px-5 py-2.5 rounded-full bg-red-600 font-sans text-sm font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex w-full justify-center items-center px-5 py-2.5 rounded-xl bg-red-600 font-sans text-sm font-medium text-white shadow-sm hover:bg-red-500  sm:w-auto transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={onConfirm}
                     disabled={isDeleting}
                   >
@@ -122,7 +122,7 @@ export default function ConfirmationDialog({
                     type="button"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="mt-3 inline-flex w-full justify-center items-center px-5 py-2.5 rounded-full bg-white font-sans text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-3 inline-flex w-full justify-center items-center px-5 py-2.5 rounded-xl bg-white font-sans text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={onClose}
                     disabled={isDeleting}
                   >

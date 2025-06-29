@@ -39,15 +39,21 @@ export const getThumbnailUrl = (publicId) => {
 };
 
 // Helper function to get preview URL (medium size, good quality)
-export const getPreviewUrl = (publicId) => {
+export const getPreviewUrl = (publicId, options = {}) => {
   return getOptimizedImageUrl(publicId, {
-    width: 800,
-    quality: "auto:good",
-    format: "jpg",
+    width: options.width || 800,
+    quality: options.quality || "auto:good",
+    format: options.format || "jpg",
+    height: options.height,
   });
 };
 
 // Helper function to get full size URL (high quality)
-export const getFullSizeUrl = (publicId) => {
-  return getOptimizedImageUrl(publicId, { quality: "auto:best" });
+export const getFullSizeUrl = (publicId, options = {}) => {
+  return getOptimizedImageUrl(publicId, {
+    width: options.width,
+    height: options.height,
+    quality: options.quality || "auto:best",
+    format: options.format,
+  });
 };

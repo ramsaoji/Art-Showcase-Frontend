@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { PhotoIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
 // import { getPreviewUrl } from "../config/cloudinary"; // Keep this for image preview
@@ -12,10 +12,13 @@ import {
   useRemainingQuota,
   useBackendLimits,
   baseUrl,
+  uploadToCloudinary,
 } from "../utils/trpc";
 import { toDatetimeLocalValue } from "../utils/formatters";
 import ArtistSelect from "./ArtistSelect";
 import { getFriendlyErrorMessage } from "../utils/formatters";
+import { v4 as uuidv4 } from "uuid";
+import ArtworkImageGrid from "./ArtworkImageGrid";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -27,7 +30,7 @@ function ProgressBar({ progress, label }) {
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2">
         <div
-          className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+          className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 h-2 rounded-full transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -68,31 +71,22 @@ const createValidationSchema = (
       .typeError("Height must be a number")
       .positive("Height must be greater than 0")
       .required("Height is required"),
+    instagramReelLink: yup.string().url("Must be a valid URL").optional(),
+    youtubeVideoLink: yup.string().url("Must be a valid URL").optional(),
     artistId: yup.string().when([], {
       is: () => isSuperAdmin && !initialData,
       then: (schema) => schema.required("Artist is required"),
       otherwise: (schema) => schema.optional(),
     }),
-    image: yup
-      .mixed()
-      .test("image-required", "Image is required", function (value) {
-        const { initialData } = this.options.context || {};
-
-        // If it's edit mode and user hasn't removed the image, don't require new image
-        if (initialData && !imageRemoved) {
-          return true;
-        }
-
-        // For all other cases (new artwork or edit mode with removed image), require image
-        return !!value;
-      }),
-    expiresAt: isSuperAdmin
-      ? yup
-          .date()
-          .nullable()
-          .typeError("Expiry date must be a valid date")
-          .optional()
-      : yup.mixed().notRequired(),
+    images: yup.array().min(1, "At least one image is required"),
+    // Only include expiresAt validation for super admins
+    ...(isSuperAdmin && {
+      expiresAt: yup
+        .date()
+        .nullable()
+        .typeError("Expiry date must be a valid date")
+        .optional(),
+    }),
   });
 };
 
@@ -142,7 +136,7 @@ export default function ArtworkForm({
   const { isSuperAdmin, isArtist, user } = useAuth();
 
   // 1. Call all hooks that provide data needed by helpers
-  const { data: backendLimits = { monthlyUpload: 10, aiDescriptionDaily: 5 } } =
+  const { data: backendLimits, isLoading: loadingBackendLimits } =
     useBackendLimits();
   // Use the correct quota hook for both AI and monthly upload quotas (single call)
   const {
@@ -152,7 +146,7 @@ export default function ArtworkForm({
     refetch: refetchMonthlyUpload,
   } = useRemainingQuota({ enabled: isArtist });
   const aiLimit =
-    artistQuotaData?.ai?.limit ?? backendLimits.aiDescriptionDaily;
+    artistQuotaData?.ai?.limit ?? backendLimits?.aiDescriptionDaily;
   const aiRemaining = artistQuotaData?.ai?.remaining ?? aiLimit;
   const utils = trpc.useContext();
   const generateAIDescriptionMutation =
@@ -194,12 +188,14 @@ export default function ArtworkForm({
         year: initialData.year || new Date().getFullYear(),
         featured: initialData.featured || false,
         sold: initialData.sold || false,
-        carousel: initialData.carousel || false,
+        instagramReelLink: initialData.instagramReelLink || "",
+        youtubeVideoLink: initialData.youtubeVideoLink || "",
         monthlyUploadLimit:
-          initialData.monthlyUploadLimit ?? backendLimits.monthlyUpload,
+          initialData.monthlyUploadLimit ?? backendLimits?.monthlyUpload ?? 10,
         aiDescriptionDailyLimit:
           initialData.aiDescriptionDailyLimit ??
-          backendLimits.aiDescriptionDaily,
+          backendLimits?.aiDescriptionDaily ??
+          5,
         artistId: "",
         width: width,
         height: height,
@@ -208,6 +204,12 @@ export default function ArtworkForm({
           ? toDatetimeLocalValue(new Date(initialData.expiresAt))
           : "",
         status: initialData.status || "ACTIVE",
+        images: initialData.images || [],
+        // Include imageUploadLimit for superadmins in edit mode
+        ...(isSuperAdmin && {
+          imageUploadLimit:
+            initialData.imageUploadLimit ?? backendLimits?.imageUpload ?? 1,
+        }),
       };
     }
     const savedData = localStorage.getItem(FORM_DATA_KEY);
@@ -221,13 +223,20 @@ export default function ArtworkForm({
           artistId: savedArtistId || cleanData.artistId || "",
           aiDescriptionDailyLimit:
             parsedData.aiDescriptionDailyLimit ??
-            backendLimits.aiDescriptionDaily,
+            backendLimits?.aiDescriptionDaily ??
+            5,
           monthlyUploadLimit:
-            parsedData.monthlyUploadLimit ?? backendLimits.monthlyUpload,
+            parsedData.monthlyUploadLimit ?? backendLimits?.monthlyUpload ?? 10,
           status: parsedData.status || "ACTIVE",
-          expiresAt: parsedData.expiresAt
-            ? toDatetimeLocalValue(parsedData.expiresAt)
-            : "",
+          // Only include expiresAt for super admins
+          ...(isSuperAdmin && {
+            expiresAt: parsedData.expiresAt
+              ? toDatetimeLocalValue(parsedData.expiresAt)
+              : "",
+            imageUploadLimit:
+              parsedData.imageUploadLimit ?? backendLimits?.imageUpload ?? 1,
+          }),
+          images: [],
         };
       } catch (error) {
         console.error("Error parsing saved form data:", error);
@@ -247,15 +256,21 @@ export default function ArtworkForm({
       year: new Date().getFullYear(),
       featured: false,
       sold: false,
-      carousel: false,
-      monthlyUploadLimit: backendLimits.monthlyUpload,
-      aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
+      instagramReelLink: "",
+      youtubeVideoLink: "",
+      monthlyUploadLimit: backendLimits?.monthlyUpload ?? 10,
+      aiDescriptionDailyLimit: backendLimits?.aiDescriptionDaily ?? 5,
       artistId: savedArtistId || "",
       width: "",
       height: "",
       dimensions: "",
       status: "ACTIVE",
-      expiresAt: expiresAtDefault,
+      // Only include expiresAt and imageUploadLimit for super admins
+      ...(isSuperAdmin && {
+        expiresAt: expiresAtDefault,
+        imageUploadLimit: backendLimits?.imageUpload ?? 1,
+      }),
+      images: [],
     };
   };
 
@@ -280,9 +295,6 @@ export default function ArtworkForm({
   };
 
   function getInitialImagePreview() {
-    if (initialData?.url) {
-      return initialData.url;
-    }
     return null;
   }
 
@@ -296,6 +308,10 @@ export default function ArtworkForm({
   // Now safe to use getInitialFormData for all state initializations
   const initialFormData = getInitialFormData();
 
+  // Debug: Log initial form data to see if social media links are included
+  console.log("Initial form data:", initialFormData);
+  console.log("Initial form data keys:", Object.keys(initialFormData));
+
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -306,9 +322,7 @@ export default function ArtworkForm({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savingProgress, setSavingProgress] = useState(0);
   const [error, setError] = useState(null);
-  const [status, setStatus] = useState(initialFormData.status || "ACTIVE");
   const [artistFieldTouched, setArtistFieldTouched] = useState(false);
-  const [expiresAt, setExpiresAt] = useState(initialFormData.expiresAt || "");
   // Track if the monthly upload limit input has been manually changed
   const [monthlyLimitTouched, setMonthlyLimitTouched] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -320,29 +334,14 @@ export default function ArtworkForm({
   const skipNextPersist = useRef(false);
   const isInitialLoad = useRef(true);
 
-  // Debug log
-  console.log(
-    "ArtworkForm: isSuperAdmin",
-    isSuperAdmin,
-    "isArtist",
-    isArtist,
-    "initialData",
-    initialData
-  );
-  console.log(
-    "ArtworkForm: artistId",
-    artistId,
-    "type:",
-    typeof artistId,
-    "length:",
-    artistId?.length
-  );
   // Only fetch monthly upload count for artists creating new artwork
   const shouldFetchUploadCount = isArtist && !isSuperAdmin && !initialData; // Only for artists (not admins) creating new artwork
 
   const monthlyUploadCount = artistQuotaData?.monthlyUploads?.used ?? 0;
   const monthlyUploadLimit =
-    artistQuotaData?.monthlyUploads?.limit ?? backendLimits.monthlyUpload;
+    artistQuotaData?.monthlyUploads?.limit ??
+    backendLimits?.monthlyUpload ??
+    10;
 
   // Compute once and reuse: shouldFetchArtistUploadCount
   const shouldFetchArtistUploadCount = Boolean(
@@ -390,12 +389,6 @@ export default function ArtworkForm({
 
   const selectedArtistAiLimit =
     selectedArtistUploadData?.aiDescriptionDailyLimit ?? 5;
-
-  useEffect(() => {
-    if (initialData?.expiresAt) {
-      setExpiresAt(toDatetimeLocalValue(initialData.expiresAt));
-    }
-  }, [initialData]);
 
   // Material and style options
   const materialOptions = [
@@ -449,6 +442,7 @@ export default function ArtworkForm({
     watch,
     setValue,
     trigger,
+    clearErrors,
     formState: { errors, isSubmitted, isDirty },
     reset,
   } = useForm({
@@ -460,15 +454,56 @@ export default function ArtworkForm({
 
   const watchedValues = watch();
 
-  // This effect will run when the image is removed, ensuring validation is
-  // triggered AFTER the form has been submitted at least once.
-  useEffect(() => {
-    // This makes the image field's validation reactive post-submission,
-    // matching the behavior of all other fields.
-    if (isSubmitted && imageRemoved) {
-      trigger("image");
+  // Debug: Log watched values to see if social media links are being tracked
+  console.log("Watched values:", watchedValues);
+  console.log("Watched values keys:", Object.keys(watchedValues));
+
+  // State for multiple images (store File or {file, preview, ...} objects)
+  const [images, setImages] = useState(() => {
+    const initialImages = initialFormData.images || [];
+    if (initialData?.images) {
+      return initialData.images.map((img) => ({
+        ...img,
+        preview: img.url,
+        uploaded: true,
+        uuid: img.id || uuidv4(),
+      }));
     }
-  }, [imageRemoved, isSubmitted, trigger]);
+    return initialImages;
+  });
+
+  const imageUploadLimit =
+    initialData?.imageUploadLimit || backendLimits?.imageUpload || 1; // Use backend config, fallback to 1
+  const [imageErrors, setImageErrors] = useState([]);
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [isAutoDismissible, setIsAutoDismissible] = useState(false);
+
+  // Update form images value when component mounts
+  useEffect(() => {
+    setValue("images", images, { shouldValidate: false });
+  }, []); // Only run once on mount
+
+  // Sync images state with form field whenever images change
+  useEffect(() => {
+    setValue("images", images, { shouldValidate: false });
+  }, [images, setValue]);
+
+  // Handle images validation error and show in alert
+  useEffect(() => {
+    // If images are present, clear any validation errors
+    if (images && images.length > 0) {
+      setValidationErrors([]);
+      return;
+    }
+
+    // Only show validation errors if no images are present
+    if (errors.images?.message) {
+      setValidationErrors([errors.images.message]);
+    } else if (validationErrors.length > 0) {
+      // Clear validation errors if validation passes
+      setValidationErrors([]);
+    }
+  }, [errors.images?.message, validationErrors.length, images]);
 
   // Mark artist field as touched if there's a saved artist ID
   useEffect(() => {
@@ -510,10 +545,8 @@ export default function ArtworkForm({
       const formDataToSave = {
         ...watchedValues,
         artistId: watchedValues.artistId || artistId, // Use form value or prop value
-        status, // Save status
         monthlyUploadLimit: watchedValues.monthlyUploadLimit, // Save monthly upload limit
         aiDescriptionDailyLimit: watchedValues.aiDescriptionDailyLimit, // Save AI limit
-        expiresAt: watchedValues.expiresAt, // Save expiresAt from form state
       };
 
       // Remove image-related data before saving to localStorage
@@ -535,13 +568,11 @@ export default function ArtworkForm({
     FORM_DATA_KEY,
     DIMENSIONS_KEY,
     ARTIST_ID_KEY,
-    status,
   ]);
 
-  // Check if form has data but no image (for page refresh notification)
   const hasFormDataButNoImage = (() => {
     if (initialData) return false; // Don't show for edit mode
-    if (imageFile || imagePreview) return false; // Don't show if image exists
+    if (images && images.length > 0) return false; // Don't show if images exist
 
     // The key condition: only show the warning if an image was previously
     // selected in this session before the refresh.
@@ -555,7 +586,7 @@ export default function ArtworkForm({
     try {
       const parsedData = JSON.parse(savedData);
       // Only show if there's actual form content (not just default values)
-      return !!(
+      const hasContent = !!(
         parsedData.title ||
         parsedData.material ||
         parsedData.style ||
@@ -563,6 +594,17 @@ export default function ArtworkForm({
         parsedData.price ||
         (parsedData.year && parsedData.year !== new Date().getFullYear())
       );
+
+      console.log("Form data restoration check:", {
+        initialData,
+        imagesLength: images?.length,
+        hadImage,
+        savedData: !!savedData,
+        hasContent,
+        imageRemoved,
+      });
+
+      return hasContent;
     } catch {
       return false;
     }
@@ -583,71 +625,6 @@ export default function ArtworkForm({
   };
 
   // Handle image change
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setImageError("");
-    setImageRemoved(false);
-
-    // Clear any existing form errors when user uploads an image
-    if (error) {
-      setError(null);
-    }
-
-    if (file) {
-      // Check file type
-      const validTypes = ["image/jpeg", "image/jpg", "image/png"];
-      if (!validTypes.includes(file.type)) {
-        setImageError("Please upload only JPG, JPEG or PNG files");
-        e.target.value = null;
-        return;
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        setImageError("Image size must be less than 5MB");
-        e.target.value = null;
-        return;
-      }
-
-      setImageFile(file);
-      setImageLoaded(false); // Reset loader state
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-
-      // Set image in form
-      setValue("image", file, { shouldValidate: true });
-
-      // Set the flag in localStorage
-      if (!initialData) {
-        localStorage.setItem(IMAGE_FLAG_KEY, "true");
-      }
-    }
-  };
-
-  // Handle image remove
-  const handleImageRemove = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setImageFile(null);
-    setImagePreview(null);
-    setImageRemoved(true);
-    setImageLoaded(false);
-    setValue("image", undefined, { shouldValidate: true });
-
-    // Remove the flag from localStorage
-    if (!initialData) {
-      localStorage.removeItem(IMAGE_FLAG_KEY);
-    }
-
-    // Reset file input
-    const fileInput = document.getElementById("file-upload");
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
 
   // Handle monthly upload limit change
   const handleMonthlyLimitChange = (e) => {
@@ -719,7 +696,6 @@ export default function ArtworkForm({
   // Handle expiry date change
   const handleExpiryDateChange = (e) => {
     const newDate = e.target.value;
-    setValue("expiresAt", newDate, { shouldValidate: true });
 
     if (newDate) {
       const selectedDate = new Date(newDate);
@@ -727,11 +703,11 @@ export default function ArtworkForm({
 
       // If date is in the past, set to EXPIRED
       if (selectedDate < now) {
-        setStatus("EXPIRED");
+        setValue("status", "EXPIRED", { shouldValidate: true });
       }
       // If date is in the future and current status is EXPIRED, set to ACTIVE
-      else if (selectedDate > now && status === "EXPIRED") {
-        setStatus("ACTIVE");
+      else if (selectedDate > now && watchedValues.status === "EXPIRED") {
+        setValue("status", "ACTIVE", { shouldValidate: true });
       }
     }
   };
@@ -741,32 +717,38 @@ export default function ArtworkForm({
     setAiError("");
     setAiLoading(true);
     try {
-      // Use imageFile (local file) or fallback to imagePreview (base64) or initialData.url
+      // Get the first image from the images array
       let imageData = null;
+      const firstImage = images[0];
 
-      if (imageFile) {
-        // Compress and convert local file to base64
-        imageData = await compressImageToBase64(imageFile);
-      } else if (imagePreview && imagePreview.startsWith("data:")) {
-        // Use existing base64 from imagePreview
-        imageData = imagePreview.split(",")[1];
-      } else if (initialData?.url) {
-        // Fallback: fetch image from URL and convert to base64
-        const response = await fetch(initialData.url);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        imageData = await new Promise((resolve, reject) => {
-          reader.onload = () => {
-            const base64 = reader.result.split(",")[1];
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
+      if (firstImage) {
+        if (firstImage.file) {
+          // New image file - compress and convert to base64
+          imageData = await compressImageToBase64(firstImage.file);
+        } else if (
+          firstImage.preview &&
+          firstImage.preview.startsWith("data:")
+        ) {
+          // Existing base64 preview
+          imageData = firstImage.preview.split(",")[1];
+        } else if (firstImage.url) {
+          // Existing uploaded image - fetch and convert to base64
+          const response = await fetch(firstImage.url);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          imageData = await new Promise((resolve, reject) => {
+            reader.onload = () => {
+              const base64 = reader.result.split(",")[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
       }
 
       if (!imageData) {
-        setAiError("Please upload an image first.");
+        setAiError("Please upload at least one image first.");
         setAiLoading(false);
         return;
       }
@@ -787,144 +769,289 @@ export default function ArtworkForm({
     }
   };
 
-  // Form submission handler
-  const onSubmitForm = async (data) => {
-    setError(null);
-    setIsSubmitting(true);
-    setCurrentStep("uploading");
+  // Handle image file selection (just preview, no upload)
+  const handleImageFiles = (files) => {
+    let newImages = [...images];
+    let errors = [];
+    let removedFiles = [];
+    // Super admins can upload up to 1000 images, artists are limited by imageUploadLimit
+    const maxImages = isSuperAdmin ? 1000 : imageUploadLimit;
 
-    let submissionSuccessful = false;
-
-    try {
-      setCurrentStep("uploading");
-
-      // Check if expiry date is in the past
-      if (expiresAt && new Date(expiresAt) < new Date()) {
-        setStatus("EXPIRED");
+    for (let file of files) {
+      if (newImages.length >= maxImages) {
+        errors.push("Image upload limit reached.");
+        break;
       }
 
-      // Create FormData object to handle file upload
-      const submitData = new FormData();
-      if (imageFile) {
-        submitData.append("image", imageFile);
+      // Only allow image types
+      if (!file.type.startsWith("image/")) {
+        removedFiles.push(`${file.name} (not a valid image file)`);
+        continue;
       }
 
-      // Add a flag to indicate if image was removed
-      if (imageRemoved) {
-        submitData.append("imageRemoved", "true");
+      // File size check
+      const MAX_SIZE_MB = backendLimits?.fileSizeMB ?? 5;
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        removedFiles.push(`${file.name} (too large, max ${MAX_SIZE_MB}MB)`);
+        continue;
       }
 
-      // Append form data
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          const formValue = typeof value === "boolean" ? String(value) : value;
-          submitData.append(key, formValue);
-        }
+      // If we get here, file is valid
+      newImages.push({
+        file,
+        preview: URL.createObjectURL(file),
+        uploaded: false,
+        order: newImages.length,
+        uuid: uuidv4(),
       });
-
-      // Add dimensions
-      if (dimensionInputs.width && dimensionInputs.height) {
-        submitData.set(
-          "dimensions",
-          `${dimensionInputs.width}cm × ${dimensionInputs.height}cm`
-        );
-      }
-
-      // Debug: log AI limit value
-      console.log(
-        "aiDescriptionDailyLimit in data:",
-        data.aiDescriptionDailyLimit
-      );
-      // For super admin, always include monthlyUploadLimit and aiDescriptionDailyLimit
-      if (isSuperAdmin) {
-        const limitValue =
-          data.monthlyUploadLimit ?? backendLimits.monthlyUpload;
-        submitData.set("monthlyUploadLimit", limitValue);
-        const aiLimitValue =
-          data.aiDescriptionDailyLimit ?? backendLimits.aiDescriptionDaily;
-        submitData.set("aiDescriptionDailyLimit", aiLimitValue);
-      }
-
-      // Pass status if admin
-      if (isSuperAdmin) {
-        submitData.set("status", status);
-      }
-
-      // Use the value from the form data, not local state
-      if (isSuperAdmin && data.expiresAt) {
-        const iso = new Date(data.expiresAt).toISOString();
-        submitData.set("expiresAt", iso);
-      }
-
-      // Log all FormData fields before submitting
-      for (let pair of submitData.entries()) {
-        console.log("FormData:", pair[0], pair[1]);
-      }
-
-      // Simulate upload progress
-      const uploadInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(uploadInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      await onSubmit(submitData);
-
-      // Complete upload progress
-      clearInterval(uploadInterval);
-      setUploadProgress(100);
-      setCurrentStep("saving");
-
-      // Simulate saving progress
-      const savingInterval = setInterval(() => {
-        setSavingProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(savingInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 100);
-
-      // Wait for a moment to show completion
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      clearInterval(savingInterval);
-      setSavingProgress(100);
-
-      // Mark submission as successful
-      submissionSuccessful = true;
-    } catch (error) {
-      console.error("Error submitting artwork:", error);
-      setError(getFriendlyErrorMessage(error));
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    } finally {
-      setTimeout(() => {
-        setIsSubmitting(false);
-        setCurrentStep(null);
-        setUploadProgress(0);
-        setSavingProgress(0);
-      }, 1000);
     }
 
-    // Reset form only after successful submission (only for new artwork)
-    if (submissionSuccessful && !initialData) {
-      reset();
-      setDimensionInputs({ width: "", height: "" });
-      setImageFile(null);
-      setImagePreview(null);
+    setImages(newImages);
+
+    // Set image flag in localStorage when images are added
+    if (newImages.length > 0) {
+      localStorage.setItem(IMAGE_FLAG_KEY, "true");
       setImageRemoved(false);
-      setImageError("");
-      setImageLoaded(false);
-      if (isSuperAdmin && setArtistId) setArtistId("");
+    }
+
+    // Show temporary notification for removed files instead of persistent errors
+    if (removedFiles.length > 0) {
+      const message =
+        removedFiles.length === 1
+          ? `File "${removedFiles[0]}" was not added because it exceeds the ${
+              backendLimits?.fileSizeMB ?? 5
+            }MB limit.`
+          : `${
+              removedFiles.length
+            } files were not added because they exceed the ${
+              backendLimits?.fileSizeMB ?? 5
+            }MB limit or are not valid image files.`;
+      setImageErrors([message]);
+      setIsAutoDismissible(true);
+
+      // Auto-clear the error after 5 seconds
+      setTimeout(() => {
+        setImageErrors([]);
+        setIsAutoDismissible(false);
+      }, 5000);
+    } else if (errors.length > 0) {
+      setImageErrors(errors);
+      setIsAutoDismissible(false);
+    } else {
+      setImageErrors([]);
+      setIsAutoDismissible(false);
+    }
+
+    // Remove image flag from localStorage if no images remain
+    if (newImages.length === 0) {
+      localStorage.removeItem(IMAGE_FLAG_KEY);
+      setImageRemoved(true);
+    }
+  };
+
+  // Remove image
+  const handleRemoveImage = (idx) => {
+    const removed = images[idx];
+
+    // Prevent artists from removing carousel images
+    if (removed?.showInCarousel && !isSuperAdmin) {
+      const errorMessage =
+        "Cannot remove carousel image. This image is used in the homepage carousel. Please contact an administrator if you need to remove it.";
+      setImageErrors([errorMessage]);
+      setIsAutoDismissible(false);
+      return;
+    }
+
+    if (removed && removed.preview && !removed.uploaded) {
+      URL.revokeObjectURL(removed.preview);
+    }
+
+    // Check if the removed image was marked for carousel
+    const wasCarouselImage = removed?.showInCarousel;
+
+    const newImages = images
+      .filter((_, i) => i !== idx)
+      .map((img, i) => ({
+        ...img,
+        order: i,
+        // Preserve showInCarousel property
+        showInCarousel: img.showInCarousel || false,
+      }));
+
+    // If we removed a carousel image and there are remaining images,
+    // automatically assign carousel to the first remaining image
+    if (wasCarouselImage && newImages.length > 0) {
+      newImages[0].showInCarousel = true;
+
+      // Show notification to user about automatic reassignment
+      const notificationMessage =
+        "The carousel image was automatically reassigned to the first remaining image to keep your artwork visible in the carousel.";
+      setImageErrors([notificationMessage]);
+      setIsAutoDismissible(true);
+
+      // Auto-clear the notification after 5 seconds
+      setTimeout(() => {
+        setImageErrors([]);
+        setIsAutoDismissible(false);
+      }, 5000);
+    }
+
+    setImages(newImages);
+
+    // Remove image flag from localStorage if no images remain
+    if (newImages.length === 0) {
+      localStorage.removeItem(IMAGE_FLAG_KEY);
+      setImageRemoved(true);
+    }
+  };
+
+  // Dismiss error messages
+  const handleDismissErrors = () => {
+    setImageErrors([]);
+    setIsAutoDismissible(false);
+  };
+
+  // On form submit: upload new images, then submit
+  const handleFormSubmit = async (formData) => {
+    // Prevent double submission
+    if (isSubmitting) {
+      return;
+    }
+
+    // Check if images exist before proceeding
+    if (!images || images.length === 0) {
+      setValidationErrors(["At least one image is required"]);
+      return;
+    }
+
+    // Clear any existing validation errors
+    setValidationErrors([]);
+
+    // Ensure images are properly set in form data
+    setValue("images", images, { shouldValidate: false });
+
+    console.log("Form submission - images:", images);
+    console.log("Form submission - images length:", images.length);
+
+    // Trigger validation for all fields, including images
+    const isValid = await trigger();
+    if (!isValid) {
+      console.log("Form validation failed");
+      return;
+    }
+
+    // Ensure imageUploadLimit is a number before submit
+    if (
+      formData.imageUploadLimit !== undefined &&
+      formData.imageUploadLimit !== null &&
+      typeof formData.imageUploadLimit !== "number"
+    ) {
+      formData.imageUploadLimit = Number(formData.imageUploadLimit);
+    }
+    setIsSubmitting(true);
+    setCurrentStep("uploading");
+    setUploadProgress(0);
+    setImageErrors([]);
+    let uploadErrors = [];
+    let uploadedImages = [];
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      const prevProgress = Math.round((i / images.length) * 100);
+      const nextProgress = Math.round(((i + 1) / images.length) * 100);
+      if (img.uploaded) {
+        uploadedImages.push({
+          url: img.url,
+          cloudinary_public_id: img.cloudinary_public_id,
+          order: i,
+          id: img.id,
+          showInCarousel: img.showInCarousel || false,
+        });
+        // Animate progress bar from prevProgress to nextProgress
+        for (let p = prevProgress + 1; p <= nextProgress; p++) {
+          setUploadProgress(p);
+          await new Promise((res) => setTimeout(res, 8));
+        }
+      } else if (img.file instanceof File) {
+        try {
+          // Animate progress bar in small increments while uploading
+          let fakeProgress = prevProgress;
+          let stopFake = false;
+          const fakeInterval = setInterval(() => {
+            if (fakeProgress < nextProgress - 5) {
+              fakeProgress++;
+              setUploadProgress(fakeProgress);
+            }
+          }, 20);
+          const cloudinaryResult = await uploadToCloudinary(img.file);
+          stopFake = true;
+          clearInterval(fakeInterval);
+          setUploadProgress(nextProgress);
+          if (!cloudinaryResult || !cloudinaryResult.secure_url) {
+            uploadErrors.push(`Image upload failed for ${img.file.name}.`);
+            continue;
+          }
+          uploadedImages.push({
+            url: cloudinaryResult.secure_url,
+            cloudinary_public_id: cloudinaryResult.public_id,
+            order: i,
+            showInCarousel: img.showInCarousel || false,
+          });
+        } catch (err) {
+          setUploadProgress(nextProgress);
+          uploadErrors.push(`Image upload failed for ${img.file.name}.`);
+        }
+      } else {
+        uploadErrors.push(
+          `Image file missing or invalid for ${
+            img.file?.name || img.preview || "unknown"
+          }.`
+        );
+        setUploadProgress(nextProgress);
+      }
+    }
+    if (uploadErrors.length > 0) {
+      setImageErrors([...new Set(uploadErrors)]);
+      setIsAutoDismissible(false);
+      setIsSubmitting(false);
+      setCurrentStep(null); // Reset step
+      return;
+    }
+    setCurrentStep("saving");
+    setSavingProgress(0);
+    // Simulate saving progress (or update as needed)
+    setSavingProgress(100);
+    // Submit form with images array
+    const payload = {
+      ...formData,
+      images: uploadedImages,
+    };
+
+    // Debug: Log the payload to see what's being submitted
+    console.log("Form submission payload:", payload);
+    console.log("Form data keys:", Object.keys(formData));
+    console.log("Instagram reel link:", formData.instagramReelLink);
+    console.log("YouTube video link:", formData.youtubeVideoLink);
+
+    // Remove expiresAt field for artists (only super admins should have this field)
+    if (!isSuperAdmin) {
+      delete payload.expiresAt;
+    }
+
+    try {
+      await onSubmit(payload);
       clearPersisted();
-      skipNextPersist.current = true;
+      // Clear validation errors on successful submission
+      clearErrors();
+      setImageErrors([]);
+      setValidationErrors([]);
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err));
+      console.error("Form submission error:", err);
+    } finally {
+      setIsSubmitting(false);
+      setCurrentStep(null); // Reset after done
+      setUploadProgress(0);
+      setSavingProgress(0);
     }
   };
 
@@ -934,18 +1061,15 @@ export default function ArtworkForm({
   const getStepLabel = () => {
     switch (currentStep) {
       case "uploading":
-        if (imageFile) return "Uploading new image...";
-        if (initialData) return "Updating artwork...";
-        return "Processing...";
+        return images && images.length > 1
+          ? "Uploading images..."
+          : "Uploading image...";
       case "saving":
         return initialData ? "Updating artwork..." : "Saving artwork...";
       default:
         return "Processing...";
     }
   };
-
-  // Check if we should show the image preview
-  const shouldShowPreview = imagePreview && !imageRemoved;
 
   // Add a handler for the AI limit field
   const handleAiLimitChange = (e) => {
@@ -988,8 +1112,57 @@ export default function ArtworkForm({
     fetchEditArtistUsageStats();
   }, [isSuperAdmin, initialData]);
 
+  // Clean up object URLs when images are removed or component unmounts
+  useEffect(() => {
+    return () => {
+      images.forEach((img) => {
+        if (img.preview && !img.uploaded) {
+          URL.revokeObjectURL(img.preview);
+        }
+      });
+    };
+  }, [images]);
+
+  // When images change, auto-update imageUploadLimit to match images.length for super admins
+  useEffect(() => {
+    if (
+      isSuperAdmin &&
+      images.length >
+        (watch("imageUploadLimit") ||
+          initialData?.imageUploadLimit ||
+          backendLimits?.imageUpload ||
+          1)
+    ) {
+      setValue("imageUploadLimit", images.length);
+    }
+  }, [
+    images.length,
+    isSuperAdmin,
+    initialData,
+    setValue,
+    watch,
+    backendLimits?.imageUpload,
+  ]);
+
   return (
-    <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6 font-sans">
+    <form
+      onSubmit={handleSubmit(handleFormSubmit)}
+      className="space-y-6 font-sans"
+    >
+      {/* Show loading state when backend limits are being fetched */}
+      {/* {loadingBackendLimits && (
+        <div className="my-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+              <span className="text-sm text-blue-700 font-sans">
+                Loading configuration...
+              </span>
+            </div>
+          </div>
+        </div>
+      )} */}
+
       {/* Error Summary at the top */}
       {/* {showErrorSummary && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
@@ -1025,6 +1198,7 @@ export default function ArtworkForm({
       {/* Page refresh notification */}
       {hasFormDataButNoImage && !imageRemoved && (
         <div className="my-4">
+          {console.log("Rendering form data restoration notification")}
           <Alert
             type="warning"
             message={
@@ -1122,134 +1296,22 @@ export default function ArtworkForm({
       )}
 
       {/* Image Upload Section */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
-          Artwork Image <span className="text-red-500">*</span>
-        </label>
-
-        {shouldShowPreview ? (
-          // Show preview with properly positioned controls
-          <div className="border-2 border-gray-200 border-dashed rounded-xl p-6 bg-gray-50/30">
-            <div className="relative">
-              {/* Image container */}
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="h-64 w-auto object-contain rounded-lg shadow-md"
-                    onLoad={() => setImageLoaded(true)}
-                  />
-                  {/* Close button positioned at top-right of image */}
-                  {imageLoaded && (
-                    <button
-                      type="button"
-                      onClick={handleImageRemove}
-                      className="absolute -top-2 -right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg z-10"
-                      title="Remove image"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Change image button */}
-              <div className="flex justify-center">
-                <label className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm font-sans font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Change Image
-                  <input
-                    id="file-upload"
-                    name="file-upload"
-                    type="file"
-                    className="sr-only"
-                    onChange={handleImageChange}
-                    accept="image/*"
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Show upload dropzone when no image
-          <label
-            className={`block cursor-pointer ${
-              imageError || errors.image
-                ? "border-red-300 bg-red-50/30"
-                : "border-gray-200"
-            } border-2 border-dashed rounded-xl hover:bg-gray-50/50 transition-colors duration-200 relative overflow-hidden group`}
-          >
-            <div className="px-6 pt-5 pb-6 relative z-10 flex flex-col items-center justify-center min-h-[200px]">
-              <PhotoIcon className="h-12 w-12 text-gray-400" />
-              <div className="mt-4 flex flex-col items-center text-sm text-gray-600 font-sans">
-                <span className="relative cursor-pointer rounded-md font-medium text-gray-600 hover:text-gray-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500">
-                  Upload a file
-                </span>
-                <p className="mt-1 text-sm text-gray-500 font-sans">
-                  PNG, JPG up to 5MB
-                </p>
-                {/* {imageRemoved && (
-                  <p className="mt-2 text-xs text-red-500 font-sans">
-                    Image removed - Please select a new image
-                  </p>
-                )} */}
-                {hasFormDataButNoImage && !imageRemoved && (
-                  <p className="mt-2 text-xs text-amber-600 font-sans px-2 py-1 rounded">
-                    Your form data was saved, but please upload your image again
-                  </p>
-                )}
-              </div>
-            </div>
-            <input
-              id="file-upload"
-              name="file-upload"
-              type="file"
-              className="sr-only"
-              onChange={handleImageChange}
-              accept="image/*"
-            />
-            {/* Decorative gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-50/30 to-gray-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-          </label>
-        )}
-
-        {imageError && (
-          <div className="my-4">
-            <Alert type="error" message={imageError} />
-          </div>
-        )}
-        {errors.image && (
-          <div className="my-4">
-            <Alert type="error" message={errors.image.message} />
-          </div>
-        )}
-        {/* Show image required error when form has data but no image, or when validation fails */}
-      </div>
+      <ArtworkImageGrid
+        images={images}
+        setImages={setImages}
+        imageUploadLimit={isSuperAdmin ? 1000 : imageUploadLimit}
+        imageErrors={imageErrors}
+        validationErrors={validationErrors}
+        onFilesSelected={handleImageFiles}
+        onRemoveImage={handleRemoveImage}
+        onDismissErrors={handleDismissErrors}
+        fileSizeMB={backendLimits?.fileSizeMB ?? 5}
+        isAutoDismissible={isAutoDismissible}
+        isSuperAdmin={isSuperAdmin}
+        validationError={isSubmitted ? errors.images?.message : null}
+        setImageErrors={setImageErrors}
+        setIsAutoDismissible={setIsAutoDismissible}
+      />
 
       {/* Form Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1370,7 +1432,8 @@ export default function ArtworkForm({
                 /
                 <span className="font-semibold">
                   {editArtistUsageStats.aiDescriptionDailyLimit ??
-                    backendLimits.aiDescriptionDaily}
+                    backendLimits?.aiDescriptionDaily ??
+                    5}
                 </span>{" "}
                 used today
               </span>
@@ -1383,7 +1446,8 @@ export default function ArtworkForm({
                 /
                 <span className="font-semibold">
                   {selectedArtistUploadData.aiDescriptionDailyLimit ??
-                    backendLimits.aiDescriptionDaily}
+                    backendLimits?.aiDescriptionDaily ??
+                    5}
                 </span>{" "}
                 used today
               </span>
@@ -1415,27 +1479,19 @@ export default function ArtworkForm({
           <div className="flex flex-row items-center gap-x-2 mt-2">
             <button
               type="button"
-              className="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-fit whitespace-nowrap"
+              className="inline-flex items-center justify-center px-3 py-1.5 bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white text-sm rounded-lg shadow hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 w-fit whitespace-nowrap"
               onClick={handleAIDescription}
               disabled={
                 aiLoading ||
-                !(
-                  imageFile ||
-                  imagePreview ||
-                  (initialData?.url && !imageRemoved)
-                ) ||
+                images.length === 0 ||
                 (isArtist && aiRemaining <= 0)
               }
               title={
                 isArtist && aiRemaining <= 0
                   ? "You have reached your daily AI description limit"
-                  : !(
-                      imageFile ||
-                      imagePreview ||
-                      (initialData?.url && !imageRemoved)
-                    )
-                  ? "Please upload an image first to generate AI description"
-                  : "Generate description using AI"
+                  : images.length === 0
+                  ? "Please upload at least one image first to generate AI description"
+                  : "Generate description using AI (uses the first image)"
               }
             >
               {aiLoading ? (
@@ -1486,17 +1542,16 @@ export default function ArtworkForm({
                 🚫 You have reached your daily AI description limit
               </span>
             )}
-            {!(
-              imageFile ||
-              imagePreview ||
-              (initialData?.url && !imageRemoved)
-            ) &&
-              aiRemaining > 0 &&
-              !aiLoading && (
-                <span className="text-xs text-gray-500 font-sans break-words max-w-[70vw]">
-                  💡 Upload an image first to use AI description generation
-                </span>
-              )}
+            {images.length === 0 && !aiLoading && (
+              <span className="text-xs text-gray-500 font-sans break-words max-w-[70vw]">
+                💡 Upload at least one image to use AI description generation
+              </span>
+            )}
+            {images.length > 1 && !aiLoading && (
+              <span className="text-xs text-blue-600 font-sans break-words max-w-[70vw]">
+                ℹ️ AI will generate description from the first image
+              </span>
+            )}
           </div>
           {aiError && (
             <div className="mt-2">
@@ -1703,6 +1758,66 @@ export default function ArtworkForm({
           )}
         </div>
 
+        {/* Instagram Link */}
+        <div className="col-span-2 sm:col-span-1">
+          <label
+            htmlFor="instagramReelLink"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
+          >
+            Instagram Link
+          </label>
+          <Controller
+            name="instagramReelLink"
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="url"
+                id="instagramReelLink"
+                placeholder="https://www.instagram.com/reel/..."
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                  "instagramReelLink"
+                )}`}
+              />
+            )}
+          />
+          {errors.instagramReelLink && (
+            <p className="text-sm text-red-600 mt-1 font-sans">
+              {errors.instagramReelLink.message}
+            </p>
+          )}
+        </div>
+
+        {/* YouTube Video Link */}
+        <div className="col-span-2 sm:col-span-1">
+          <label
+            htmlFor="youtubeVideoLink"
+            className="block text-sm font-medium text-gray-700 font-sans mb-1"
+          >
+            YouTube Video Link
+          </label>
+          <Controller
+            name="youtubeVideoLink"
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="url"
+                id="youtubeVideoLink"
+                placeholder="https://www.youtube.com/watch?v=..."
+                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                  "youtubeVideoLink"
+                )}`}
+              />
+            )}
+          />
+          {errors.youtubeVideoLink && (
+            <p className="text-sm text-red-600 mt-1 font-sans">
+              {errors.youtubeVideoLink.message}
+            </p>
+          )}
+        </div>
+
         {/* Year */}
         <div className="col-span-2">
           <label
@@ -1742,47 +1857,58 @@ export default function ArtworkForm({
               Status
             </label>
             <div className="relative">
-              <select
+              <Controller
                 name="status"
-                value={status}
-                onChange={(e) => {
-                  const newStatus = e.target.value;
-                  // Prevent setting ACTIVE or INACTIVE status if expiry date is in the past
-                  if (
-                    (newStatus === "ACTIVE" || newStatus === "INACTIVE") &&
-                    expiresAt &&
-                    new Date(expiresAt) < new Date()
-                  ) {
-                    return; // Don't update status
-                  }
-                  setStatus(newStatus);
-                }}
-                className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${
-                  expiresAt &&
-                  new Date(expiresAt) < new Date() &&
-                  (status === "ACTIVE" || status === "INACTIVE")
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                    : ""
-                }`}
-              >
-                <option
-                  value="ACTIVE"
-                  className="font-sans"
-                  disabled={expiresAt && new Date(expiresAt) < new Date()}
-                >
-                  Active
-                </option>
-                <option
-                  value="INACTIVE"
-                  className="font-sans"
-                  disabled={expiresAt && new Date(expiresAt) < new Date()}
-                >
-                  Inactive
-                </option>
-                <option value="EXPIRED" className="font-sans">
-                  Expired
-                </option>
-              </select>
+                control={control}
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 pr-10 focus:ring-2 focus:border-transparent focus:outline-none font-sans bg-white appearance-none ${
+                      watchedValues.expiresAt &&
+                      new Date(watchedValues.expiresAt) < new Date()
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
+                    onChange={(e) => {
+                      const newStatus = e.target.value;
+                      // Prevent setting ACTIVE or INACTIVE status if expiry date is in the past
+                      const currentExpiresAt = watchedValues.expiresAt;
+                      if (
+                        (newStatus === "ACTIVE" || newStatus === "INACTIVE") &&
+                        currentExpiresAt &&
+                        new Date(currentExpiresAt) < new Date()
+                      ) {
+                        return; // Don't update status
+                      }
+                      field.onChange(newStatus);
+                    }}
+                  >
+                    <option
+                      value="ACTIVE"
+                      className="font-sans"
+                      disabled={
+                        watchedValues.expiresAt &&
+                        new Date(watchedValues.expiresAt) < new Date()
+                      }
+                    >
+                      Active
+                    </option>
+                    <option
+                      value="INACTIVE"
+                      className="font-sans"
+                      disabled={
+                        watchedValues.expiresAt &&
+                        new Date(watchedValues.expiresAt) < new Date()
+                      }
+                    >
+                      Inactive
+                    </option>
+                    <option value="EXPIRED" className="font-sans">
+                      Expired
+                    </option>
+                  </select>
+                )}
+              />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 <svg
                   className="w-5 h-5 text-gray-600"
@@ -1800,9 +1926,10 @@ export default function ArtworkForm({
                 </svg>
               </div>
             </div>
-            {expiresAt &&
-              new Date(expiresAt) < new Date() &&
-              (status === "ACTIVE" || status === "INACTIVE") && (
+            {watchedValues.expiresAt &&
+              new Date(watchedValues.expiresAt) < new Date() &&
+              (watchedValues.status === "ACTIVE" ||
+                watchedValues.status === "INACTIVE") && (
                 <div className="mt-2">
                   <p className="text-sm text-red-600 mt-1 font-sans">
                     Cannot set status to Active or Inactive with a past expiry
@@ -1831,7 +1958,11 @@ export default function ArtworkForm({
                   {...field}
                   type="number"
                   id="monthlyUploadLimit"
-                  placeholder={`Default is ${backendLimits.monthlyUpload}. Leave blank or set to ${backendLimits.monthlyUpload} for standard limit.`}
+                  placeholder={`Default is ${
+                    backendLimits?.monthlyUpload ?? 10
+                  }. Leave blank or set to ${
+                    backendLimits?.monthlyUpload ?? 10
+                  } for standard limit.`}
                   min={1}
                   max={1000}
                   onChange={handleMonthlyLimitChange}
@@ -1861,7 +1992,9 @@ export default function ArtworkForm({
                   {...field}
                   type="number"
                   id="aiDescriptionDailyLimit"
-                  placeholder={`Default is ${backendLimits.aiDescriptionDaily} or set any other.`}
+                  placeholder={`Default is ${
+                    backendLimits?.aiDescriptionDaily ?? 5
+                  } or set any other.`}
                   min={1}
                   max={100}
                   onChange={handleAiLimitChange}
@@ -1883,19 +2016,92 @@ export default function ArtworkForm({
             >
               Expires At
             </label>
-            <input
-              type="datetime-local"
-              id="expiresAt"
+            <Controller
               name="expiresAt"
-              value={watchedValues.expiresAt || ""}
-              onChange={handleExpiryDateChange}
-              className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
-                "expiresAt"
-              )}`}
+              control={control}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  type="datetime-local"
+                  id="expiresAt"
+                  value={field.value || ""}
+                  onChange={(e) => {
+                    field.onChange(e.target.value);
+                    handleExpiryDateChange(e);
+                  }}
+                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                    "expiresAt"
+                  )}`}
+                />
+              )}
             />
             {errors.expiresAt && (
               <p className="text-sm text-red-600 mt-1 font-sans">
                 {errors.expiresAt.message}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Super Admin: Set image upload limit for selected artist */}
+        {isSuperAdmin && (
+          <div className="col-span-2 sm:col-span-1 mt-4">
+            <label
+              htmlFor="imageUploadLimit"
+              className="block text-sm font-medium text-gray-700 font-sans mb-1"
+            >
+              Image Upload Limit for Artist
+            </label>
+            <Controller
+              name="imageUploadLimit"
+              control={control}
+              render={({ field }) => (
+                <div className="relative">
+                  <input
+                    {...field}
+                    type="number"
+                    id="imageUploadLimit"
+                    min={Math.max(1, images.length)}
+                    max={1000}
+                    value={
+                      field.value ??
+                      (initialData?.imageUploadLimit ||
+                        backendLimits?.imageUpload ||
+                        1)
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const numVal = val === "" ? "" : Number(val);
+                      // Ensure the limit is at least equal to the number of selected images
+                      const minLimit = Math.max(1, images.length);
+                      if (numVal !== "" && numVal < minLimit) {
+                        field.onChange(minLimit);
+                      } else {
+                        field.onChange(numVal);
+                      }
+                    }}
+                    className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
+                      "imageUploadLimit"
+                    )}`}
+                  />
+                  {images.length > (field.value || 1) && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                        Auto-updated
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            />
+            <p className="text-xs text-gray-500 mt-1 font-sans">
+              Artist's image limit for this artwork (1-1000). You can upload up
+              to 1000 images.
+            </p>
+            {images.length > 0 && (
+              <p className="text-xs text-blue-600 mt-1 font-sans">
+                Current images: {images.length} - limit auto-updates to{" "}
+                {Math.max(images.length, watch("imageUploadLimit") || 1)}
               </p>
             )}
           </div>
@@ -1942,25 +2148,6 @@ export default function ArtworkForm({
                 </span>
               </label>
             )}
-            {isSuperAdmin && (
-              <label className="flex items-center space-x-3">
-                <Controller
-                  name="carousel"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type="checkbox"
-                      checked={field.value || false}
-                      className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                  )}
-                />
-                <span className="text-sm font-medium text-gray-700 font-sans">
-                  Show in Carousel
-                </span>
-              </label>
-            )}
           </div>
         )}
       </div>
@@ -2000,7 +2187,7 @@ export default function ArtworkForm({
               !isSuperAdmin &&
               monthlyUploadCount >= monthlyUploadLimit)
           }
-          className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-500 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+          className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base font-medium hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 hover:border-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
         >
           {isSubmitting ? (
             <div className="flex items-center">
@@ -2033,26 +2220,46 @@ export default function ArtworkForm({
                 year: new Date().getFullYear(),
                 featured: false,
                 sold: false,
-                carousel: false,
-                monthlyUploadLimit: backendLimits.monthlyUpload,
-                aiDescriptionDailyLimit: backendLimits.aiDescriptionDaily,
+                instagramReelLink: "",
+                youtubeVideoLink: "",
+                monthlyUploadLimit: backendLimits?.monthlyUpload ?? 10,
+                aiDescriptionDailyLimit: backendLimits?.aiDescriptionDaily ?? 5,
                 artistId: "",
                 status: "ACTIVE",
-                expiresAt: defaultExpiresAt,
+                // Only include expiresAt and imageUploadLimit for super admins
+                ...(isSuperAdmin && {
+                  expiresAt: defaultExpiresAt,
+                  imageUploadLimit: backendLimits?.imageUpload ?? 1,
+                }),
                 width: "",
                 height: "",
                 dimensions: "",
+                images: [],
               });
+
+              // Clear form validation errors
+              clearErrors();
 
               // Reset other state
               setDimensionInputs({ width: "", height: "" });
+
+              // Clear images and clean up object URLs
+              images.forEach((img) => {
+                if (img.preview && !img.uploaded) {
+                  URL.revokeObjectURL(img.preview);
+                }
+              });
+              setImages([]);
+
               setImageFile(null);
               setImagePreview(null);
               setImageRemoved(false);
               setImageError("");
               setImageLoaded(false);
               setArtistFieldTouched(false);
-              setStatus("ACTIVE");
+              setImageErrors([]); // Clear any image errors
+              setValidationErrors([]); // Clear validation errors
+              setIsAutoDismissible(false);
 
               // Clear artist selection
               if (isSuperAdmin && setArtistId) {
@@ -2069,7 +2276,7 @@ export default function ArtworkForm({
                 behavior: "smooth",
               });
             }}
-            className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-gray-400 rounded-full bg-white text-gray-700 font-sans text-base font-medium hover:bg-gray-100 hover:border-gray-500 focus:outline-none focus:ring-0 transition-colors duration-300"
+            className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-gray-400 rounded-xl bg-white text-gray-700 font-sans text-base font-medium hover:bg-gray-100 hover:border-gray-500 focus:outline-none focus:ring-0 transition-colors duration-300"
           >
             Reset Form
           </button>

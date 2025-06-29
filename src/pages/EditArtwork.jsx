@@ -8,10 +8,11 @@ import Alert from "../components/Alert";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 
 export default function EditArtwork() {
-  const { id } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { isSuperAdmin, user } = useAuth();
   const [error, setError] = useState(null);
-  const { isSuperAdmin } = useAuth();
+  const [artwork, setArtwork] = useState(null);
 
   console.log("Route ID from useParams:", id, "Type:", typeof id);
 
@@ -20,7 +21,7 @@ export default function EditArtwork() {
 
   // tRPC queries and mutations
   const {
-    data: artwork,
+    data: artworkData,
     isLoading,
     error: fetchError,
     refetch,
@@ -45,17 +46,17 @@ export default function EditArtwork() {
 
   // Handle case where artwork is not found
   useEffect(() => {
-    if (!isLoading && !artwork && !fetchError) {
+    if (!isLoading && !artworkData && !fetchError) {
       setError("Artwork not found");
     }
-  }, [isLoading, artwork, fetchError]);
+  }, [isLoading, artworkData, fetchError]);
 
   const updateArtworkMutation = trpc.artwork.updateArtworkWithImage.useMutation(
     {
       onSuccess: () => {
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
-        utils.artwork.getArtworkById.invalidate({ id: artwork.id });
+        utils.artwork.getArtworkById.invalidate({ id: artworkData.id });
         navigate("/gallery");
       },
       onError: (err) => {
@@ -65,57 +66,49 @@ export default function EditArtwork() {
   );
 
   const handleSubmit = async (formData) => {
-    if (!artwork) return;
+    if (!artworkData) return;
     try {
       setError(null);
-      const imageFile = formData.get("image");
-      let imageUrl = undefined;
-      let cloudinaryPublicId = undefined;
-      if (imageFile && imageFile.size > 0) {
-        const cloudinaryResult = await uploadToCloudinary(imageFile);
-        if (!cloudinaryResult || !cloudinaryResult.secure_url) {
-          setError(
-            getFriendlyErrorMessage({ message: "Cloudinary upload failed" })
-          );
-          return;
-        }
-        imageUrl = cloudinaryResult.secure_url;
-        cloudinaryPublicId = cloudinaryResult.public_id;
-      }
-      // Prepare update data
-      const updateData = {
-        id: artwork.id,
-        title: formData.get("title"),
-        price: parseFloat(formData.get("price")),
-        description: formData.get("description"),
-        dimensions: formData.get("dimensions"),
-        material: formData.get("material"),
-        style: formData.get("style"),
-        year: parseInt(formData.get("year")),
-        featured: formData.get("featured") === "true",
-        sold: formData.get("sold") === "true",
-        carousel: formData.get("carousel") === "true",
-        status: formData.get("status") || "ACTIVE",
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      };
-      if (imageUrl && cloudinaryPublicId) {
-        updateData.imageUrl = imageUrl;
-        updateData.cloudinaryPublicId = cloudinaryPublicId;
-      }
+      const images = (formData.images || []).map((img) => ({
+        id: img.id,
+        url: img.url,
+        cloudinary_public_id: img.cloudinary_public_id,
+        order: img.order,
+        showInCarousel: img.showInCarousel,
+      }));
+      // For admins/super admins, ensure imageUploadLimit is at least equal to the number of images
+      let imageUploadLimit = formData.imageUploadLimit;
       if (isSuperAdmin) {
-        const limit = formData.get("monthlyUploadLimit");
-        if (limit !== null && limit !== undefined && limit !== "") {
-          updateData.monthlyUploadLimit = Number(limit);
-        }
-        const aiLimit = formData.get("aiDescriptionDailyLimit");
-        if (aiLimit !== null && aiLimit !== undefined && aiLimit !== "") {
-          updateData.aiDescriptionDailyLimit = Number(aiLimit);
-        }
+        // Super admins can upload up to 1000 images, ensure the limit is at least equal to images
+        imageUploadLimit = Math.max(
+          images.length,
+          formData.imageUploadLimit || artworkData.imageUploadLimit || 1
+        );
+        if (imageUploadLimit > 1000) imageUploadLimit = 1000;
       }
-      const expiresAt = formData.get("expiresAt");
-      if (isSuperAdmin && expiresAt) {
-        updateData.expiresAt = new Date(expiresAt);
-      }
+      const updateData = {
+        id: artworkData.id,
+        title: formData.title,
+        price: Number(formData.price),
+        description: formData.description,
+        dimensions: formData.dimensions,
+        material: formData.material,
+        style: formData.style,
+        year: Number(formData.year),
+        featured: !!formData.featured,
+        sold: !!formData.sold,
+        instagramReelLink: formData.instagramReelLink,
+        youtubeVideoLink: formData.youtubeVideoLink,
+        status: formData.status || "ACTIVE",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        images,
+        imageUploadLimit,
+        monthlyUploadLimit: formData.monthlyUploadLimit,
+        aiDescriptionDailyLimit: formData.aiDescriptionDailyLimit,
+        expiresAt: formData.expiresAt
+          ? new Date(formData.expiresAt)
+          : undefined,
+      };
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (err) {
       console.error("Artwork update failed:", err);
@@ -151,7 +144,7 @@ export default function EditArtwork() {
   }
 
   // Artwork not found
-  if (!artwork) {
+  if (!artworkData) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -169,12 +162,12 @@ export default function EditArtwork() {
 
   // Find the artist for this artwork (for super admin)
   const selectedArtist =
-    isSuperAdmin && artwork.userId
-      ? artists.find((a) => a.id === artwork.userId)
+    isSuperAdmin && artworkData.userId
+      ? artists.find((a) => a.id === artworkData.userId)
       : null;
 
   // Debug: log the artwork object to check monthlyUploadLimit
-  console.log("EditArtwork: artwork data passed to form", artwork);
+  console.log("EditArtwork: artwork data passed to form", artworkData);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 sm:py-16 bg-white/50">
@@ -205,7 +198,7 @@ export default function EditArtwork() {
         <div className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100">
           <div className="p-6 sm:p-8">
             <ArtworkForm
-              initialData={artwork}
+              initialData={artworkData}
               onSubmit={handleSubmit}
               isLoading={false}
               submitLabel="Update Artwork"

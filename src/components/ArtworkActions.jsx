@@ -21,7 +21,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
   const utils = trpc.useContext();
 
   // Only show edit for artists if they own the artwork
-  const isOwner = user && artwork && artwork.userId === user.id;
+  const isOwner = user && artwork && artwork?.userId === user.id;
   if (!isSuperAdmin && !isOwner) return null;
 
   // Sync local status state with prop
@@ -94,8 +94,8 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
       };
       // If changing from expired to active/inactive, update expiresAt to 1 month from now
       const isExpired =
-        artwork.status === "EXPIRED" ||
-        (artwork.expiresAt && new Date(artwork.expiresAt) < new Date());
+        artwork?.status === "EXPIRED" ||
+        (artwork?.expiresAt && new Date(artwork.expiresAt) < new Date());
       if ((newStatus === "ACTIVE" || newStatus === "INACTIVE") && isExpired) {
         const oneMonthFromNow = new Date();
         oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
@@ -119,7 +119,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
             onClick={handleEdit}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
+            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
             title="Edit artwork"
           >
             <PencilSquareIcon className="h-4 w-4 mr-1.5" />
@@ -138,7 +138,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
                 value={status}
                 onChange={handleStatusChange}
                 disabled={isStatusUpdating}
-                className="appearance-none inline-flex min-w-[95px] items-center px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-12 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
+                className="appearance-none inline-flex min-w-[95px] items-center px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-12 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:border-yellow-300 cursor-pointer"
                 title="Change artwork status"
               >
                 <option value="ACTIVE" className="font-sans text-sm">
@@ -176,7 +176,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             disabled={isDeleting}
-            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-full bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete artwork"
           >
             <TrashIcon className="h-4 w-4 mr-1.5" />
@@ -189,7 +189,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        dialogTitle={`Delete ${artwork.title}`}
+        dialogTitle={`Delete ${artwork?.title}`}
         description={
           "Are you sure you want to delete this artwork? This action cannot be undone."
         }

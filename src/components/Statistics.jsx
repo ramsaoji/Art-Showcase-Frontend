@@ -27,23 +27,27 @@ const INRIcon = ({ className }) => (
 
 const StatCard = memo(({ icon: Icon, label, value, subtext, delay }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
+    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+    whileInView={{ opacity: 1, y: 0, scale: 1 }}
     viewport={{ once: true }}
-    transition={{ duration: 0.5, delay }}
-    className="relative p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-shadow duration-300"
+    transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    className="relative p-6 bg-gradient-to-br from-white/80 via-white/90 to-gray-50/80 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group"
   >
     <div className="absolute -top-4 left-6">
-      <div className="p-3 bg-indigo-600/90 backdrop-blur-sm rounded-xl shadow-lg">
+      <div className="p-3 bg-gradient-to-br from-indigo-500/90 to-indigo-600/90 backdrop-blur-sm rounded-xl shadow-lg group-hover:shadow-xl transition-shadow duration-300">
         <Icon className="w-6 h-6 text-white" />
       </div>
     </div>
     <div className="mt-4">
-      <div className="font-artistic text-3xl font-bold text-gray-900">
+      <div className="font-artistic text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
         {value?.toLocaleString() || "0"}
-        <span className="text-indigo-600">+</span>
+        <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent">
+          +
+        </span>
       </div>
-      <p className="mt-1 text-sm font-sans text-gray-600">{label}</p>
+      <p className="mt-1 text-sm font-sans font-semibold text-gray-700 uppercase tracking-wide">
+        {label}
+      </p>
       {subtext && (
         <p className="mt-2 text-xs font-sans text-gray-500 italic">{subtext}</p>
       )}
@@ -53,10 +57,10 @@ const StatCard = memo(({ icon: Icon, label, value, subtext, delay }) => (
 
 const SkeletonCard = ({ delay }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay }}
-    className="relative p-6 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl hover:shadow-2xl transition-shadow duration-300 animate-pulse"
+    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ duration: 0.5, delay, ease: "easeOut" }}
+    className="relative p-6 bg-gradient-to-br from-white/50 via-white/60 to-gray-50/50 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl animate-pulse"
   >
     {/* Icon placeholder */}
     <div className="absolute -top-4 left-6">
@@ -165,13 +169,13 @@ export default function Statistics() {
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-3xl" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
           </div>
         </div>
 
         <div className="relative container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <div className="font-artistic text-4xl sm:text-5xl font-bold text-gray-400 tracking-wide mb-4">
+            <div className="font-artistic text-4xl sm:text-5xl font-bold text-gray-600 tracking-wide mb-4">
               Our Growing Community
             </div>
             <div className="font-sans text-lg text-gray-400 max-w-2xl mx-auto">
@@ -209,11 +213,11 @@ export default function Statistics() {
   if (allZero) return null;
 
   return (
-    <section className="relative py-10 sm:py-20 overflow-hidden bg-white/80">
+    <section className="relative py-10 sm:py-20 overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-3xl" />
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
         </div>
       </div>
 

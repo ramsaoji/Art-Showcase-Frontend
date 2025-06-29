@@ -19,6 +19,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Get tRPC utils for query invalidation
+  const utils = trpc.useContext();
+
   // Helper: set token in localStorage and state
   const saveToken = (jwt) => {
     setToken(jwt);
@@ -91,40 +94,48 @@ export function AuthProvider({ children }) {
   }, [token, user]);
 
   // Login function
-  const login = useCallback(async (email, password) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await trpcClient.user.login.mutate({ email, password });
-      saveToken(res.token);
-      setUser(res.user);
-      return res.user;
-    } catch (err) {
-      // Parse error message if it's a JSON string (validation error)
-      let errorMessage = err.message || "Login failed";
+  const login = useCallback(
+    async (email, password) => {
+      setLoading(true);
+      setError(null);
       try {
-        // Check if the error message is a JSON string
-        if (errorMessage.startsWith("[") && errorMessage.includes("code")) {
-          const parsedError = JSON.parse(errorMessage);
-          // Handle validation errors
-          if (
-            parsedError[0]?.code === "too_small" &&
-            parsedError[0]?.path?.includes("password")
-          ) {
-            errorMessage = `Password must contain at least ${parsedError[0].minimum} characters`;
-          }
-        }
-      } catch (parseError) {
-        // If parsing fails, use the original error message
-        console.error("Error parsing error message:", parseError);
-      }
+        const res = await trpcClient.user.login.mutate({ email, password });
+        saveToken(res.token);
+        setUser(res.user);
 
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        // Invalidate getAllArtworks query after successful login
+        // This ensures fresh data is fetched with the new user context
+        utils.artwork.getAllArtworks.invalidate();
+
+        return res.user;
+      } catch (err) {
+        // Parse error message if it's a JSON string (validation error)
+        let errorMessage = err.message || "Login failed";
+        try {
+          // Check if the error message is a JSON string
+          if (errorMessage.startsWith("[") && errorMessage.includes("code")) {
+            const parsedError = JSON.parse(errorMessage);
+            // Handle validation errors
+            if (
+              parsedError[0]?.code === "too_small" &&
+              parsedError[0]?.path?.includes("password")
+            ) {
+              errorMessage = `Password must contain at least ${parsedError[0].minimum} characters`;
+            }
+          }
+        } catch (parseError) {
+          // If parsing fails, use the original error message
+          console.error("Error parsing error message:", parseError);
+        }
+
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [utils.artwork.getAllArtworks]
+  );
 
   // Logout function
   const logout = useCallback(() => {
@@ -134,7 +145,11 @@ export function AuthProvider({ children }) {
 
     // Clear all artwork-related localStorage data
     clearArtworkLocalStorage();
-  }, []);
+
+    // Invalidate getAllArtworks query after logout
+    // This ensures fresh data is fetched with the public context
+    utils.artwork.getAllArtworks.invalidate();
+  }, [utils.artwork.getAllArtworks]);
 
   // Clear error function for external use
   const clearError = useCallback(() => setError(null), []);

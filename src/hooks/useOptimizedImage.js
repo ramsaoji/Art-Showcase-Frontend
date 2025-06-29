@@ -30,7 +30,7 @@ export default function useOptimizedImage(publicId, options = {}) {
 
   // Preload high quality image when component mounts
   useEffect(() => {
-    if (!publicId || !lazy) {
+    if (!publicId) {
       setIsLoading(false);
       return;
     }
@@ -60,7 +60,7 @@ export default function useOptimizedImage(publicId, options = {}) {
       img.onload = null;
       img.onerror = null;
     };
-  }, [publicId, fullSizeUrl, lazy]);
+  }, [publicId, fullSizeUrl]);
 
   return {
     previewUrl,

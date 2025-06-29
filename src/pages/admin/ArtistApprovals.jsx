@@ -108,9 +108,16 @@ export default function ArtistApprovals() {
   const handleSetActive = (id, active, user) => {
     setError("");
     setSuccess("");
-    setActiveDialogUser(user);
-    setActiveDialogAction(active ? "activate" : "deactivate");
-    setActiveDialogOpen(true);
+
+    // If activating, directly call the mutation without confirmation dialog
+    if (active) {
+      setActiveMutation.mutate({ id, active: true });
+    } else {
+      // Only show confirmation dialog for deactivate actions
+      setActiveDialogUser(user);
+      setActiveDialogAction("deactivate");
+      setActiveDialogOpen(true);
+    }
   };
 
   const confirmSetActive = async () => {
@@ -146,15 +153,28 @@ export default function ArtistApprovals() {
   const artistTotalCount = userPage?.artistTotalCount || 0;
 
   return (
-    <div className="font-sans bg-white/50">
+    <div className="relative min-h-screen bg-white/50">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
+          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
+        </div>
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
+        </div>
+        <div className="absolute left-0 bottom-0">
+          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-indigo-400/8 via-indigo-500/8 to-indigo-600/8 blur-3xl" />
+        </div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative container mx-auto px-4 sm:px-8 py-12 "
+        className="relative container mx-auto px-4 sm:px-8 py-12"
       >
         <div className="text-center mb-12">
-          <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
+          <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900 leading-[1.1] py-2">
             Artist Management
           </h2>
           <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
@@ -169,7 +189,7 @@ export default function ArtistApprovals() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="w-full sm:w-80 px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-sans placeholder-gray-400 shadow-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all duration-200 outline-none hover:border-indigo-200"
+            className="w-full sm:w-80 px-5 py-3 rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm text-gray-900 font-sans placeholder-gray-400 shadow-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all duration-200 outline-none hover:border-indigo-200"
             style={{ boxShadow: "0 2px 12px 0 rgba(80, 80, 180, 0.04)" }}
           />
         </div>
@@ -187,7 +207,7 @@ export default function ArtistApprovals() {
             className="mb-4 items-center font-sans"
           />
         )}
-        <div className="bg-white/90 shadow-xl rounded-2xl p-3 sm:p-6 md:p-8 font-sans border border-gray-100">
+        <div className="bg-white/90 backdrop-blur-xl shadow-xl rounded-2xl p-3 sm:p-6 md:p-8 font-sans border border-white/20 ring-1 ring-white/10">
           {isLoading || isFetching ? (
             <div className="flex justify-center py-16">
               <Loader size="medium" />
@@ -242,7 +262,7 @@ export default function ArtistApprovals() {
                         return (
                           <tr
                             key={artist.id}
-                            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+                            className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-white/20"
                           >
                             <td
                               className="px-4 py-3 font-sans align-middle text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate text-left"
@@ -289,7 +309,7 @@ export default function ArtistApprovals() {
                               <div className="flex items-center gap-2 justify-start">
                                 {!artist.approved && (
                                   <button
-                                    className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-sans transition-all duration-200 focus:ring-2 focus:ring-blue-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm font-semibold"
+                                    className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 font-sans transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm font-semibold"
                                     onClick={() => handleApprove(artist.id)}
                                     disabled={approveMutation.isLoading}
                                   >
@@ -297,10 +317,10 @@ export default function ArtistApprovals() {
                                   </button>
                                 )}
                                 <button
-                                  className={`min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 focus:ring-2 focus:ring-indigo-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
+                                  className={`min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
                                     artist.active
-                                      ? "bg-amber-300 text-amber-900 hover:bg-amber-400"
-                                      : "bg-green-600 text-white hover:bg-green-700"
+                                      ? "bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 hover:from-amber-400 hover:to-amber-500"
+                                      : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800"
                                   }`}
                                   onClick={() =>
                                     handleSetActive(
@@ -315,7 +335,7 @@ export default function ArtistApprovals() {
                                 </button>
                                 {canDelete && (
                                   <button
-                                    className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-sans font-semibold transition-all duration-200 focus:ring-2 focus:ring-red-300 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
+                                    className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
                                     onClick={() =>
                                       handleDeleteUserClick(artist)
                                     }
@@ -339,7 +359,7 @@ export default function ArtistApprovals() {
               <div className="w-full mt-8">
                 <div className="flex flex-nowrap justify-center sm:justify-between items-center gap-2 sm:gap-4 min-w-0">
                   <button
-                    className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gray-100 text-gray-700 font-sans font-medium hover:bg-gray-200 transition-all duration-200 border-none outline-none focus:ring-2 focus:ring-indigo-300 shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
+                    className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
                   >
@@ -350,10 +370,10 @@ export default function ArtistApprovals() {
                       (p) => (
                         <button
                           key={p}
-                          className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-sans font-medium transition-all duration-200 border-none outline-none focus:ring-2 focus:ring-indigo-300 shadow-sm min-w-[36px] sm:min-w-[44px] text-sm sm:text-base ${
+                          className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm min-w-[36px] sm:min-w-[44px] text-sm sm:text-base ${
                             p === page
-                              ? "bg-indigo-600 text-white shadow-md"
-                              : "bg-gray-100 text-gray-700 hover:bg-indigo-50"
+                              ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md"
+                              : "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-indigo-50 hover:to-indigo-100"
                           }`}
                           onClick={() => setPage(p)}
                         >
@@ -363,7 +383,7 @@ export default function ArtistApprovals() {
                     )}
                   </div>
                   <button
-                    className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gray-100 text-gray-700 font-sans font-medium hover:bg-gray-200 transition-all duration-200 border-none outline-none focus:ring-2 focus:ring-indigo-300 shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
+                    className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                   >
@@ -379,7 +399,7 @@ export default function ArtistApprovals() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <h3 className="mt-4 font-artistic text-2xl sm:text-3xl font-semibold text-gray-900">
+              <h3 className="mt-4 font-artistic text-2xl sm:text-3xl font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
                 No artists found
               </h3>
               <p className="mt-4 text-lg text-gray-500 font-sans">

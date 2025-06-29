@@ -40,31 +40,31 @@ export default function GalleryGrid({
     );
   }
   // State to track if we should use virtualization (for larger datasets)
-  const [useVirtualization, setUseVirtualization] = useState(false);
+  // const [useVirtualization, setUseVirtualization] = useState(false);
 
   // Update virtualization state when artwork count changes
-  useEffect(() => {
-    // Enable virtualization for larger datasets (more than 20 items)
-    setUseVirtualization(filteredArtworks.length > 20);
-  }, [filteredArtworks.length]);
+  // useEffect(() => {
+  //   // Enable virtualization for larger datasets (more than 20 items)
+  //   setUseVirtualization(filteredArtworks.length > 20);
+  // }, [filteredArtworks.length]);
 
   // Memoized item renderer for virtualization
-  const ItemRenderer = useCallback(
-    (index) => {
-      const image = filteredArtworks[index];
-      return (
-        <div className="p-2">
-          <ArtworkCard
-            key={image.id}
-            artwork={image}
-            onDelete={handleDelete}
-            onQuickView={handleImageClick}
-          />
-        </div>
-      );
-    },
-    [filteredArtworks, handleDelete, handleImageClick]
-  );
+  // const ItemRenderer = useCallback(
+  //   (index) => {
+  //     const image = filteredArtworks[index];
+  //     return (
+  //       <div className="p-2">
+  //         <ArtworkCard
+  //           key={image.id}
+  //           artwork={image}
+  //           onDelete={handleDelete}
+  //           onQuickView={handleImageClick}
+  //         />
+  //       </div>
+  //     );
+  //   },
+  //   [filteredArtworks, handleDelete, handleImageClick]
+  // );
 
   // Helper: check if any filter or search is active
   const filtersActive =
@@ -113,41 +113,6 @@ export default function GalleryGrid({
             ))}
           </div>
         </div>
-      ) : // Use virtualization for larger datasets, infinite scroll for smaller ones
-      useVirtualization ? (
-        <div className="min-h-[800px]">
-          <Virtuoso
-            style={{ height: "800px" }}
-            totalCount={filteredArtworks.length}
-            overscan={200}
-            endReached={hasMore ? loadMore : null}
-            itemContent={ItemRenderer}
-            components={{
-              Footer: () => (
-                <div className="text-center py-8">
-                  {hasMore ? (
-                    <div className="inline-flex items-center space-x-2 text-gray-600">
-                      <Loader size="small" />
-                      <span className="text-base font-sans">
-                        Loading more artworks...
-                      </span>
-                    </div>
-                  ) : (
-                    filteredArtworks.length > 0 && (
-                      <p className="text-gray-500 font-sans text-base">
-                        🎨{" "}
-                        {filteredArtworks.length === 1
-                          ? "You've seen the only artwork!"
-                          : `You've seen all ${filteredArtworks.length} artworks!`}
-                      </p>
-                    )
-                  )}
-                </div>
-              ),
-            }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12"
-          />
-        </div>
       ) : (
         <InfiniteScroll
           dataLength={filteredArtworks.length}
@@ -178,7 +143,7 @@ export default function GalleryGrid({
           scrollThreshold={0.8}
           style={{ overflow: "visible" }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
             {filteredArtworks.map((image) => (
               <ArtworkCard
                 key={image.id}
