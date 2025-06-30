@@ -226,7 +226,7 @@ export default function HeroCarousel() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="font-artistic text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-2xl shadow-black/50 mb-4 sm:mb-8 leading-tight tracking-wide"
+                className="font-artistic text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-2xl shadow-black/50 mb-4 sm:mb-8 leading-tight tracking-wide"
               >
                 Welcome to{" "}
                 <span className="italic block sm:inline text-white drop-shadow-2xl shadow-black/50">
@@ -395,7 +395,7 @@ export default function HeroCarousel() {
                           duration: 0.7,
                           ease: [0.25, 0.1, 0.25, 1.0],
                         }}
-                        className="font-artistic text-5xl sm:text-6xl md:text-7xl xl:text-6xl 2xl:text-7xl font-bold text-white drop-shadow-2xl shadow-black/50 mb-4 sm:mb-8 xl:mb-6 tracking-wide xl:leading-tight xl:break-words xl:hyphens-auto"
+                        className="font-artistic text-4xl sm:text-6xl md:text-7xl xl:text-6xl 2xl:text-7xl font-bold text-white drop-shadow-2xl shadow-black/50 mb-4 sm:mb-8 xl:mb-6 tracking-wide xl:leading-tight xl:break-words xl:hyphens-auto"
                         style={{
                           wordBreak: "break-word",
                           overflowWrap: "break-word",
@@ -475,7 +475,7 @@ export default function HeroCarousel() {
                           duration: 0.7,
                           ease: [0.25, 0.1, 0.25, 1.0],
                         }}
-                        className="font-artistic text-5xl sm:text-6xl md:text-7xl xl:text-8xl font-bold text-white drop-shadow-2xl shadow-black/50 mb-4 sm:mb-8 tracking-wide"
+                        className="font-artistic text-4xl sm:text-6xl md:text-7xl xl:text-8xl font-bold text-white drop-shadow-2xl shadow-black/50 mb-4 sm:mb-8 tracking-wide"
                       >
                         Welcome to{" "}
                         <span className="italic block sm:inline text-white drop-shadow-2xl shadow-black/50">
