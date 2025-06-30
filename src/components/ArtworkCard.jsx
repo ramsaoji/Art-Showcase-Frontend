@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   PhotoIcon,
   StarIcon,
@@ -69,14 +69,18 @@ export default function ArtworkCard({
 
   // Manual navigation
   const goTo = (idx) => {
+    if (idx === currentIndex) return;
+    clearTimeout(autoTimer.current);
     setCurrentIndex(idx);
   };
   const goPrev = (e) => {
     e && e.stopPropagation();
+    clearTimeout(autoTimer.current);
     setCurrentIndex((idx) => (idx - 1 + images.length) % images.length);
   };
   const goNext = (e) => {
     e && e.stopPropagation();
+    clearTimeout(autoTimer.current);
     setCurrentIndex((idx) => (idx + 1) % images.length);
   };
 
@@ -239,7 +243,7 @@ export default function ArtworkCard({
         ) : (
           <>
             {/* Loading placeholder */}
-            {(!imageState.highQualityLoaded || !imageLoaded) && (
+            {!imageState.highQualityLoaded && (
               <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse flex items-center justify-center z-10">
                 <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4">
                   <PhotoIcon className="h-12 w-12 text-gray-300" />
@@ -248,46 +252,27 @@ export default function ArtworkCard({
             )}
             {/* Only load image when in viewport */}
             {isVisible && (
-              <picture>
-                <source
-                  type="image/webp"
-                  srcSet={imageState.getSrcSet([300, 600, 900])}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                />
-                {/* Low quality image placeholder while loading */}
-                {!imageState.highQualityLoaded && imageState.previewUrl && (
-                  <img
-                    key={`preview-${
-                      currentImage.cloudinary_public_id || currentImage.url
-                    }-${currentIndex}`}
-                    src={imageState.previewUrl}
+              <div className="relative w-full h-full overflow-hidden">
+                <AnimatePresence>
+                  <motion.img
+                    key={currentIndex}
+                    src={
+                      imageState.fullSizeUrl ||
+                      currentImage.url ||
+                      "placeholder.png"
+                    }
                     alt={safeArtwork.title}
-                    className="absolute inset-0 h-full w-full object-cover blur-sm transition-opacity duration-300"
-                    style={{
-                      opacity: imageState.highQualityLoaded ? 0 : 0.8,
-                    }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-110"
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
+                    loading={priority ? "eager" : "lazy"}
                   />
-                )}
-                {/* Main image */}
-                <img
-                  key={`${
-                    currentImage.cloudinary_public_id || currentImage.url
-                  }-${currentIndex}`}
-                  ref={imageRef}
-                  src={
-                    currentImage.cloudinary_public_id && imageState.fullSizeUrl
-                      ? imageState.fullSizeUrl
-                      : currentImage.url || ""
-                  }
-                  alt={safeArtwork.title}
-                  className={`w-full h-full object-cover transform transition-all duration-700 group-hover:scale-110 ${
-                    imageLoaded ? "opacity-100" : "opacity-0"
-                  }`}
-                  onError={handleImageError}
-                  onLoad={handleImageLoad}
-                  loading={priority ? "eager" : "lazy"}
-                />
-              </picture>
+                </AnimatePresence>
+              </div>
             )}
             {/* Enhanced gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-100 transition-all duration-300" />

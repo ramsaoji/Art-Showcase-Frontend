@@ -38,6 +38,7 @@ export default function ArtworkDetail() {
   const [modalOpen, setModalOpen] = useState(false);
   const [fullScreenImageOpen, setFullScreenImageOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showZoomHint, setShowZoomHint] = useState(false);
   const [socialMediaModal, setSocialMediaModal] = useState({
     isOpen: false,
     type: null,
@@ -119,14 +120,20 @@ export default function ArtworkDetail() {
     }, 4000);
     return () => clearTimeout(timer);
   }, [currentIndex, images.length]);
-  // Reset index if images change
+  // Reset index and set loading state when artwork changes
   useEffect(() => {
     setCurrentIndex(0);
+    setIsLoading(true);
   }, [artwork?.id]);
 
+  // Show zoom hint temporarily
   useEffect(() => {
-    setIsLoading(true);
-  }, [currentImage.cloudinary_public_id, currentImage.url]);
+    setShowZoomHint(true);
+    const timer = setInterval(() => {
+      setShowZoomHint((prev) => !prev);
+    }, 3500); // Toggles every 3.5s
+    return () => clearInterval(timer);
+  }, [currentIndex, artwork?.id]);
 
   if (artworkLoading) {
     return (
@@ -179,7 +186,7 @@ export default function ArtworkDetail() {
         >
           <div className="flex flex-col xl:flex-row h-full min-h-[85vh]">
             {/* Enhanced Image Section */}
-            <div className="relative flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900/50 to-black/30 min-h-[50vh] xl:min-h-[60vh]">
+            <div className="relative flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900/50 to-black/30 h-[50vh] md:h-[60vh] xl:min-h-[60vh] xl:h-auto">
               {images.length === 0 || imageError ? (
                 <div className="flex flex-col items-center justify-center text-gray-300 p-8 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
                   <PhotoIcon className="h-16 w-16 mb-4 text-gray-400" />
@@ -193,7 +200,7 @@ export default function ArtworkDetail() {
               ) : (
                 <div
                   className="relative w-full h-full flex items-center justify-center select-none overflow-hidden"
-                  style={{ minHeight: "inherit" }}
+                  // style={{ minHeight: "inherit" }}
                 >
                   {/* Enhanced blurred background image with gradient overlay */}
                   <div className="absolute inset-0 w-full h-full">
@@ -270,7 +277,7 @@ export default function ArtworkDetail() {
 
                   {/* Enhanced progressive image loading */}
                   <div
-                    className="relative z-10 w-full h-full flex items-center justify-center cursor-zoom-in group"
+                    className="relative z-10 w-full h-[50vh] md:h-[60vh] xl:h-full flex items-center justify-center cursor-zoom-in group"
                     onClick={() => {
                       setFullScreenImageOpen(true);
                     }}
@@ -302,9 +309,18 @@ export default function ArtworkDetail() {
                           display: imageError ? "none" : "block",
                         }}
                       />
-                      {/* Subtle zoom indicator */}
-                      <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <MagnifyingGlassIcon className="h-4 w-4 text-white" />
+                      {/* Enhanced zoom indicator */}
+                      <div
+                        className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                          showZoomHint ? "opacity-100" : "opacity-0"
+                        } group-hover:opacity-100`}
+                      >
+                        <div className="flex items-center space-x-2 rounded-full bg-black/30 px-3 py-1.5 text-white sm:space-x-2.5 sm:px-4 sm:py-2">
+                          <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                          <span className="font-sans text-xs font-semibold sm:text-sm">
+                            Click to expand
+                          </span>
+                        </div>
                       </div>
                     </div>
                     {isLoading && (

@@ -39,6 +39,7 @@ export default function ImageModal({
   const [highQualityLoaded, setHighQualityLoaded] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [fullScreenImageOpen, setFullScreenImageOpen] = useState(false);
+  const [showZoomHint, setShowZoomHint] = useState(false);
   const [socialMediaModal, setSocialMediaModal] = useState({
     isOpen: false,
     type: null,
@@ -63,7 +64,21 @@ export default function ImageModal({
     setIsLoading(true);
     setHasError(false);
     setHighQualityLoaded(false);
-  }, [image?.id, currentIndex]);
+  }, [image?.id]);
+
+  // Show zoom hint temporarily when modal opens or image changes
+  useEffect(() => {
+    if (isOpen) {
+      setShowZoomHint(true);
+      const timer = setInterval(() => {
+        setShowZoomHint((prev) => !prev);
+      }, 3500); // Toggles every 3.5 seconds to create a "come and go" effect
+
+      return () => clearInterval(timer);
+    } else {
+      setShowZoomHint(false);
+    }
+  }, [isOpen, image?.id]);
 
   // Progressive loading logic for current image
   const getPreviewImageUrl = () => {
@@ -103,13 +118,30 @@ export default function ImageModal({
   // Carousel navigation handlers
   const goPrev = (e) => {
     e && e.stopPropagation();
-    setCurrentIndex((idx) => (idx - 1 + images.length) % images.length);
+    // Prioritize carousel navigation. If at the start, use artwork navigation.
+    if (images.length > 1 && currentIndex > 0) {
+      setCurrentIndex((idx) => idx - 1);
+    } else if (onPrevious && hasPrevious) {
+      onPrevious();
+    }
   };
   const goNext = (e) => {
     e && e.stopPropagation();
-    setCurrentIndex((idx) => (idx + 1) % images.length);
+    // Prioritize carousel navigation. If at the end, use artwork navigation.
+    if (images.length > 1 && currentIndex < images.length - 1) {
+      setCurrentIndex((idx) => idx + 1);
+    } else if (onNext && hasNext) {
+      onNext();
+    }
   };
   const goTo = (idx) => setCurrentIndex(idx);
+
+  // Determine if navigation is possible
+  const canGoPrev =
+    (images.length > 1 && currentIndex > 0) || (hasPrevious && onPrevious);
+  const canGoNext =
+    (images.length > 1 && currentIndex < images.length - 1) ||
+    (hasNext && onNext);
 
   // Reset index if image changes
   useEffect(() => {
@@ -284,9 +316,18 @@ export default function ImageModal({
                               objectFit: "contain",
                             }}
                           />
-                          {/* Subtle zoom indicator */}
-                          <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <MagnifyingGlassIcon className="h-4 w-4 text-white" />
+                          {/* Enhanced zoom indicator */}
+                          <div
+                            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                              showZoomHint ? "opacity-100" : "opacity-0"
+                            } group-hover:opacity-100`}
+                          >
+                            <div className="flex items-center space-x-2 rounded-full bg-black/30 px-3 py-1.5 text-white sm:space-x-2.5 sm:px-4 sm:py-2">
+                              <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="font-sans text-xs font-semibold sm:text-sm">
+                                Click to expand
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -361,25 +402,27 @@ export default function ImageModal({
                     </div>
                   )}
 
-                  {/* Enhanced Navigation buttons for carousel */}
-                  {images.length > 1 && (
-                    <>
+                  {/* Enhanced Navigation buttons for artwork/carousel */}
+                  <>
+                    {canGoPrev && (
                       <button
                         onClick={goPrev}
                         className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 sm:p-3 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
-                        aria-label="Previous image"
+                        aria-label="Previous"
                       >
                         <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
+                    )}
+                    {canGoNext && (
                       <button
                         onClick={goNext}
                         className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 sm:p-3 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
-                        aria-label="Next image"
+                        aria-label="Next"
                       >
                         <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
-                    </>
-                  )}
+                    )}
+                  </>
                 </div>
 
                 {/* Enhanced Details Section */}
@@ -630,32 +673,27 @@ export default function ImageModal({
               <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
 
-            {/* Navigation arrows - only show if multiple images */}
-            {images && images.length > 1 && (
-              <>
-                {/* Previous arrow */}
+            {/* Navigation arrows - unified logic */}
+            <>
+              {canGoPrev && (
                 <button
-                  onClick={() => {
-                    setCurrentIndex(
-                      (idx) => (idx - 1 + images.length) % images.length
-                    );
-                  }}
+                  onClick={goPrev}
                   className="absolute left-2 sm:left-4 md:left-6 top-1/2 transform -translate-y-1/2 z-[110] w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition-all duration-300 cursor-pointer border border-white/20 hover:border-white/40 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  aria-label="Previous"
                 >
                   <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 </button>
-
-                {/* Next arrow */}
+              )}
+              {canGoNext && (
                 <button
-                  onClick={() => {
-                    setCurrentIndex((idx) => (idx + 1) % images.length);
-                  }}
+                  onClick={goNext}
                   className="absolute right-2 sm:right-4 md:right-6 top-1/2 transform -translate-y-1/2 z-[110] w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition-all duration-300 cursor-pointer border border-white/20 hover:border-white/40 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  aria-label="Next"
                 >
                   <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                 </button>
-              </>
-            )}
+              )}
+            </>
             {/* Image container */}
             <div className="relative w-full h-full flex items-center justify-center p-8">
               {/* Blurred background image with gradient overlay - same as main section */}
