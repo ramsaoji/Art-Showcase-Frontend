@@ -318,9 +318,9 @@ export default function HeroCarousel() {
               handlePrev();
               resetTimer();
             }}
-            className="hidden xl:flex absolute left-6 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
+            className="flex absolute left-2 sm:left-4 xl:left-6 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 sm:p-3 xl:p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
           >
-            <ChevronLeftIcon className="h-6 w-6" />
+            <ChevronLeftIcon className="h-5 w-5 sm:h-6 sm:w-6 xl:h-6 xl:w-6" />
           </button>
           {/* Right Arrow */}
           <button
@@ -329,9 +329,9 @@ export default function HeroCarousel() {
               handleNext();
               resetTimer();
             }}
-            className="hidden xl:flex absolute right-6 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
+            className="flex absolute right-2 sm:right-4 xl:right-6 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 sm:p-3 xl:p-3 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
           >
-            <ChevronRightIcon className="h-6 w-6" />
+            <ChevronRightIcon className="h-5 w-5 sm:h-6 sm:w-6 xl:h-6 xl:w-6" />
           </button>
         </>
       )}

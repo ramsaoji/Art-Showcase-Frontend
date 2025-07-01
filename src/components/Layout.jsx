@@ -40,7 +40,7 @@ export default function Layout() {
 
       {/* Content */}
       <Navbar />
-      <main className="relative flex-grow pt-16 sm:pt-20">
+      <main className="relative flex-grow pt-14 sm:pt-20">
         <div className="relative">
           <Outlet />
         </div>

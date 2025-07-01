@@ -17,7 +17,6 @@ const EditArtwork = lazy(() => import("./pages/EditArtwork"));
 const Login = lazy(() => import("./pages/Login"));
 const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
 const Signup = lazy(() => import("./pages/Signup"));
-const ArtistApprovals = lazy(() => import("./pages/admin/ArtistApprovals"));
 const AdminManagement = lazy(() => import("./pages/admin/AdminManagement"));
 const ChangePassword = lazy(() => import("./pages/user/ChangePassword"));
 
