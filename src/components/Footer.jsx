@@ -217,6 +217,14 @@ export default function Footer() {
                   className="w-3.5 h-3.5 mx-1"
                   fill="currentColor"
                   viewBox="0 0 20 20"
+                  style={{ display: "inline-block", verticalAlign: "middle" }}
+                  whileHover={{ scale: 1.4, y: -6 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 10,
+                  }}
                 >
                   <path
                     fillRule="evenodd"
@@ -224,7 +232,15 @@ export default function Footer() {
                     clipRule="evenodd"
                   />
                 </motion.svg>
-                <span>by Ram Saoji</span>
+                <span>by </span>
+                <a
+                  href="https://ramsaoji.techness.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 text-indigo-500 hover:text-indigo-600 transition-colors"
+                >
+                  Ram Saoji
+                </a>
               </p>
             </div>
           </motion.div>
