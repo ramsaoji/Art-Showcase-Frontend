@@ -75,7 +75,8 @@ const SortableItem = memo(function SortableItem({
               type="button"
               tabIndex={0}
               aria-label="Drag to reorder"
-              className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300"
+              className="flex items-center justify-center w-10 h-10 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors"
+              style={{ touchAction: "none" }}
               {...listeners}
               onClick={(e) => e.stopPropagation()}
             >
@@ -174,7 +175,8 @@ const SortableItem = memo(function SortableItem({
             type="button"
             tabIndex={0}
             aria-label="Drag to reorder"
-            className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors"
+            className="flex items-center justify-center w-10 h-10 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors"
+            style={{ touchAction: "none" }}
             {...listeners}
             onClick={(e) => e.stopPropagation()}
           >
@@ -216,7 +218,7 @@ const CarouselManagement = () => {
   const [originalItems, setOriginalItems] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const successTimeout = useRef();
-  const limit = 5;
+  const limit = 10;
 
   const { data, isLoading, error, refetch, isFetching } =
     trpc.artwork.getCarouselImages.useQuery(
@@ -307,8 +309,8 @@ const CarouselManagement = () => {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
     useSensor(TouchSensor),
+    useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -453,9 +455,11 @@ const CarouselManagement = () => {
         <button
           onClick={handleSaveChanges}
           className={`px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-200 flex items-center justify-center gap-2${
-            isSaving ? " opacity-60 pointer-events-none cursor-not-allowed" : ""
+            isSaving || !hasUnsavedChanges
+              ? " opacity-60 pointer-events-none cursor-not-allowed"
+              : ""
           }`}
-          disabled={false}
+          disabled={isSaving || !hasUnsavedChanges}
         >
           {isSaving ? (
             <span className="flex items-center gap-2">

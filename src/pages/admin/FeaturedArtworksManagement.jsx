@@ -95,6 +95,7 @@ const SortableArtwork = memo(function SortableArtwork({
                 tabIndex={0}
                 aria-label="Drag to reorder"
                 className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300"
+                style={{ touchAction: "none" }}
                 {...listeners}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -222,7 +223,8 @@ const SortableArtwork = memo(function SortableArtwork({
               type="button"
               tabIndex={0}
               aria-label="Drag to reorder"
-              className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors"
+              className="flex items-center justify-center w-10 h-10 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300"
+              style={{ touchAction: "none" }}
               {...listeners}
               onClick={(e) => e.stopPropagation()}
             >
@@ -269,8 +271,7 @@ const FeaturedArtworksManagement = () => {
   const [featuredOffset, setFeaturedOffset] = useState(0);
   const [hasMoreAvailable, setHasMoreAvailable] = useState(true);
   const [hasMoreFeatured, setHasMoreFeatured] = useState(true);
-  const limit = 5;
-  const [activeId, setActiveId] = useState(null);
+  const limit = 10;
   const [showSuccess, setShowSuccess] = useState(false);
   const [previousAvailable, setPreviousAvailable] = useState([]);
   const [previousFeatured, setPreviousFeatured] = useState([]);
@@ -384,17 +385,18 @@ const FeaturedArtworksManagement = () => {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
     useSensor(TouchSensor),
+    useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const handleDragStart = (event) => {
-    setActiveId(event.active.id);
+    console.log("Drag started", event);
   };
   const handleDragEnd = (event) => {
-    setActiveId(null);
+    console.log("Drag ended", event);
     const { active, over } = event;
+    if (!over) return;
     if (active.id !== over.id) {
       setFeatured((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
@@ -404,7 +406,7 @@ const FeaturedArtworksManagement = () => {
     }
   };
   const handleDragCancel = () => {
-    setActiveId(null);
+    console.log("Drag cancelled");
   };
 
   const toggleFeatured = (artwork) => {
@@ -491,15 +493,11 @@ const FeaturedArtworksManagement = () => {
             Click on an artwork to add it to the featured list. Use the Load
             More button to browse all available artworks.
           </p>
-          <div
-            className={`space-y-3 flex-1 min-h-0 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 border border-gray-200 rounded-xl p-4 ${
-              isFetchingAvailable && available.length === 0
-                ? "flex items-center justify-center"
-                : ""
-            }`}
-          >
-            {isFetchingAvailable && available.length === 0 ? (
-              <Loader size="small" />
+          <div className="space-y-3 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 border border-gray-200 rounded-xl p-4">
+            {isLoadingAvailable && available.length === 0 ? (
+              <div className="flex justify-center items-center min-h-[10rem]">
+                <Loader size="medium" />
+              </div>
             ) : (
               <AnimatePresence>
                 {available.length === 0 && (
@@ -525,6 +523,11 @@ const FeaturedArtworksManagement = () => {
                 ))}
               </AnimatePresence>
             )}
+            {isFetchingAvailable && available.length > 0 && (
+              <div className="flex justify-center py-2">
+                <Loader size="small" />
+              </div>
+            )}
             {hasMoreAvailable && !isFetchingAvailable && (
               <div className="flex justify-center mt-4">
                 <span
@@ -535,11 +538,6 @@ const FeaturedArtworksManagement = () => {
                   <ArrowDownCircleIcon className="w-5 h-5 text-indigo-400" />
                   Load More
                 </span>
-              </div>
-            )}
-            {isFetchingAvailable && available.length > 0 && (
-              <div className="flex justify-center py-2">
-                <Loader size="small" />
               </div>
             )}
             {!hasMoreAvailable && available.length > 0 && (
@@ -565,15 +563,11 @@ const FeaturedArtworksManagement = () => {
             Drag to reorder. Click to unfeature. Use the Load More button to see
             more featured artworks.
           </p>
-          <div
-            className={`space-y-3 flex-1 min-h-0 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 border border-gray-200 rounded-xl p-4 ${
-              isFetchingFeatured && featured.length === 0
-                ? "flex items-center justify-center"
-                : ""
-            }`}
-          >
-            {isFetchingFeatured && featured.length === 0 ? (
-              <Loader size="small" />
+          <div className="space-y-3 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 border border-gray-200 rounded-xl p-4">
+            {isLoadingFeatured && featured.length === 0 ? (
+              <div className="flex justify-center items-center min-h-[10rem]">
+                <Loader size="medium" />
+              </div>
             ) : (
               <DndContext
                 sensors={sensors}
@@ -612,6 +606,11 @@ const FeaturedArtworksManagement = () => {
                 </SortableContext>
               </DndContext>
             )}
+            {isFetchingFeatured && featured.length > 0 && (
+              <div className="flex justify-center py-2">
+                <Loader size="small" />
+              </div>
+            )}
             {hasMoreFeatured && !isFetchingFeatured && (
               <div className="flex justify-center mt-4">
                 <span
@@ -624,11 +623,6 @@ const FeaturedArtworksManagement = () => {
                 </span>
               </div>
             )}
-            {isFetchingFeatured && featured.length > 0 && (
-              <div className="flex justify-center py-2">
-                <Loader size="small" />
-              </div>
-            )}
             {!hasMoreFeatured && featured.length > 0 && (
               <div className="text-center text-xs text-gray-400 py-2">
                 All featured artworks loaded
@@ -639,11 +633,11 @@ const FeaturedArtworksManagement = () => {
             <button
               onClick={handleSaveChanges}
               className={`w-full md:w-auto px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-200 flex items-center justify-center gap-2${
-                isSaving
+                isSaving || !hasUnsavedChanges
                   ? " opacity-60 pointer-events-none cursor-not-allowed"
                   : ""
               }`}
-              disabled={false}
+              disabled={isSaving || !hasUnsavedChanges}
             >
               {isSaving ? (
                 <span className="flex items-center gap-2">

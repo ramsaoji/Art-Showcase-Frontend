@@ -7,12 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 const AdminManagement = () => {
   const [activeTab, setActiveTab] = useState("artist-approvals");
 
-  const tabStyles =
-    "px-5 py-2 font-sans font-semibold text-base transition-all duration-300 border-b-2 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0";
-  const activeTabStyles = "border-indigo-500 text-indigo-600";
-  const inactiveTabStyles =
-    "border-transparent text-gray-500 hover:text-indigo-500 hover:border-indigo-500";
-
   return (
     <div className="relative min-h-screen bg-gray-50/50">
       {/* Decorative background elements */}
@@ -21,7 +15,12 @@ const AdminManagement = () => {
         <div className="absolute -bottom-64 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-blue-400/10 to-transparent blur-3xl" />
       </div>
 
-      <div className="relative container mx-auto px-4 sm:px-8 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative container mx-auto px-4 sm:px-8 py-12"
+      >
         <div className="text-center mb-12">
           <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic tracking-wide text-gray-900">
             Admin Management
@@ -147,7 +146,7 @@ const AdminManagement = () => {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
