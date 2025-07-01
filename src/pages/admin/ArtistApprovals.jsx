@@ -219,6 +219,9 @@ export default function ArtistApprovals() {
                   <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-center">
                     Artworks
                   </th>
+                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-center">
+                    Email Verified
+                  </th>
                   <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
                     Active
                   </th>
@@ -259,6 +262,17 @@ export default function ArtistApprovals() {
                         <td className="px-4 py-3 font-sans align-middle text-gray-700 text-center">
                           {artist.artworksCount ?? 0}
                         </td>
+                        <td className="px-4 py-3 font-sans align-middle text-center">
+                          {artist.emailVerified ? (
+                            <span className="px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block bg-green-100 text-green-700">
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block bg-red-100 text-red-700">
+                              Not Verified
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 font-sans align-middle text-left">
                           <div className="flex items-center gap-2">
                             <span
@@ -287,35 +301,37 @@ export default function ArtistApprovals() {
                         </td>
                         <td className="px-4 py-3 font-sans align-middle whitespace-normal min-w-[120px] text-left">
                           <div className="flex items-center gap-2 justify-start">
-                            {!artist.approved && (
+                            {artist.emailVerified && !artist.approved && (
                               <button
-                                className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 font-sans transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm font-semibold"
+                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 font-sans transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm font-semibold"
                                 onClick={() => handleApprove(artist.id)}
                                 disabled={approveMutation.isLoading}
                               >
                                 Approve
                               </button>
                             )}
-                            <button
-                              className={`min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
-                                artist.active
-                                  ? "bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 hover:from-amber-400 hover:to-amber-500"
-                                  : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800"
-                              }`}
-                              onClick={() =>
-                                handleSetActive(
-                                  artist.id,
-                                  !artist.active,
-                                  artist
-                                )
-                              }
-                              disabled={setActiveMutation.isLoading}
-                            >
-                              {artist.active ? "Deactivate" : "Activate"}
-                            </button>
+                            {artist.emailVerified && (
+                              <button
+                                className={`min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
+                                  artist.active
+                                    ? "bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 hover:from-amber-400 hover:to-amber-500"
+                                    : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800"
+                                }`}
+                                onClick={() =>
+                                  handleSetActive(
+                                    artist.id,
+                                    !artist.active,
+                                    artist
+                                  )
+                                }
+                                disabled={setActiveMutation.isLoading}
+                              >
+                                {artist.active ? "Deactivate" : "Activate"}
+                              </button>
+                            )}
                             {canDelete && (
                               <button
-                                className="min-w-[90px] px-2 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
+                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
                                 onClick={() => handleDeleteUserClick(artist)}
                                 disabled={
                                   deleteUserMutation.isLoading || isDeletingUser
