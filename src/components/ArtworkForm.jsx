@@ -2182,18 +2182,21 @@ export default function ArtworkForm({
         <button
           type="submit"
           disabled={
-            isSubmitting ||
-            (isArtist &&
-              !isSuperAdmin &&
-              monthlyUploadCount >= monthlyUploadLimit)
+            isArtist &&
+            !isSuperAdmin &&
+            monthlyUploadCount >= monthlyUploadLimit
           }
-          className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base font-medium hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 hover:border-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+          className={`w-full sm:w-auto inline-flex justify-center items-center px-6 py-2.5 border-2 border-indigo-600 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base font-medium hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 hover:border-indigo-700  transition-all duration-300${
+            isSubmitting
+              ? " opacity-60 pointer-events-none cursor-not-allowed"
+              : ""
+          }`}
         >
           {isSubmitting ? (
-            <div className="flex items-center">
-              <Loader size="small" className="mr-2" />
+            <span className="flex items-center gap-2">
+              <Loader size="xsmall" color="indigo-600" />
               {getStepLabel()}
-            </div>
+            </span>
           ) : initialData ? (
             "Update Artwork"
           ) : (

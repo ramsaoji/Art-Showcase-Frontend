@@ -171,7 +171,7 @@ export default function GalleryGrid({
                 <span>Try adjusting your search or filter settings.</span>
                 <button
                   onClick={handleResetAllFilters}
-                  className="ml-2 inline-flex font-medium text-indigo-600 hover:text-indigo-800 hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                  className="ml-2 inline-flex font-medium text-indigo-600 hover:text-indigo-800 hover:underline  transition-colors"
                 >
                   Clear all filters
                 </button>

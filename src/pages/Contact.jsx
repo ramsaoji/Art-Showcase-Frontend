@@ -192,14 +192,18 @@ const Contact = () => {
                   <div>
                     <button
                       type="submit"
-                      className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center gap-2"
-                      disabled={isSubmitting}
+                      className={`w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300  flex items-center justify-center gap-2${
+                        isSubmitting
+                          ? " opacity-60 pointer-events-none cursor-not-allowed"
+                          : ""
+                      }`}
+                      disabled={false}
                     >
                       {isSubmitting ? (
-                        <>
-                          <Loader size="small" className="mr-2" />
+                        <span className="flex items-center gap-2">
+                          <Loader size="xsmall" color="indigo-600" />
                           Sending...
-                        </>
+                        </span>
                       ) : (
                         "Send Message"
                       )}

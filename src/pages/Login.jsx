@@ -218,14 +218,18 @@ export default function Login() {
                 <div>
                   <button
                     type="submit"
-                    disabled={isSubmitting || authLoading}
-                    className="w-full inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-indigo-500 disabled:hover:via-indigo-600 disabled:hover:to-indigo-700"
+                    className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 ${
+                      isSubmitting
+                        ? " opacity-60 pointer-events-none cursor-not-allowed"
+                        : ""
+                    }`}
+                    disabled={false}
                   >
                     {isSubmitting ? (
-                      <div className="flex items-center">
-                        <Loader size="small" className="mr-2" />
+                      <span className="flex items-center gap-2">
+                        <Loader size="xsmall" color="indigo-600" />
                         Signing in...
-                      </div>
+                      </span>
                     ) : (
                       "Sign in"
                     )}

@@ -250,11 +250,18 @@ export default function ChangePassword() {
               <div className="flex justify-center pt-4">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-semibold rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-all duration-300 font-sans"
+                  className={`w-full inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-semibold rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700  transition-all duration-300 font-sans${
+                    isSubmitting
+                      ? " opacity-60 pointer-events-none cursor-not-allowed"
+                      : ""
+                  }`}
+                  disabled={false}
                 >
                   {isSubmitting ? (
-                    <Loader size="small" color="white" />
+                    <span className="flex items-center gap-2">
+                      <Loader size="xsmall" color="indigo-600" />
+                      Updating...
+                    </span>
                   ) : (
                     "Update Password"
                   )}

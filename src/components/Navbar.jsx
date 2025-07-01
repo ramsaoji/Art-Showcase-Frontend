@@ -113,9 +113,7 @@ export default function Navbar() {
   // Dynamically build navigation array
   const navLinks = [
     ...navigation,
-    ...(isSuperAdmin && user
-      ? [{ name: "Artist Approvals", href: "/admin" }]
-      : []),
+    ...(isSuperAdmin && user ? [{ name: "Admin", href: "/admin" }] : []),
     ...((isSuperAdmin || isArtist) && user
       ? [{ name: "Add Artwork", href: "/add-artwork" }]
       : []),
@@ -199,7 +197,11 @@ export default function Navbar() {
                                   "relative group px-2 lg:px-3 py-2.5 text-sm lg:text-base font-sans tracking-wide transition-all duration-300 flex items-center whitespace-nowrap h-auto",
                                   (
                                     item.href === "/admin"
-                                      ? location.pathname.startsWith("/admin")
+                                      ? location.pathname === "/admin"
+                                      : item.href === "/admin/homepage"
+                                      ? location.pathname.startsWith(
+                                          "/admin/homepage"
+                                        )
                                       : location.pathname === item.href
                                   )
                                     ? "text-indigo-600 font-semibold"
@@ -212,13 +214,17 @@ export default function Navbar() {
                           </span>
                           {item.name !== "Add Artwork" && (
                             <>
-                              <div className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 scale-95 opacity-0 group-hover:opacity-100 rounded-lg transition-all duration-300" />
+                              <div className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 scale-95 opacity-0 group-hover:opacity-100 rounded-xl transition-all duration-300" />
                               {(item.href === "/admin"
-                                ? location.pathname.startsWith("/admin")
+                                ? location.pathname === "/admin"
+                                : item.href === "/admin/homepage"
+                                ? location.pathname.startsWith(
+                                    "/admin/homepage"
+                                  )
                                 : location.pathname === item.href) && (
                                 <motion.div
                                   layoutId="navbar-active"
-                                  className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 rounded-lg"
+                                  className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 rounded-xl"
                                   transition={{
                                     type: "spring",
                                     bounce: 0.2,
@@ -299,7 +305,7 @@ export default function Navbar() {
                             leaveFrom="transform opacity-100 scale-100"
                             leaveTo="transform opacity-0 scale-95"
                           >
-                            <Menu.Items className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            <Menu.Items className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                               <div className="px-4 py-2 border-b border-gray-100">
                                 <p className="text-sm font-medium text-gray-900 truncate font-sans">
                                   {getUserDisplayName()}

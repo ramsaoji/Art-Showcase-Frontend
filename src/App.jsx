@@ -18,6 +18,7 @@ const Login = lazy(() => import("./pages/Login"));
 const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ArtistApprovals = lazy(() => import("./pages/admin/ArtistApprovals"));
+const AdminManagement = lazy(() => import("./pages/admin/AdminManagement"));
 const ChangePassword = lazy(() => import("./pages/user/ChangePassword"));
 
 // Analytics wrapper component
@@ -136,7 +137,7 @@ function App() {
                   element={
                     <Suspense fallback={<PageLoader />}>
                       <ProtectedRoute superAdminOnly>
-                        <ArtistApprovals />
+                        <AdminManagement />
                       </ProtectedRoute>
                     </Suspense>
                   }

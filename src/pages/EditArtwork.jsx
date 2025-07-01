@@ -73,7 +73,7 @@ export default function EditArtwork() {
         id: img.id,
         url: img.url,
         cloudinary_public_id: img.cloudinary_public_id,
-        order: img.order,
+        galleryOrder: img.galleryOrder,
         showInCarousel: img.showInCarousel,
       }));
       // For admins/super admins, ensure imageUploadLimit is at least equal to the number of images

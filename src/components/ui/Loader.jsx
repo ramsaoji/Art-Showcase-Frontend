@@ -1,25 +1,37 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-const Loader = ({ size = "medium", className = "" }) => {
+const Loader = ({ size = "medium", className = "", color = "indigo-600" }) => {
   const sizeClasses = {
+    xsmall: "w-3 h-3",
     small: "w-5 h-5",
     medium: "w-16 h-16",
     large: "w-24 h-24",
   };
 
   const containerSize = {
+    xsmall: "w-5 h-5",
     small: "w-8 h-8",
     medium: "w-24 h-24",
     large: "w-32 h-32",
   };
 
+  // Helper to get Tailwind class for bg color
+  const bgColor = `bg-${color}`;
+  const dotColor = `bg-${color}`;
+  // For decorative dots, use a slightly lighter shade if indigo, else same
+  const decoDotColor = color.startsWith("indigo") ? "bg-indigo-500" : bgColor;
+
   return (
     <div className={`flex justify-center items-center ${className}`}>
       <div className={`relative ${containerSize[size]}`}>
-        {/* Main spinning circle with indigo gradient */}
+        {/* Main spinning circle with gradient or solid color */}
         <motion.div
-          className={`absolute inset-0 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-400`}
+          className={`absolute inset-0 rounded-full ${bgColor} ${
+            color === "indigo-600"
+              ? "bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-400"
+              : ""
+          }`}
           animate={{ rotate: 360 }}
           transition={{
             duration: 3,
@@ -51,7 +63,7 @@ const Loader = ({ size = "medium", className = "" }) => {
           }}
         >
           <div
-            className={`${sizeClasses[size]} scale-[0.2] rounded-full bg-indigo-600`}
+            className={`${sizeClasses[size]} scale-[0.2] rounded-full ${dotColor}`}
           />
         </motion.div>
 
@@ -59,7 +71,7 @@ const Loader = ({ size = "medium", className = "" }) => {
         {["top", "right", "bottom", "left"].map((position, index) => (
           <motion.div
             key={position}
-            className="absolute w-2 h-2 rounded-full bg-indigo-500"
+            className={`absolute w-2 h-2 rounded-full ${decoDotColor}`}
             style={{
               [position]: "0",
               left:
@@ -84,7 +96,7 @@ const Loader = ({ size = "medium", className = "" }) => {
           />
         ))}
 
-        {/* Artistic swirl */}
+        {/* Artistic swirl (keeps indigo gradient for subtlety) */}
         <motion.div
           className="absolute inset-0"
           animate={{ rotate: -360 }}

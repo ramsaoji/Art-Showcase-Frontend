@@ -166,7 +166,7 @@ export default function ArtworkImageGrid({
       .filter((_, i) => i !== idx)
       .map((img, i) => ({
         ...img,
-        order: i,
+        galleryOrder: i,
         // Preserve showInCarousel property
         showInCarousel: img.showInCarousel || false,
       }));
@@ -200,7 +200,7 @@ export default function ArtworkImageGrid({
       const reordered = arrayMove(images, oldIndex, newIndex).map(
         (img, idx) => ({
           ...img,
-          order: idx,
+          galleryOrder: idx,
           // Preserve showInCarousel property
           showInCarousel: img.showInCarousel || false,
         })

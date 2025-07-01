@@ -80,7 +80,7 @@ export default function VerifyEmail() {
               <Alert type="success" message={message} />
               <Link
                 to="/login"
-                className="mt-4 inline-block px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 font-sans transition-all duration-300 ease-in-out"
+                className="mt-4 inline-block px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700  font-sans transition-all duration-300 ease-in-out"
               >
                 Proceed to Login
               </Link>

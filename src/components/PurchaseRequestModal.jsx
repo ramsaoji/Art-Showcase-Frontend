@@ -286,14 +286,18 @@ export default function PurchaseRequestModal({
             <button
               type="submit"
               form="purchase-form"
-              className="flex-1 min-w-0 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold shadow hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap text-base"
-              disabled={isSubmitting}
+              className={`flex-1 min-w-0 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold shadow hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap text-base${
+                isSubmitting
+                  ? " opacity-60 pointer-events-none cursor-not-allowed"
+                  : ""
+              }`}
+              disabled={false}
             >
               {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="flex items-center gap-2">
+                  <Loader size="xsmall" color="indigo-600" />
                   Submitting...
-                </>
+                </span>
               ) : (
                 "Submit Request"
               )}
