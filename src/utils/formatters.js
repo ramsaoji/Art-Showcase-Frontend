@@ -45,10 +45,14 @@ export function toDatetimeLocalValue(dateString) {
  */
 export function getFriendlyErrorMessage(err) {
   if (!err) return "An unknown error occurred.";
-  let message = typeof err === "string" ? err : err.message || "";
-
-  // Check for tRPC error code
   const code = err?.data?.code || err?.code;
+  let message =
+    (code &&
+      code !== "INTERNAL_SERVER_ERROR" &&
+      err.data &&
+      err.data.message) ||
+    (typeof err === "string" ? err : err.message || "");
+
   if (code === "UNAUTHORIZED") {
     return "You must be logged in to perform this action.";
   }
@@ -61,11 +65,11 @@ export function getFriendlyErrorMessage(err) {
   if (code === "CONFLICT") {
     return "This email is already registered.";
   }
-  if (code === "BAD_REQUEST") {
-    // BAD_REQUEST is often used for validation or user input errors; fallback to message mapping
-  }
   if (code === "INTERNAL_SERVER_ERROR") {
     return "The service is temporarily unavailable. Please try again later.";
+  }
+  if (code === "BAD_REQUEST" && message) {
+    return message;
   }
 
   // Try to parse JSON error arrays (Zod validation, etc.)

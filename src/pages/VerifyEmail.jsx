@@ -15,6 +15,18 @@ export default function VerifyEmail() {
   const [message, setMessage] = useState("");
 
   const verifyEmail = trpc.user.verifyEmail.useMutation();
+  const resendVerification = trpc.user.resendVerificationEmail.useMutation();
+  const [resendEmail, setResendEmail] = useState("");
+  const [resendStatus, setResendStatus] = useState(null);
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
+
+  // Auto-clear resendStatus after 5 seconds
+  useEffect(() => {
+    if (resendStatus) {
+      const timer = setTimeout(() => setResendStatus(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendStatus]);
 
   useEffect(() => {
     if (!token) {
@@ -36,10 +48,20 @@ export default function VerifyEmail() {
         },
         onError: (err) => {
           setStatus("error");
-          setMessage(
+          const friendlyMsg =
             getFriendlyErrorMessage(err) ||
-              "An unexpected error occurred during verification. Please try again later."
-          );
+            "An unexpected error occurred during verification. Please try again later.";
+          setMessage(friendlyMsg);
+          // Check if error is token expired
+          if (
+            err?.data?.code === "TOKEN_EXPIRED" ||
+            (typeof friendlyMsg === "string" &&
+              friendlyMsg.toLowerCase().includes("expired"))
+          ) {
+            setIsTokenExpired(true);
+          } else {
+            setIsTokenExpired(false);
+          }
         },
       }
     );
@@ -73,11 +95,11 @@ export default function VerifyEmail() {
           )}
           {status === "success" && (
             <div className="flex flex-col items-center gap-4">
+              <Alert type="success" message={message} />
               <CheckCircleIcon className="w-16 h-16 text-green-500" />
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">
                 Email Verified!
               </h1>
-              <Alert type="success" message={message} />
               <Link
                 to="/login"
                 className="mt-4 inline-block px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700  font-sans transition-all duration-300 ease-in-out"
@@ -92,10 +114,75 @@ export default function VerifyEmail() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">
                 Verification Failed
               </h1>
-              <Alert type="error" message={message} />
+              {resendStatus ? (
+                <Alert
+                  type={resendStatus.type}
+                  message={resendStatus.message}
+                />
+              ) : (
+                <Alert type="error" message={message} />
+              )}
+              {isTokenExpired && (
+                <div className="mt-4 flex flex-col items-center w-full">
+                  <div className="w-full max-w-xs flex flex-col gap-2 items-center">
+                    <p className="text-gray-600 text-sm font-sans mb-1 text-center">
+                      If your verification link expired, enter your email to
+                      resend:
+                    </p>
+                    <input
+                      type="email"
+                      className="w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 border-gray-200 focus:ring-indigo-500 focus:border-transparent text-sm shadow-sm"
+                      placeholder="Enter your email"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      disabled={resendVerification.isLoading}
+                    />
+                    <button
+                      className={`w-full mt-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 flex items-center justify-center gap-2${
+                        resendVerification.isLoading || !resendEmail
+                          ? " opacity-60 pointer-events-none cursor-not-allowed"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setResendStatus(null);
+                        resendVerification.mutate(
+                          { email: resendEmail },
+                          {
+                            onSuccess: () =>
+                              setResendStatus({
+                                type: "success",
+                                message:
+                                  "A new verification email has been sent!",
+                              }),
+                            onError: (err) => {
+                              setResendStatus({
+                                type: "error",
+                                message:
+                                  getFriendlyErrorMessage(err) ||
+                                  "Failed to resend email.",
+                              });
+                            },
+                          }
+                        );
+                      }}
+                      disabled={resendVerification.isLoading || !resendEmail}
+                    >
+                      {resendVerification.isLoading && (
+                        <Loader size="xsmall" color="indigo-600" />
+                      )}
+                      <span>
+                        {resendVerification.isLoading
+                          ? "Sending..."
+                          : "Resend Verification Email"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="my-6 w-full max-w-xs border-t border-gray-200" />
               <Link
                 to="/contact"
-                className="mt-4 inline-block px-6 py-3 text-base font-medium text-white bg-gray-600 rounded-xl shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 font-sans transition-all duration-300 ease-in-out"
+                className="w-full max-w-xs px-6 py-3 rounded-xl bg-gray-600 text-white font-sans font-semibold shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-300 text-base text-center"
               >
                 Contact Support
               </Link>
