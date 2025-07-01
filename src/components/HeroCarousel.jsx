@@ -115,7 +115,9 @@ export default function HeroCarousel() {
   // Set timer for carousel
   useEffect(() => {
     if (slides.length > 1) {
-      timerRef.current = setTimeout(handleNext, 5000);
+      const isWelcome = slides[currentSlideIndex]?.type === "welcome";
+      const timeout = isWelcome ? 2500 : 4000;
+      timerRef.current = setTimeout(handleNext, timeout);
     }
     return () => {
       if (timerRef.current) {
@@ -127,7 +129,9 @@ export default function HeroCarousel() {
   const resetTimer = () => {
     clearTimeout(timerRef.current);
     if (slides.length > 1) {
-      timerRef.current = setTimeout(handleNext, 5000);
+      const isWelcome = slides[currentSlideIndex]?.type === "welcome";
+      const timeout = isWelcome ? 2000 : 5000;
+      timerRef.current = setTimeout(handleNext, timeout);
     }
   };
 
