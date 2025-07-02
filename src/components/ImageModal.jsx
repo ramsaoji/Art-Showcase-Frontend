@@ -19,6 +19,7 @@ import Loader from "./ui/Loader";
 import { useAuth } from "../contexts/AuthContext";
 import PurchaseRequestModal from "./PurchaseRequestModal";
 import SocialMediaModal from "./SocialMediaModal";
+import useMediaQuery from "../hooks/useMediaQuery";
 
 export default function ImageModal({
   isOpen,
@@ -48,6 +49,7 @@ export default function ImageModal({
   });
   const currentImage = images[currentIndex] || {};
   const autoTimer = useRef();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   // Debug logging
   console.log("ImageModal Debug:", {
@@ -229,18 +231,16 @@ export default function ImageModal({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.95 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="relative w-full max-w-5xl flex flex-col xl:flex-row bg-transparent backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 ring-1 ring-white/5"
+                className="relative w-full max-w-5xl min-w-[320px] sm:min-w-[480px] md:min-w-[600px] lg:min-w-[700px] flex flex-col xl:flex-row bg-transparent backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 ring-1 ring-white/5"
                 style={{
                   height: "calc(100dvh - 5rem)",
                 }}
               >
                 {/* Image Section */}
-                <div className="relative flex h-2/5 sm:h-1/2 w-full items-center justify-center bg-gradient-to-br from-gray-900/50 to-black/30 md:h-2/3 xl:h-full xl:flex-[3]">
+                <div className="relative flex h-2/5 sm:h-1/2 w-full min-w-[220px] sm:min-w-[320px] md:min-w-[400px] lg:min-w-[500px] min-h-[220px] sm:min-h-[320px] md:min-h-[400px] lg:min-h-[500px] items-center justify-center flex-[3_3_0%] bg-gradient-to-br from-gray-900/50 to-black/30 md:h-2/3 xl:h-full">
                   {isLoading && !hasError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-                      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6">
-                        <Loader size="large" />
-                      </div>
+                    <div className="absolute inset-0 flex items-center justify-center z-20 w-full h-full min-h-40 min-w-40 sm:min-h-0 sm:min-w-0">
+                      <Loader size={isDesktop ? "large" : "medium"} />
                     </div>
                   )}
 
@@ -426,7 +426,7 @@ export default function ImageModal({
                 </div>
 
                 {/* Enhanced Details Section */}
-                <div className="relative h-3/5 w-full flex-shrink-0 bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl flex flex-col md:h-1/3 xl:h-full xl:flex-[2] border-t xl:border-l xl:border-t-0 border-white/20">
+                <div className="relative h-3/5 w-full flex-shrink-0 flex-[2_2_0%] bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl flex flex-col md:h-1/3 xl:h-full xl:border-l xl:border-t-0 border-t border-white/20">
                   {/* Enhanced close button */}
                   <button
                     onClick={handleImageModalClose}

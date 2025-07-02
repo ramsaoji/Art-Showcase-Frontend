@@ -33,6 +33,7 @@
     "react-dom": "^18.2.0",
     "react-firebase-hooks": "^5.1.1",
     "react-hook-form": "^7.58.1",
+    "react-image-crop": "^11.0.10",
     "react-infinite-scroll-component": "^6.1.0",
     "react-router-dom": "^6.21.1",
     "react-virtuoso": "^4.12.8",

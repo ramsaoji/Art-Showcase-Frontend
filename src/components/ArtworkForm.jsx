@@ -19,6 +19,7 @@ import ArtistSelect from "./ArtistSelect";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 import { v4 as uuidv4 } from "uuid";
 import ArtworkImageGrid from "./ArtworkImageGrid";
+import ImageCropper from "./ImageCropper";
 
 // Progress bar component
 function ProgressBar({ progress, label }) {
@@ -333,6 +334,9 @@ export default function ArtworkForm({
   // Add a ref to skip the next persist after reset
   const skipNextPersist = useRef(false);
   const isInitialLoad = useRef(true);
+  // Add state for image cropping
+  const [croppingImage, setCroppingImage] = useState(null);
+  const [croppingImageIndex, setCroppingImageIndex] = useState(null);
 
   // Only fetch monthly upload count for artists creating new artwork
   const shouldFetchUploadCount = isArtist && !isSuperAdmin && !initialData; // Only for artists (not admins) creating new artwork
@@ -849,6 +853,73 @@ export default function ArtworkForm({
     }
   };
 
+  // Handle image cropping
+  const handleCropImage = async (idx) => {
+    const image = images[idx];
+    if (image) {
+      if (image.file) {
+        setCroppingImageIndex(idx);
+        setCroppingImage(URL.createObjectURL(image.file));
+      } else if (image.url) {
+        // Fetch the image as a blob and create a File
+        const response = await fetch(image.url);
+        const blob = await response.blob();
+        const file = new File([blob], `cropped-${idx}.jpg`, {
+          type: blob.type,
+        });
+        // Update the image object with the new file
+        images[idx].file = file;
+        setImages([...images]);
+        setCroppingImageIndex(idx);
+        setCroppingImage(URL.createObjectURL(file));
+      }
+    }
+  };
+
+  // Handle crop completion
+  const handleCropComplete = (croppedResult) => {
+    if (croppingImageIndex !== null && croppedResult) {
+      const { blob, url } = croppedResult;
+
+      // Create a new File object from the cropped blob
+      const croppedFile = new File(
+        [blob],
+        `cropped-${
+          images[croppingImageIndex].file?.name ||
+          images[croppingImageIndex].id ||
+          "image"
+        }.jpg`,
+        {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        }
+      );
+
+      // Update the image in the images array
+      const newImages = [...images];
+      newImages[croppingImageIndex] = {
+        ...newImages[croppingImageIndex],
+        file: croppedFile,
+        preview: url,
+        uploaded: false, // Force re-upload
+        url: undefined, // Remove old URL
+        cloudinary_public_id: undefined, // Remove old Cloudinary ID
+      };
+
+      setImages(newImages);
+    }
+
+    // Clean up
+    setCroppingImage(null);
+    setCroppingImageIndex(null);
+  };
+
+  // Handle crop cancellation
+  const handleCropCancel = () => {
+    setCroppingImage(null);
+    setCroppingImageIndex(null);
+  };
+
   // Remove image
   const handleRemoveImage = (idx) => {
     const removed = images[idx];
@@ -1123,6 +1194,15 @@ export default function ArtworkForm({
     };
   }, [images]);
 
+  // Clean up cropping image URL when component unmounts or cropping is cancelled
+  useEffect(() => {
+    return () => {
+      if (croppingImage) {
+        URL.revokeObjectURL(croppingImage);
+      }
+    };
+  }, [croppingImage]);
+
   // When images change, auto-update imageUploadLimit to match images.length for super admins
   useEffect(() => {
     if (
@@ -1304,6 +1384,7 @@ export default function ArtworkForm({
         validationErrors={validationErrors}
         onFilesSelected={handleImageFiles}
         onRemoveImage={handleRemoveImage}
+        onCrop={handleCropImage}
         onDismissErrors={handleDismissErrors}
         fileSizeMB={backendLimits?.fileSizeMB ?? 5}
         isAutoDismissible={isAutoDismissible}
@@ -2295,6 +2376,18 @@ export default function ArtworkForm({
             </span>
           )}
       </div>
+
+      {/* Image Cropper Modal */}
+      {croppingImage && (
+        <ImageCropper
+          image={croppingImage}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+          aspectRatio={1} // Square crop by default
+          minWidth={100}
+          minHeight={100}
+        />
+      )}
     </form>
   );
 }

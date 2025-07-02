@@ -1,5 +1,10 @@
 import React from "react";
-import { XMarkIcon, PhotoIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  PhotoIcon,
+  PlusIcon,
+  ScissorsIcon,
+} from "@heroicons/react/24/outline";
 import {
   DndContext,
   closestCenter,
@@ -17,7 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-function SortableImage({ img, idx, onRemove, isSuperAdmin = false }) {
+function SortableImage({ img, idx, onRemove, onCrop, isSuperAdmin = false }) {
   const {
     attributes,
     listeners,
@@ -77,27 +82,45 @@ function SortableImage({ img, idx, onRemove, isSuperAdmin = false }) {
         </div>
       )}
 
-      {/* Remove button - positioned outside the image */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(idx);
-        }}
-        className={`absolute -top-3 -right-3 rounded-full p-2 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white z-20 touch-manipulation ${
-          img.showInCarousel && !isSuperAdmin
-            ? "bg-gray-400 text-gray-600 cursor-not-allowed hover:bg-gray-400 hover:scale-100"
-            : "bg-red-500 text-white hover:bg-red-600"
-        }`}
-        title={
-          img.showInCarousel && !isSuperAdmin
-            ? "Cannot remove carousel image - contact admin"
-            : "Remove image"
-        }
-        disabled={img.showInCarousel && !isSuperAdmin}
-      >
-        <XMarkIcon className="h-3 w-3 stroke-2" />
-      </button>
+      {/* Action buttons - positioned outside the image */}
+      <div className="absolute -top-3 -right-3 flex space-x-1">
+        {/* Crop button - show for all images with a file or url */}
+        {(img.file || img.url) && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCrop(idx);
+            }}
+            className="rounded-full p-2 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white z-20 touch-manipulation bg-blue-500 text-white hover:bg-blue-600"
+            title="Crop image"
+          >
+            <ScissorsIcon className="h-3 w-3 stroke-2" />
+          </button>
+        )}
+
+        {/* Remove button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(idx);
+          }}
+          className={`rounded-full p-2 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white z-20 touch-manipulation ${
+            img.showInCarousel && !isSuperAdmin
+              ? "bg-gray-400 text-gray-600 cursor-not-allowed hover:bg-gray-400 hover:scale-100"
+              : "bg-red-500 text-white hover:bg-red-600"
+          }`}
+          title={
+            img.showInCarousel && !isSuperAdmin
+              ? "Cannot remove carousel image - contact admin"
+              : "Remove image"
+          }
+          disabled={img.showInCarousel && !isSuperAdmin}
+        >
+          <XMarkIcon className="h-3 w-3 stroke-2" />
+        </button>
+      </div>
 
       {/* Image number indicator - always visible */}
       <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
@@ -105,7 +128,7 @@ function SortableImage({ img, idx, onRemove, isSuperAdmin = false }) {
       </div>
 
       {/* Mobile drag indicator */}
-      <div className="absolute top-2 right-2 bg-violet-500/80 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+      <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         Drag
       </div>
     </div>
@@ -119,6 +142,7 @@ export default function ArtworkImageGrid({
   imageErrors = [],
   validationErrors = [],
   onFilesSelected,
+  onCrop,
   fileSizeMB = 5,
   onDismissErrors,
   isAutoDismissible = false,
@@ -511,6 +535,7 @@ export default function ArtworkImageGrid({
                         img={img}
                         idx={idx}
                         onRemove={handleRemoveImage}
+                        onCrop={onCrop}
                         isSuperAdmin={isSuperAdmin}
                       />
                       {isSuperAdmin && (
