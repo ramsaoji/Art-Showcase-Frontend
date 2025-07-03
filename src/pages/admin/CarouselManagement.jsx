@@ -22,6 +22,7 @@ import Alert from "../../components/Alert";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/solid";
 import { ArrowDownCircleIcon } from "@heroicons/react/24/outline";
+import Badge from "../../components/Badge";
 
 const SortableItem = memo(function SortableItem({
   id,
@@ -65,46 +66,30 @@ const SortableItem = memo(function SortableItem({
               </span>
             )}
             {isSelected && (
-              <span className="text-xs text-indigo-600 font-medium">
+              <Badge type="featured" variant="simple" className="text-xs">
                 Selected
-              </span>
+              </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              tabIndex={0}
-              aria-label="Drag to reorder"
-              className="flex items-center justify-center w-10 h-10 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors"
-              style={{ touchAction: "none" }}
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ChevronUpDownIcon
-                className="w-4 h-4 text-gray-600"
-                title="Drag to reorder"
-              />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggle(id);
-              }}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200  ${
-                isSelected ? "bg-indigo-600" : "bg-gray-200"
-              }`}
-              aria-label={
-                isSelected ? "Deselect from carousel" : "Select for carousel"
-              }
-              tabIndex={0}
-            >
-              {isSelected && <CheckIcon className="w-4 h-4 text-white" />}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle(id);
+            }}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200  ${
+              isSelected ? "bg-indigo-600" : "bg-gray-200"
+            }`}
+            aria-label={
+              isSelected ? "Deselect from carousel" : "Select for carousel"
+            }
+            tabIndex={0}
+          >
+            {isSelected && <CheckIcon className="w-4 h-4 text-white" />}
+          </button>
         </div>
 
-        {/* Content row: Image, title, artist */}
+        {/* Content row: Image, title, artist, drag btn */}
         <div className="flex items-center gap-3">
           <img
             src={image.url}
@@ -126,6 +111,21 @@ const SortableItem = memo(function SortableItem({
               {image.artwork.artistName}
             </p>
           </div>
+          {/* Drag button for mobile beside title/artist */}
+          <button
+            type="button"
+            tabIndex={0}
+            aria-label="Drag to reorder"
+            className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 ml-2"
+            style={{ touchAction: "none" }}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ChevronUpDownIcon
+              className="w-4 h-4 text-gray-600"
+              title="Drag to reorder"
+            />
+          </button>
         </div>
       </div>
 
@@ -163,9 +163,9 @@ const SortableItem = memo(function SortableItem({
         {/* Center section: Status */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {isSelected && (
-            <span className="text-sm text-indigo-600 font-medium">
+            <Badge type="featured" variant="simple" className="text-xs">
               Selected
-            </span>
+            </Badge>
           )}
         </div>
 

@@ -77,34 +77,28 @@ const SortableArtwork = memo(function SortableArtwork({
         {/* Top row: Order number and action button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {isFeatured && orderNumber !== undefined && (
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-300 flex-shrink-0">
+            {orderNumber !== undefined && (
+              <span
+                className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                  isFeatured
+                    ? "bg-indigo-100 text-indigo-700 border-indigo-300"
+                    : "bg-gray-100 text-gray-700 border-gray-300"
+                } font-bold text-xs border flex-shrink-0`}
+              >
                 {orderNumber}
               </span>
             )}
-            {isFeatured && (
+            {isFeatured ? (
               <Badge type="featured" variant="simple" className="text-xs">
                 Featured
+              </Badge>
+            ) : (
+              <Badge type="default" variant="simple" className="text-xs">
+                Available
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {isFeatured && (
-              <button
-                type="button"
-                tabIndex={0}
-                aria-label="Drag to reorder"
-                className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300"
-                style={{ touchAction: "none" }}
-                {...listeners}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ChevronUpDownIcon
-                  className="w-4 h-4 text-gray-600"
-                  title="Drag to reorder"
-                />
-              </button>
-            )}
             {isFeatured ? (
               <button
                 type="button"
@@ -152,14 +146,22 @@ const SortableArtwork = memo(function SortableArtwork({
               {artwork.artistName}
             </p>
           </div>
-          {!isFeatured && (
-            <Badge
-              type="default"
-              variant="simple"
-              className="text-xs flex-shrink-0"
+          {/* Drag button for featured artworks on mobile */}
+          {isFeatured && (
+            <button
+              type="button"
+              tabIndex={0}
+              aria-label="Drag to reorder"
+              className="flex items-center justify-center w-8 h-8 cursor-move bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 ml-2"
+              style={{ touchAction: "none" }}
+              {...listeners}
+              onClick={(e) => e.stopPropagation()}
             >
-              Available
-            </Badge>
+              <ChevronUpDownIcon
+                className="w-4 h-4 text-gray-600"
+                title="Drag to reorder"
+              />
+            </button>
           )}
         </div>
       </div>
