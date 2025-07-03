@@ -1224,8 +1224,27 @@ export default function ArtworkForm({
     backendLimits?.imageUpload,
   ]);
 
+  // Add a ref to the top of the form for scrolling
+  const formTopRef = useRef(null);
+
+  // Scroll to top if imageErrors or validationErrors are set after submit
+  useEffect(() => {
+    if (
+      (imageErrors && imageErrors.length > 0) ||
+      (validationErrors && validationErrors.length > 0)
+    ) {
+      if (formTopRef.current) {
+        formTopRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  }, [imageErrors, validationErrors]);
+
   return (
     <form
+      ref={formTopRef}
       onSubmit={handleSubmit(handleFormSubmit)}
       className="space-y-6 font-sans"
     >
