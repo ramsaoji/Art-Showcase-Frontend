@@ -23,6 +23,7 @@ import { getFriendlyErrorMessage } from "../../utils/formatters";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/solid";
 import { ArrowDownCircleIcon } from "@heroicons/react/24/outline";
 import Badge from "../../components/Badge";
+import { getThumbnailUrl } from "../../config/cloudinary";
 
 const SortableItem = memo(function SortableItem({
   id,
@@ -92,7 +93,7 @@ const SortableItem = memo(function SortableItem({
         {/* Content row: Image, title, artist, drag btn */}
         <div className="flex items-center gap-3">
           <img
-            src={image.url}
+            src={image.cloudinary_public_id ? getThumbnailUrl(image.cloudinary_public_id) : image.url}
             alt={image.artwork.title}
             className="w-10 h-10 object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0"
             loading="lazy"
@@ -139,7 +140,7 @@ const SortableItem = memo(function SortableItem({
             </span>
           )}
           <img
-            src={image.url}
+            src={image.cloudinary_public_id ? getThumbnailUrl(image.cloudinary_public_id) : image.url}
             alt={image.artwork.title}
             className="w-10 h-10 object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0"
             loading="lazy"

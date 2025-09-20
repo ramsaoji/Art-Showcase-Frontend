@@ -23,6 +23,7 @@ import Alert from "../../components/Alert";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
 import { ChevronUpDownIcon } from "@heroicons/react/24/solid";
 import Badge from "../../components/Badge";
+import { getThumbnailUrl } from "../../config/cloudinary";
 import {
   ArrowRightCircleIcon,
   ArrowLeftCircleIcon,
@@ -127,7 +128,7 @@ const SortableArtwork = memo(function SortableArtwork({
         {/* Content row: Image, title, artist */}
         <div className="flex items-center gap-3">
           <img
-            src={artwork.images[0]?.url || "https://via.placeholder.com/40"}
+            src={artwork.images[0]?.cloudinary_public_id ? getThumbnailUrl(artwork.images[0].cloudinary_public_id) : (artwork.images[0]?.url || "https://via.placeholder.com/40")}
             alt={artwork.title}
             className="w-10 h-10 object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0"
             loading="lazy"
@@ -181,7 +182,7 @@ const SortableArtwork = memo(function SortableArtwork({
             </span>
           )}
           <img
-            src={artwork.images[0]?.url || "https://via.placeholder.com/40"}
+            src={artwork.images[0]?.cloudinary_public_id ? getThumbnailUrl(artwork.images[0].cloudinary_public_id) : (artwork.images[0]?.url || "https://via.placeholder.com/40")}
             alt={artwork.title}
             className="w-10 h-10 object-cover rounded-lg shadow-sm border border-gray-100 flex-shrink-0"
             loading="lazy"
