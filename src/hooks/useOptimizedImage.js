@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 
 /**
@@ -20,13 +20,22 @@ export default function useOptimizedImage(publicId, options = {}) {
   const [isError, setIsError] = useState(false);
   const [highQualityLoaded, setHighQualityLoaded] = useState(false);
 
-  // Generate URLs for preview (low quality) and full (high quality) versions
-  const previewUrl = publicId
-    ? getPreviewUrl(publicId, { width, height, quality: 10, format })
-    : "";
-  const fullSizeUrl = publicId
-    ? getFullSizeUrl(publicId, { width, height, quality, format })
-    : "";
+  // Memoize URL generation to avoid recalculating on every render (js-cache-function-results)
+  const previewUrl = useMemo(
+    () =>
+      publicId
+        ? getPreviewUrl(publicId, { width, height, quality: 10, format })
+        : "",
+    [publicId, width, height, format]
+  );
+  
+  const fullSizeUrl = useMemo(
+    () =>
+      publicId
+        ? getFullSizeUrl(publicId, { width, height, quality, format })
+        : "",
+    [publicId, width, height, quality, format]
+  );
 
   // Preload high quality image when component mounts
   useEffect(() => {

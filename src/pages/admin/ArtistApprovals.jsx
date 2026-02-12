@@ -1,10 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "../../utils/trpc";
 import Alert from "../../components/Alert";
 import Loader from "../../components/ui/Loader";
 import ConfirmationDialog from "../../components/ConfirmationDialog";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
+import { useCallback } from "react";
+
+// Hoisted static motion configuration (rendering-hoist-jsx)
+const emptyStateMotion = {
+  initial: { opacity: 0, scale: 0.95 },
+  animate: { opacity: 1, scale: 1 },
+  transition: { duration: 0.5 },
+};
 
 export default function ArtistApprovals() {
   const [error, setError] = useState("");
@@ -74,16 +82,29 @@ export default function ArtistApprovals() {
   const [activeDialogAction, setActiveDialogAction] = useState(null); // 'activate' or 'deactivate'
   const [isSettingActive, setIsSettingActive] = useState(false);
 
+  // Memoized handlers (rerender-functional-setstate)
+  const handleSearchChange = useCallback((e) => {
+    setSearch(e.target.value);
+  }, []);
+
+  const handlePreviousPage = useCallback(() => {
+    setPage((p) => Math.max(1, p - 1));
+  }, []);
+
+  const handleNextPage = useCallback((totalPages) => {
+    setPage((p) => Math.min(totalPages, p + 1));
+  }, []);
+
   // Handler to open delete dialog
-  const handleDeleteUserClick = (user) => {
+  const handleDeleteUserClick = useCallback((user) => {
     setUserToDelete(user);
     setDeleteDialogOpen(true);
     setError("");
     setSuccess("");
-  };
+  }, []);
 
   // Handler to confirm delete
-  const handleConfirmDeleteUser = async () => {
+  const handleConfirmDeleteUser = useCallback(async () => {
     if (!userToDelete) return;
     setIsDeletingUser(true);
     setError("");
@@ -97,15 +118,15 @@ export default function ArtistApprovals() {
     } finally {
       setIsDeletingUser(false);
     }
-  };
+  }, [userToDelete, deleteUserMutation]);
 
-  const handleApprove = (id) => {
+  const handleApprove = useCallback((id) => {
     setError("");
     setSuccess("");
     approveMutation.mutate({ id });
-  };
+  }, [approveMutation]);
 
-  const handleSetActive = (id, active, user) => {
+  const handleSetActive = useCallback((id, active, user) => {
     setError("");
     setSuccess("");
 
@@ -118,9 +139,9 @@ export default function ArtistApprovals() {
       setActiveDialogAction("deactivate");
       setActiveDialogOpen(true);
     }
-  };
+  }, [setActiveMutation]);
 
-  const confirmSetActive = async () => {
+  const confirmSetActive = useCallback(async () => {
     if (!activeDialogUser) return;
     setIsSettingActive(true);
     try {
@@ -136,7 +157,7 @@ export default function ArtistApprovals() {
     } finally {
       setIsSettingActive(false);
     }
-  };
+  }, [activeDialogUser, activeDialogAction, setActiveMutation]);
 
   // Auto-clear success and error messages after 2.5 seconds
   useEffect(() => {
@@ -149,7 +170,11 @@ export default function ArtistApprovals() {
     }
   }, [success, error]);
 
-  const artistUsers = allUsers.filter((u) => u.role === "ARTIST");
+  // Memoize filtered artists to avoid recalculating on every render (js-cache-function-results)
+  const artistUsers = useMemo(
+    () => allUsers.filter((u) => u.role === "ARTIST"),
+    [allUsers]
+  );
   const artistTotalCount = userPage?.artistTotalCount || 0;
 
   return (
@@ -169,7 +194,7 @@ export default function ArtistApprovals() {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
           placeholder="Search by name or email..."
           className="w-full sm:w-80 px-5 py-3 rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm text-gray-900 font-sans placeholder-gray-400 shadow-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all duration-200 outline-none hover:border-indigo-200"
           style={{ boxShadow: "0 2px 12px 0 rgba(80, 80, 180, 0.04)" }}
@@ -193,7 +218,7 @@ export default function ArtistApprovals() {
         <div className="flex justify-center py-16">
           <Loader size="medium" />
         </div>
-      ) : allUsers && allUsers.filter((u) => u.role === "ARTIST").length > 0 ? (
+      ) : artistUsers.length > 0 ? (
         <>
           <div className="mb-4 text-sm text-gray-500 font-sans text-right">
             Showing{" "}
@@ -234,9 +259,7 @@ export default function ArtistApprovals() {
                 </tr>
               </thead>
               <tbody>
-                {allUsers
-                  .filter((u) => u.role === "ARTIST")
-                  .map((artist) => {
+                {artistUsers.map((artist) => {
                     // Check if artist has artworks (by userId)
                     // We'll use a derived property if available, else fallback to 0
                     // If artworks count is not available, you may need to fetch it per user (not ideal for large lists)
@@ -353,7 +376,7 @@ export default function ArtistApprovals() {
             <div className="flex flex-nowrap justify-center sm:justify-between items-center gap-2 sm:gap-4 min-w-0">
               <button
                 className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={handlePreviousPage}
                 disabled={page === 1}
               >
                 Previous
@@ -377,7 +400,7 @@ export default function ArtistApprovals() {
               </div>
               <button
                 className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => handleNextPage(totalPages)}
                 disabled={page === totalPages}
               >
                 Next
@@ -387,10 +410,8 @@ export default function ArtistApprovals() {
         </>
       ) : (
         <motion.div
+          {...emptyStateMotion}
           className="text-center py-10"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
         >
           <h3 className="mt-4 font-artistic text-2xl sm:text-3xl font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
             No artists found

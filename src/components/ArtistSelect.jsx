@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useArtistsSearch } from "../utils/trpc";
 import InfiniteScroll from "react-infinite-scroll-component";
-import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 
 export default function ArtistSelect({
   value,

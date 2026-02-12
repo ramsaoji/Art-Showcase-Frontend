@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
-import { PhotoIcon, StarIcon } from "@heroicons/react/24/outline";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import StarIcon from "@heroicons/react/24/outline/StarIcon";
 import { trpc } from "../utils/trpc";
 import { useAuth } from "../contexts/AuthContext";
 import Alert from "./Alert";
@@ -97,62 +98,74 @@ export default function Statistics() {
     soldArtworksCount === 0;
 
   // Build cards array based on role
-  const cards = [
-    {
-      icon: PhotoIcon,
-      label:
-        isSuperAdmin || isArtist ? "Total Artworks" : "Artworks on Display",
-      value: isSuperAdmin || isArtist ? totalArtworksCount : activeCount,
-      subtext:
-        isSuperAdmin || isArtist
-          ? "All artworks in the system"
-          : "Explore art from our community",
-      delay: 0.1,
-    },
-  ];
+  const cards = useMemo(() => {
+    const list = [
+      {
+        icon: PhotoIcon,
+        label:
+          isSuperAdmin || isArtist ? "Total Artworks" : "Artworks on Display",
+        value: isSuperAdmin || isArtist ? totalArtworksCount : activeCount,
+        subtext:
+          isSuperAdmin || isArtist
+            ? "All artworks in the system"
+            : "Explore art from our community",
+        delay: 0.1,
+      },
+    ];
 
-  if (isSuperAdmin || isArtist) {
-    cards.push(
+    if (isSuperAdmin || isArtist) {
+      list.push(
+        {
+          icon: PhotoIcon,
+          label: "Active",
+          value: activeCount,
+          subtext: "Active artworks",
+          delay: 0.15,
+        },
+        {
+          icon: PhotoIcon,
+          label: "Inactive",
+          value: inactiveCount,
+          subtext: "Inactive artworks",
+          delay: 0.18,
+        },
+        {
+          icon: PhotoIcon,
+          label: "Expired",
+          value: expiredCount,
+          subtext: "Expired artworks",
+          delay: 0.21,
+        }
+      );
+    }
+
+    list.push(
       {
-        icon: PhotoIcon,
-        label: "Active",
-        value: activeCount,
-        subtext: "Active artworks",
-        delay: 0.15,
+        icon: StarIcon,
+        label: "Featured Works",
+        value: featuredArtworksCount,
+        subtext: "Curated Selection",
+        delay: 0.25,
       },
       {
-        icon: PhotoIcon,
-        label: "Inactive",
-        value: inactiveCount,
-        subtext: "Inactive artworks",
-        delay: 0.18,
-      },
-      {
-        icon: PhotoIcon,
-        label: "Expired",
-        value: expiredCount,
-        subtext: "Expired artworks",
-        delay: 0.21,
+        icon: INRIcon,
+        label: "Artworks Sold",
+        value: soldArtworksCount,
+        subtext: "Finding new homes",
+        delay: 0.3,
       }
     );
-  }
-
-  cards.push(
-    {
-      icon: StarIcon,
-      label: "Featured Works",
-      value: featuredArtworksCount,
-      subtext: "Curated Selection",
-      delay: 0.25,
-    },
-    {
-      icon: INRIcon,
-      label: "Artworks Sold",
-      value: soldArtworksCount,
-      subtext: "Finding new homes",
-      delay: 0.3,
-    }
-  );
+    return list;
+  }, [
+    isSuperAdmin,
+    isArtist,
+    totalArtworksCount,
+    activeCount,
+    inactiveCount,
+    expiredCount,
+    featuredArtworksCount,
+    soldArtworksCount,
+  ]);
 
   // if (isLoading) {
   //   return (

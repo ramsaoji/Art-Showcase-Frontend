@@ -11,7 +11,7 @@ export default function PageLoader() {
       transition={{ duration: 0.3 }}
     >
       <div className="text-center">
-        <Loader size="lg" />
+        <Loader size="large" />
         <p className="mt-4 text-lg text-gray-600 font-sans">
           Loading content...
         </p>

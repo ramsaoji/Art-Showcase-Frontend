@@ -9,10 +9,7 @@ const safeLogEvent = async (eventName, eventParams = {}) => {
       logEvent(analyticsInstance, eventName, eventParams);
     }
   } catch (error) {
-    console.error("[Analytics] Error:", {
-      event: eventName,
-      error: error.message,
-    });
+    // Analytics error silently handled
   }
 };
 

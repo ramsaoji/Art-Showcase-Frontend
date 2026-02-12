@@ -1,13 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { Link } from "react-router-dom";
-import {
-  ArrowRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronDownIcon,
-} from "@heroicons/react/24/outline";
+import ArrowRightIcon from "@heroicons/react/24/outline/ArrowRightIcon";
+import ChevronLeftIcon from "@heroicons/react/24/outline/ChevronLeftIcon";
+import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
+import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import Loader from "./ui/Loader";
 import { trpc } from "../utils/trpc";
 import Alert from "./Alert";
@@ -94,17 +92,23 @@ export default function HeroCarousel() {
     return [welcomeSlide, ...artworkSlides];
   }, [artworks]);
 
-  const handleNext = () => {
-    setCurrentSlideIndex((prevIndex) =>
-      prevIndex === slides.length - 1 ? 0 : prevIndex + 1
-    );
-  };
+  // Keep slides.length in a ref for stable handler references (rerender-stable-handlers)
+  const slidesLengthRef = useRef(slides.length);
+  useEffect(() => {
+    slidesLengthRef.current = slides.length;
+  }, [slides.length]);
 
-  const handlePrev = () => {
+  const handleNext = useCallback(() => {
     setCurrentSlideIndex((prevIndex) =>
-      prevIndex === 0 ? slides.length - 1 : prevIndex - 1
+      prevIndex === slidesLengthRef.current - 1 ? 0 : prevIndex + 1
     );
-  };
+  }, []);
+
+  const handlePrev = useCallback(() => {
+    setCurrentSlideIndex((prevIndex) =>
+      prevIndex === 0 ? slidesLengthRef.current - 1 : prevIndex - 1
+    );
+  }, []);
 
   // Reset loading states when slide changes
   useEffect(() => {
@@ -124,53 +128,54 @@ export default function HeroCarousel() {
         clearTimeout(timerRef.current);
       }
     };
-  }, [currentSlideIndex, slides.length]);
+  }, [currentSlideIndex, slides, handleNext]);
 
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     clearTimeout(timerRef.current);
-    if (slides.length > 1) {
-      const isWelcome = slides[currentSlideIndex]?.type === "welcome";
-      const timeout = isWelcome ? 2000 : 5000;
-      timerRef.current = setTimeout(handleNext, timeout);
+    if (slidesLengthRef.current > 1) {
+      timerRef.current = setTimeout(handleNext, 5000);
     }
-  };
+  }, [handleNext]);
 
   const currentSlide = slides[currentSlideIndex];
 
   // Preload both images simultaneously
   useEffect(() => {
-    if (currentSlide) {
-      // Preload background image
-      const backgroundImg = new Image();
-      backgroundImg.onload = () => setBackgroundLoaded(true);
-      backgroundImg.onerror = () => setBackgroundLoaded(true);
+    if (!currentSlide) return;
 
-      if (currentSlide.type === "welcome") {
-        backgroundImg.src = currentSlide.backgroundImage;
-        setBackgroundLoaded(true); // Instant load
-        setArtworkLoaded(true);
-      } else {
-        const bgUrl = currentSlide.cloudinary_public_id
-          ? getPreviewUrl(currentSlide.cloudinary_public_id)
-          : currentSlide.url;
+    const backgroundImg = new Image();
+    backgroundImg.onload = () => setBackgroundLoaded(true);
+    backgroundImg.onerror = () => setBackgroundLoaded(true);
 
-        backgroundImg.src = bgUrl;
-
-        // Eager preload using <link rel="preload"> to prioritize
-        const link = document.createElement("link");
-        link.rel = "preload";
-        link.as = "image";
-        link.href = bgUrl;
-        document.head.appendChild(link);
-
-        const artworkImg = new Image();
-        artworkImg.onload = () => setArtworkLoaded(true);
-        artworkImg.onerror = () => setArtworkLoaded(true);
-        artworkImg.src = currentSlide.cloudinary_public_id
-          ? getFullSizeUrl(currentSlide.cloudinary_public_id)
-          : currentSlide.url;
-      }
+    if (currentSlide.type === "welcome") {
+      backgroundImg.src = currentSlide.backgroundImage;
+      setBackgroundLoaded(true);
+      setArtworkLoaded(true);
+      return;
     }
+
+    const bgUrl = currentSlide.cloudinary_public_id
+      ? getPreviewUrl(currentSlide.cloudinary_public_id)
+      : currentSlide.url;
+    backgroundImg.src = bgUrl;
+
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = bgUrl;
+    link.fetchPriority = "high";
+    document.head.appendChild(link);
+
+    const artworkImg = new Image();
+    artworkImg.onload = () => setArtworkLoaded(true);
+    artworkImg.onerror = () => setArtworkLoaded(true);
+    artworkImg.src = currentSlide.cloudinary_public_id
+      ? getFullSizeUrl(currentSlide.cloudinary_public_id)
+      : currentSlide.url;
+
+    return () => {
+      if (link.parentNode) link.parentNode.removeChild(link);
+    };
   }, [currentSlide]);
 
   useEffect(() => {

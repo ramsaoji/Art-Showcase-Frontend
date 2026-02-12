@@ -1,8 +1,8 @@
-import { useCallback, useState, lazy, Suspense } from "react";
+import { useCallback, useState, lazy, Suspense, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRightIcon, HeartIcon, StarIcon } from "@heroicons/react/20/solid";
-import { PhotoIcon } from "@heroicons/react/24/outline";
+import ArrowRightIcon from "@heroicons/react/20/solid/ArrowRightIcon";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import { trpc } from "../utils/trpc";
 import ImageModal from "../components/ImageModal";
 import ArtworkCard from "../components/ArtworkCard";
@@ -19,6 +19,7 @@ import ScrollToTopButton from "../components/ScrollToTopButton";
 // Lazy load the Statistics component
 const Statistics = lazy(() => import("../components/Statistics"));
 
+// Hoist static animation variants outside component (rendering-hoist-jsx)
 const container = {
   hidden: { opacity: 0 },
   show: {
@@ -30,6 +31,58 @@ const container = {
   },
 };
 
+// Hoist static motion configurations
+const motionViewport = { once: true };
+const headerInitial = { opacity: 0, y: 20 };
+const headerAnimate = { opacity: 1, y: 0 };
+const headerTransition = { duration: 0.5 };
+const titleTransition = { duration: 0.5, delay: 0.1 };
+const descriptionTransition = { duration: 0.5, delay: 0.2 };
+const emptyStateInitial = { opacity: 0, scale: 0.95 };
+const emptyStateAnimate = { opacity: 1, scale: 1 };
+const emptyStateTransition = { duration: 0.5 };
+const viewAllTransition = { duration: 0.5, delay: 0.3 };
+
+// Hoist static animation keyframes
+const floatingAnimation1 = {
+  y: [0, -10, 0],
+  opacity: [0.5, 1, 0.5],
+};
+const floatingTransition1 = {
+  duration: 3,
+  repeat: Infinity,
+  repeatType: "reverse",
+};
+const floatingAnimation2 = {
+  y: [0, 10, 0],
+  opacity: [0.5, 1, 0.5],
+};
+const floatingTransition2 = {
+  duration: 2.5,
+  repeat: Infinity,
+  repeatType: "reverse",
+};
+const floatingAnimation3 = {
+  scale: [1, 1.5, 1],
+  opacity: [0.5, 1, 0.5],
+};
+const floatingTransition3 = {
+  duration: 2,
+  repeat: Infinity,
+  repeatType: "reverse",
+};
+
+// Hoist static motion props for artwork cards
+const artworkCardInitial = { opacity: 0, y: 20 };
+const artworkCardAnimate = { opacity: 1, y: 0 };
+const artworkCardExit = { opacity: 0, y: -20 };
+
+// Helper to create transition with delay (avoids object creation in loop)
+const getArtworkTransition = (index) => ({
+  delay: index * 0.1,
+  duration: 0.3,
+});
+
 export default function Home() {
   const [selectedArtwork, setSelectedArtwork] = useState(null);
 
@@ -39,7 +92,6 @@ export default function Home() {
     refetch,
     error,
   } = trpc.artwork.getFeaturedArtworks.useQuery();
-  console.log("Featured Artworks Data:", featuredArtworks);
 
   const handleDelete = useCallback(
     (deletedId) => {
@@ -52,14 +104,51 @@ export default function Home() {
     [refetch, selectedArtwork?.id]
   );
 
-  const handleViewAllClick = () => {
+  // Memoize event handlers for stable references (rerender-functional-setstate)
+  const handleViewAllClick = useCallback(() => {
     trackUserAction("view_all_featured");
-  };
+  }, []);
 
-  const handleArtworkSelect = (artwork) => {
+  const handleArtworkSelect = useCallback((artwork) => {
     setSelectedArtwork(artwork);
     trackArtworkInteraction("quick_view_from_home", artwork.id, artwork.title);
-  };
+  }, []);
+
+  // Memoize selected artwork index to avoid repeated findIndex calls (js-cache-function-results)
+  const selectedArtworkIndex = useMemo(() => {
+    if (!selectedArtwork) return -1;
+    return featuredArtworks.findIndex((artwork) => artwork.id === selectedArtwork.id);
+  }, [selectedArtwork, featuredArtworks]);
+
+  // Memoize modal navigation handlers (rerender-functional-setstate)
+  const handlePrevious = useCallback(() => {
+    if (selectedArtworkIndex > 0) {
+      const prevArtwork = featuredArtworks[selectedArtworkIndex - 1];
+      setSelectedArtwork(prevArtwork);
+      trackArtworkInteraction(
+        "view_previous_from_home",
+        prevArtwork.id,
+        prevArtwork.title
+      );
+    }
+  }, [selectedArtworkIndex, featuredArtworks]);
+
+  const handleNext = useCallback(() => {
+    if (selectedArtworkIndex < featuredArtworks.length - 1) {
+      const nextArtwork = featuredArtworks[selectedArtworkIndex + 1];
+      setSelectedArtwork(nextArtwork);
+      trackArtworkInteraction(
+        "view_next_from_home",
+        nextArtwork.id,
+        nextArtwork.title
+      );
+    }
+  }, [selectedArtworkIndex, featuredArtworks]);
+
+  // Memoize modal close handler (rerender-functional-setstate)
+  const handleModalClose = useCallback(() => {
+    setSelectedArtwork(null);
+  }, []);
 
   return (
     <div className="bg-white/40">
@@ -84,10 +173,10 @@ export default function Home() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ">
           <div className="flex flex-col items-center text-center mb-16 sm:mb-20 ">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              initial={headerInitial}
+              whileInView={headerAnimate}
+              viewport={motionViewport}
+              transition={headerTransition}
               className="relative flex items-center justify-center gap-2 text-indigo-600 font-body italic text-2xl mb-6 px-4 sm:px-16 w-full"
             >
               {/* Decorative elements */}
@@ -120,57 +209,36 @@ export default function Home() {
               {/* Additional floating elements */}
               <motion.div
                 className="absolute -left-8 top-1/2 w-4 h-4 rounded-full bg-indigo-400/30"
-                animate={{
-                  y: [0, -10, 0],
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
+                animate={floatingAnimation1}
+                transition={floatingTransition1}
               />
               <motion.div
                 className="absolute -right-8 top-1/2 w-4 h-4 rounded-full bg-amber-400/30"
-                animate={{
-                  y: [0, 10, 0],
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
+                animate={floatingAnimation2}
+                transition={floatingTransition2}
               />
               <motion.div
                 className="absolute left-1/2 -translate-x-1/2 -bottom-4 w-3 h-3 rounded-full bg-rose-400/30"
-                animate={{
-                  scale: [1, 1.5, 1],
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
+                animate={floatingAnimation3}
+                transition={floatingTransition3}
               />
             </motion.div>
 
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              initial={headerInitial}
+              whileInView={headerAnimate}
+              viewport={motionViewport}
+              transition={titleTransition}
               className="font-artistic text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight mb-6"
             >
               Featured Artworks
             </motion.h2>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              initial={headerInitial}
+              whileInView={headerAnimate}
+              viewport={motionViewport}
+              transition={descriptionTransition}
               className="text-xl text-gray-600 max-w-2xl leading-relaxed font-sans"
             >
               Discover our handpicked selection of exceptional pieces that
@@ -202,9 +270,9 @@ export default function Home() {
           ) : featuredArtworks.length === 0 ? (
             <motion.div
               className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-xl"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              initial={emptyStateInitial}
+              animate={emptyStateAnimate}
+              transition={emptyStateTransition}
             >
               <PhotoIcon className="mx-auto h-16 w-16 text-gray-400" />
               <h3 className="mt-4 font-artistic text-xl font-semibold text-gray-900">
@@ -226,10 +294,10 @@ export default function Home() {
                   {featuredArtworks.map((artwork, index) => (
                     <motion.div
                       key={artwork.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.1, duration: 0.3 }}
+                      initial={artworkCardInitial}
+                      animate={artworkCardAnimate}
+                      exit={artworkCardExit}
+                      transition={getArtworkTransition(index)}
                     >
                       <ArtworkCard
                         key={artwork.id}
@@ -244,10 +312,10 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.3 }}
+                initial={headerInitial}
+                whileInView={headerAnimate}
+                viewport={motionViewport}
+                transition={viewAllTransition}
                 className="mt-16 text-center"
               >
                 <Link
@@ -268,7 +336,7 @@ export default function Home() {
       <Suspense
         fallback={
           <div className="py-16 flex justify-center">
-            <Loader size="lg" />
+            <Loader size="large" />
           </div>
         }
       >
@@ -278,47 +346,12 @@ export default function Home() {
       {selectedArtwork && (
         <ImageModal
           isOpen={!!selectedArtwork}
-          onClose={() => setSelectedArtwork(null)}
+          onClose={handleModalClose}
           image={selectedArtwork}
-          onPrevious={() => {
-            const currentIndex = featuredArtworks.findIndex(
-              (artwork) => artwork.id === selectedArtwork?.id
-            );
-            if (currentIndex > 0) {
-              const prevArtwork = featuredArtworks[currentIndex - 1];
-              setSelectedArtwork(prevArtwork);
-              trackArtworkInteraction(
-                "view_previous_from_home",
-                prevArtwork.id,
-                prevArtwork.title
-              );
-            }
-          }}
-          onNext={() => {
-            const currentIndex = featuredArtworks.findIndex(
-              (artwork) => artwork.id === selectedArtwork?.id
-            );
-            if (currentIndex < featuredArtworks.length - 1) {
-              const nextArtwork = featuredArtworks[currentIndex + 1];
-              setSelectedArtwork(nextArtwork);
-              trackArtworkInteraction(
-                "view_next_from_home",
-                nextArtwork.id,
-                nextArtwork.title
-              );
-            }
-          }}
-          hasPrevious={
-            featuredArtworks.findIndex(
-              (artwork) => artwork.id === selectedArtwork?.id
-            ) > 0
-          }
-          hasNext={
-            featuredArtworks.findIndex(
-              (artwork) => artwork.id === selectedArtwork?.id
-            ) <
-            featuredArtworks.length - 1
-          }
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          hasPrevious={selectedArtworkIndex > 0}
+          hasNext={selectedArtworkIndex < featuredArtworks.length - 1}
         />
       )}
       <ScrollToTopButton />

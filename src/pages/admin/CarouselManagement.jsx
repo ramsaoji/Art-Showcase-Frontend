@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from "react";
+import React, { useState, useEffect, useRef, memo, useCallback } from "react";
 import { trpc } from "../../utils/trpc";
 import {
   DndContext,
@@ -20,8 +20,9 @@ import { CSS } from "@dnd-kit/utilities";
 import Loader from "../../components/ui/Loader";
 import Alert from "../../components/Alert";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
-import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/24/solid";
-import { ArrowDownCircleIcon } from "@heroicons/react/24/outline";
+import CheckIcon from "@heroicons/react/24/solid/CheckIcon";
+import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
+import ArrowDownCircleIcon from "@heroicons/react/24/outline/ArrowDownCircleIcon";
 import Badge from "../../components/Badge";
 import { getThumbnailUrl } from "../../config/cloudinary";
 
@@ -61,11 +62,11 @@ const SortableItem = memo(function SortableItem({
         {/* Top row: Order number and action button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {typeof orderNumber === "number" && (
+            {typeof orderNumber === "number" && orderNumber != null ? (
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-300 flex-shrink-0">
                 {orderNumber}
               </span>
-            )}
+            ) : null}
             {isSelected && (
               <Badge type="featured" variant="simple" className="text-xs">
                 Selected
@@ -134,11 +135,11 @@ const SortableItem = memo(function SortableItem({
       <div className="hidden md:flex items-center gap-3">
         {/* Left section: Order number, image, and content */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          {typeof orderNumber === "number" && (
+          {typeof orderNumber === "number" && orderNumber != null ? (
             <span className="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-300 flex-shrink-0">
               {orderNumber}
             </span>
-          )}
+          ) : null}
           <img
             src={image.cloudinary_public_id ? getThumbnailUrl(image.cloudinary_public_id) : image.url}
             alt={image.artwork.title}
@@ -271,9 +272,7 @@ const CarouselManagement = () => {
       // Reset saving state
       setIsSaving(false);
 
-      // Show error message
-      console.error("Failed to update carousel:", error);
-      // You could add error state here if needed
+      // Error is handled by mutation error state
     },
   });
   const utils = trpc.useContext();
@@ -330,13 +329,13 @@ const CarouselManagement = () => {
     }
   };
 
-  const handleToggle = (id) => {
+  const handleToggle = useCallback((id) => {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
-  };
+  }, []);
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = useCallback(() => {
     const orderedSelectedItems = items.filter((item) =>
       selected.includes(item.id)
     );
@@ -363,7 +362,7 @@ const CarouselManagement = () => {
 
     // Perform the actual update
     updateCarouselOrder.mutate({ images: payload });
-  };
+  }, [items, selected, updateCarouselOrder]);
 
   const hasUnsavedChanges =
     JSON.stringify(

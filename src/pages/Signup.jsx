@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -6,9 +6,23 @@ import * as yup from "yup";
 import { trpc } from "../utils/trpc";
 import { motion } from "framer-motion";
 import Alert from "../components/Alert";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
+import EyeSlashIcon from "@heroicons/react/24/outline/EyeSlashIcon";
 import Loader from "../components/ui/Loader";
 import { getFriendlyErrorMessage } from "../utils/formatters";
+
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
+
+const formContainerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.1 },
+};
 
 const schema = yup.object().shape({
   artistName: yup.string().required("Artist name is required"),
@@ -37,6 +51,15 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [signupRole, setSignupRole] = useState("");
+
+  // Memoized password toggle handlers (rerender-functional-setstate)
+  const handlePasswordToggle = useCallback(() => {
+    setShowPassword((v) => !v);
+  }, []);
+
+  const handleConfirmPasswordToggle = useCallback(() => {
+    setShowConfirmPassword((v) => !v);
+  }, []);
 
   const {
     register,
@@ -72,7 +95,6 @@ export default function Signup() {
           }
         } catch (e) {
           // Fall through to generic error if parsing fails
-          console.error("Failed to parse error message:", e);
         }
       }
 
@@ -117,10 +139,8 @@ export default function Signup() {
       <div className="relative">
         <div className="">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
+          {...containerMotion}
+          className="text-center mb-8 sm:mb-12"
           >
             <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
               Create Artist Account
@@ -131,10 +151,8 @@ export default function Signup() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 p-8 sm:p-10"
+          {...formContainerMotion}
+          className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl overflow-hidden border border-gray-100 p-8 sm:p-10"
           >
             <div className="space-y-6">
               {(registerMutation.isSuccess || errors.root?.serverError) && (
@@ -216,7 +234,7 @@ export default function Signup() {
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword((v) => !v)}
+                        onClick={handlePasswordToggle}
                         className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500 transition-colors"
                       >
                         {showPassword ? (
@@ -247,7 +265,7 @@ export default function Signup() {
                       />
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        onClick={handleConfirmPasswordToggle}
                         className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500 transition-colors"
                       >
                         {showConfirmPassword ? (

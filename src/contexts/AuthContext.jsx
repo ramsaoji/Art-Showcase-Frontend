@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from "react";
 import { trpc, trpcClient } from "../utils/trpc";
 
@@ -22,37 +23,34 @@ export function AuthProvider({ children }) {
   // Get tRPC utils for query invalidation
   const utils = trpc.useContext();
 
-  // Helper: set token in localStorage and state
+  // Helper: set token in localStorage and state (try/catch per Vercel 4.4 - localStorage can throw)
   const saveToken = (jwt) => {
     setToken(jwt);
-    if (jwt) {
-      localStorage.setItem("token", jwt);
-    } else {
-      localStorage.removeItem("token");
+    try {
+      if (jwt) {
+        localStorage.setItem("token", jwt);
+      } else {
+        localStorage.removeItem("token");
+      }
+    } catch {
+      // Ignore in incognito, quota exceeded, or disabled
     }
   };
 
-  // Helper: clear all artwork-related localStorage data
+  // Helper: clear all artwork-related localStorage data (try/catch per Vercel 4.4)
   const clearArtworkLocalStorage = () => {
-    const keysToRemove = [];
-
-    // Get all localStorage keys
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        // Remove artwork form data, dimensions, and artist ID keys
-        if (
-          key.includes("artwork_form_data") ||
-          key.includes("artwork_dimensions") ||
-          key.includes("artwork_artist_id")
-        ) {
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes("artwork_form_data") || key.includes("artwork_dimensions") || key.includes("artwork_artist_id"))) {
           keysToRemove.push(key);
         }
       }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+    } catch {
+      // Ignore in incognito or when storage is disabled
     }
-
-    // Remove the identified keys
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
   };
 
   // Fetch user info if token exists
@@ -91,7 +89,7 @@ export function AuthProvider({ children }) {
     }
     fetchUser();
     // eslint-disable-next-line
-  }, [token, user]);
+  }, [token]);
 
   // Login function
   const login = useCallback(
@@ -125,7 +123,6 @@ export function AuthProvider({ children }) {
           }
         } catch (parseError) {
           // If parsing fails, use the original error message
-          console.error("Error parsing error message:", parseError);
         }
 
         setError(errorMessage);
@@ -158,18 +155,21 @@ export function AuthProvider({ children }) {
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isArtist = user?.role === "ARTIST";
 
-  const value = {
-    user,
-    role: user?.role,
-    isSuperAdmin,
-    isArtist,
-    login,
-    logout,
-    loading,
-    error,
-    clearError,
-    token,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      role: user?.role,
+      isSuperAdmin,
+      isArtist,
+      login,
+      logout,
+      loading,
+      error,
+      clearError,
+      token,
+    }),
+    [user, isSuperAdmin, isArtist, login, logout, loading, error, clearError, token]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

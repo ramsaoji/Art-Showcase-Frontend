@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import Loader from "./ui/Loader";
 import Alert from "./Alert";
 import { trpc } from "../utils/trpc";
@@ -28,6 +28,12 @@ const schema = yup.object().shape({
   address: yup.string().required("Address is required"),
 });
 
+const modalVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+};
+
 export default function PurchaseRequestModal({
   isOpen,
   onClose,
@@ -42,7 +48,7 @@ export default function PurchaseRequestModal({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting },
     reset,
   } = useForm({
     resolver: yupResolver(schema),
@@ -52,10 +58,13 @@ export default function PurchaseRequestModal({
 
   const purchaseRequest = trpc.artwork.purchaseRequest.useMutation({
     onError: (err) => {
-      console.error("Purchase request failed:", err);
       setServerError(getFriendlyErrorMessage(err));
     },
   });
+
+  const closeModal = useCallback(() => {
+    onClose();
+  }, [onClose]);
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -73,7 +82,7 @@ export default function PurchaseRequestModal({
       setServerError("");
       return () => document.removeEventListener("keydown", handleEscape);
     }
-  }, [isOpen, reset]);
+  }, [isOpen, reset, closeModal]);
 
   // Focus the name input when modal opens
   useEffect(() => {
@@ -109,16 +118,11 @@ export default function PurchaseRequestModal({
       }
     } catch (err) {
       // The onError handler of the mutation will be called, but this is a fallback.
-      console.error("Purchase request submission failed:", err);
       setServerError(getFriendlyErrorMessage(err));
       if (scrollableContentRef.current) {
         scrollableContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
-  };
-
-  const closeModal = () => {
-    onClose();
   };
 
   const handleOverlayClick = (e) => {
@@ -139,9 +143,7 @@ export default function PurchaseRequestModal({
       />
       {/* Modal Content */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        {...modalVariants}
         className="relative w-full max-w-xl mx-auto bg-white rounded-2xl shadow-2xl border border-white/20 z-[70] flex flex-col"
         style={{
           maxHeight: "calc(100dvh - 5rem)",

@@ -5,6 +5,20 @@ import { motion } from "framer-motion";
 import { trpc, uploadToCloudinary } from "../utils/trpc";
 import { useAuth } from "../contexts/AuthContext";
 import { getFriendlyErrorMessage } from "../utils/formatters";
+import { useCallback } from "react";
+
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
+
+const formContainerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.1 },
+};
 
 export default function AddArtwork() {
   const navigate = useNavigate();
@@ -82,7 +96,6 @@ export default function AddArtwork() {
       setArtistId("");
       localStorage.removeItem(ARTIST_ID_KEY);
     } catch (err) {
-      console.error("Artwork submission failed:", err);
       setError(getFriendlyErrorMessage(err));
     }
   };

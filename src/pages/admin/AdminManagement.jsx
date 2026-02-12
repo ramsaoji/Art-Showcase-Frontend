@@ -4,6 +4,23 @@ import FeaturedArtworksManagement from "./FeaturedArtworksManagement";
 import ArtistApprovals from "./ArtistApprovals";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
+
+const tabPillTransition = { type: "spring", stiffness: 500, damping: 30 };
+const tabButtonTransition = { type: "spring", stiffness: 400, damping: 20 };
+
+const tabContentMotion = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -16 },
+  transition: { duration: 0.25, ease: "easeInOut" },
+};
+
 const AdminManagement = () => {
   const [activeTab, setActiveTab] = useState("artist-approvals");
 
@@ -16,9 +33,7 @@ const AdminManagement = () => {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        {...containerMotion}
         className="relative container mx-auto px-4 sm:px-8 py-12"
       >
         <div className="text-center mb-12">
@@ -39,7 +54,7 @@ const AdminManagement = () => {
                   layoutId="admin-tab-pill"
                   className="absolute z-0 h-full w-full bg-white/60 rounded-xl"
                   style={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  transition={tabPillTransition}
                 />
               )}
             </AnimatePresence>
@@ -52,7 +67,7 @@ const AdminManagement = () => {
               }`}
               onClick={() => setActiveTab("artist-approvals")}
               whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              transition={tabButtonTransition}
             >
               Artist Approvals
             </motion.button>
@@ -64,7 +79,7 @@ const AdminManagement = () => {
                   layoutId="admin-tab-pill"
                   className="absolute z-0 h-full w-full bg-white/60 rounded-xl"
                   style={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  transition={tabPillTransition}
                 />
               )}
             </AnimatePresence>
@@ -77,7 +92,7 @@ const AdminManagement = () => {
               }`}
               onClick={() => setActiveTab("carousel")}
               whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              transition={tabButtonTransition}
             >
               Carousel
             </motion.button>
@@ -89,7 +104,7 @@ const AdminManagement = () => {
                   layoutId="admin-tab-pill"
                   className="absolute z-0 h-full w-full bg-white/60 rounded-xl"
                   style={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  transition={tabPillTransition}
                 />
               )}
             </AnimatePresence>
@@ -102,7 +117,7 @@ const AdminManagement = () => {
               }`}
               onClick={() => setActiveTab("featured")}
               whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              transition={tabButtonTransition}
             >
               Featured Artworks
             </motion.button>
@@ -114,10 +129,7 @@ const AdminManagement = () => {
             {activeTab === "artist-approvals" && (
               <motion.div
                 key="artist-approvals"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
+                {...tabContentMotion}
               >
                 <ArtistApprovals />
               </motion.div>
@@ -125,10 +137,7 @@ const AdminManagement = () => {
             {activeTab === "carousel" && (
               <motion.div
                 key="carousel"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
+                {...tabContentMotion}
               >
                 <CarouselManagement />
               </motion.div>
@@ -136,10 +145,7 @@ const AdminManagement = () => {
             {activeTab === "featured" && (
               <motion.div
                 key="featured"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
+                {...tabContentMotion}
               >
                 <FeaturedArtworksManagement />
               </motion.div>

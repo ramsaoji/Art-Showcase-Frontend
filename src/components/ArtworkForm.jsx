@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -19,10 +19,12 @@ import ArtistSelect from "./ArtistSelect";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 import { v4 as uuidv4 } from "uuid";
 import ArtworkImageGrid from "./ArtworkImageGrid";
-import ImageCropper from "./ImageCropper";
+
+// Lazy load ImageCropper (heavy component with react-image-crop) - Vercel 2.4
+const ImageCropper = lazy(() => import("./ImageCropper"));
 
 // Progress bar component
-function ProgressBar({ progress, label }) {
+const ProgressBar = React.memo(({ progress, label }) => {
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm text-gray-600 font-sans">
@@ -37,14 +39,12 @@ function ProgressBar({ progress, label }) {
       </div>
     </div>
   );
-}
+});
 
 // Validation schema
 const createValidationSchema = (
   isSuperAdmin,
-  initialData,
-  artistId,
-  imageRemoved
+  initialData
 ) => {
   return yup.object().shape({
     title: yup.string().trim().required("Title is required"),
@@ -126,6 +126,36 @@ async function compressImageToBase64(file, maxSize = 1024, quality = 0.7) {
     reader.readAsDataURL(file);
   });
 }
+
+// Material and style options
+const materialOptions = [
+  "Oil on Canvas",
+  "Acrylic on Canvas",
+  "Watercolor on Paper",
+  "Mixed Media",
+  "Digital Art",
+  "Sculpture",
+  "Photography",
+  "Printmaking",
+  "Collage",
+  "Drawing",
+  "Other",
+];
+
+const styleOptions = [
+  "Abstract",
+  "Realistic",
+  "Impressionist",
+  "Expressionist",
+  "Surrealist",
+  "Contemporary",
+  "Traditional",
+  "Modern",
+  "Landscape",
+  "Portrait",
+  "Still Life",
+  "Other",
+];
 
 export default function ArtworkForm({
   onSubmit,
@@ -240,7 +270,7 @@ export default function ArtworkForm({
           images: [],
         };
       } catch (error) {
-        console.error("Error parsing saved form data:", error);
+        // Silently fall through to defaults
       }
     }
     // If super admin and add mode, set expiresAt to 30 days from now
@@ -289,15 +319,13 @@ export default function ArtworkForm({
       try {
         return JSON.parse(savedDimensions);
       } catch (error) {
-        console.error("Error parsing saved dimensions:", error);
+        // Silently fall through to defaults
       }
     }
     return { width: "", height: "" };
   };
 
-  function getInitialImagePreview() {
-    return null;
-  }
+
 
   const clearPersisted = () => {
     localStorage.removeItem(FORM_DATA_KEY);
@@ -309,16 +337,11 @@ export default function ArtworkForm({
   // Now safe to use getInitialFormData for all state initializations
   const initialFormData = getInitialFormData();
 
-  // Debug: Log initial form data to see if social media links are included
-  console.log("Initial form data:", initialFormData);
-  console.log("Initial form data keys:", Object.keys(initialFormData));
 
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(getInitialImagePreview());
+
   const [imageRemoved, setImageRemoved] = useState(false);
-  const [imageError, setImageError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+
   const [currentStep, setCurrentStep] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savingProgress, setSavingProgress] = useState(0);
@@ -394,36 +417,6 @@ export default function ArtworkForm({
   const selectedArtistAiLimit =
     selectedArtistUploadData?.aiDescriptionDailyLimit ?? 5;
 
-  // Material and style options
-  const materialOptions = [
-    "Oil on Canvas",
-    "Acrylic on Canvas",
-    "Watercolor on Paper",
-    "Mixed Media",
-    "Digital Art",
-    "Sculpture",
-    "Photography",
-    "Printmaking",
-    "Collage",
-    "Drawing",
-    "Other",
-  ];
-
-  const styleOptions = [
-    "Abstract",
-    "Realistic",
-    "Impressionist",
-    "Expressionist",
-    "Surrealist",
-    "Contemporary",
-    "Traditional",
-    "Modern",
-    "Landscape",
-    "Portrait",
-    "Still Life",
-    "Other",
-  ];
-
   // Create validation schema inside component to have access to current props and state
   const validationSchema = useMemo(() => {
     return createValidationSchema(
@@ -458,9 +451,7 @@ export default function ArtworkForm({
 
   const watchedValues = watch();
 
-  // Debug: Log watched values to see if social media links are being tracked
-  console.log("Watched values:", watchedValues);
-  console.log("Watched values keys:", Object.keys(watchedValues));
+
 
   // State for multiple images (store File or {file, preview, ...} objects)
   const [images, setImages] = useState(() => {
@@ -599,14 +590,7 @@ export default function ArtworkForm({
         (parsedData.year && parsedData.year !== new Date().getFullYear())
       );
 
-      console.log("Form data restoration check:", {
-        initialData,
-        imagesLength: images?.length,
-        hadImage,
-        savedData: !!savedData,
-        hasContent,
-        imageRemoved,
-      });
+
 
       return hasContent;
     } catch {
@@ -766,7 +750,6 @@ export default function ArtworkForm({
       // Invalidate quota so it refetches
       utils.misc.getRemainingQuota.invalidate();
     } catch (err) {
-      console.error("AI description error:", err);
       setAiError(getFriendlyErrorMessage(err));
     } finally {
       setAiLoading(false);
@@ -1001,13 +984,12 @@ export default function ArtworkForm({
     // Ensure images are properly set in form data
     setValue("images", images, { shouldValidate: false });
 
-    console.log("Form submission - images:", images);
-    console.log("Form submission - images length:", images.length);
+
 
     // Trigger validation for all fields, including images
     const isValid = await trigger();
     if (!isValid) {
-      console.log("Form validation failed");
+
       return;
     }
 
@@ -1097,11 +1079,7 @@ export default function ArtworkForm({
       images: uploadedImages,
     };
 
-    // Debug: Log the payload to see what's being submitted
-    console.log("Form submission payload:", payload);
-    console.log("Form data keys:", Object.keys(formData));
-    console.log("Instagram reel link:", formData.instagramReelLink);
-    console.log("YouTube video link:", formData.youtubeVideoLink);
+
 
     // Remove expiresAt field for artists (only super admins should have this field)
     if (!isSuperAdmin) {
@@ -1117,7 +1095,6 @@ export default function ArtworkForm({
       setValidationErrors([]);
     } catch (err) {
       setError(getFriendlyErrorMessage(err));
-      console.error("Form submission error:", err);
     } finally {
       setIsSubmitting(false);
       setCurrentStep(null); // Reset after done
@@ -1176,7 +1153,7 @@ export default function ArtworkForm({
           // TRPC returns { result: { data: ... } }
           setEditArtistUsageStats(json?.result?.data ?? null);
         } catch (err) {
-          console.error("Error fetching artist usage stats:", err);
+          // Error is silently handled; UI shows stale data
         }
       }
     }
@@ -1297,7 +1274,7 @@ export default function ArtworkForm({
       {/* Page refresh notification */}
       {hasFormDataButNoImage && !imageRemoved && (
         <div className="my-4">
-          {console.log("Rendering form data restoration notification")}
+
           <Alert
             type="warning"
             message={
@@ -2258,7 +2235,7 @@ export default function ArtworkForm({
           {currentStep === "uploading" && (
             <ProgressBar
               progress={uploadProgress}
-              label={imageFile ? "Uploading new image..." : "Processing..."}
+              label="Processing..."
             />
           )}
           {currentStep === "saving" && (
@@ -2354,11 +2331,8 @@ export default function ArtworkForm({
               });
               setImages([]);
 
-              setImageFile(null);
-              setImagePreview(null);
               setImageRemoved(false);
-              setImageError("");
-              setImageLoaded(false);
+
               setArtistFieldTouched(false);
               setImageErrors([]); // Clear any image errors
               setValidationErrors([]); // Clear validation errors
@@ -2398,14 +2372,16 @@ export default function ArtworkForm({
 
       {/* Image Cropper Modal */}
       {croppingImage && (
-        <ImageCropper
-          image={croppingImage}
-          onCropComplete={handleCropComplete}
-          onCancel={handleCropCancel}
-          aspectRatio={1} // Square crop by default
-          minWidth={100}
-          minHeight={100}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"><Loader size="large" /></div>}>
+          <ImageCropper
+            image={croppingImage}
+            onCropComplete={handleCropComplete}
+            onCancel={handleCropCancel}
+            aspectRatio={1} // Square crop by default
+            minWidth={100}
+            minHeight={100}
+          />
+        </Suspense>
       )}
     </form>
   );

@@ -1,16 +1,14 @@
-import { Fragment, useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Dialog, Transition } from "@headlessui/react";
-import {
-  XMarkIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PhotoIcon,
-  StarIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
+import ChevronLeftIcon from "@heroicons/react/24/outline/ChevronLeftIcon";
+import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import StarIcon from "@heroicons/react/24/outline/StarIcon";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import format from "date-fns/format";
 import { formatPrice, formatLocalDateTime } from "../utils/formatters";
 import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
 import { trackArtworkInteraction } from "../services/analytics";
@@ -20,6 +18,13 @@ import { useAuth } from "../contexts/AuthContext";
 import PurchaseRequestModal from "./PurchaseRequestModal";
 import SocialMediaModal from "./SocialMediaModal";
 import useMediaQuery from "../hooks/useMediaQuery";
+
+const modalVariants = {
+  initial: { opacity: 0, y: 20, scale: 0.95 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -20, scale: 0.95 },
+  transition: { duration: 0.4, ease: "easeOut" },
+};
 
 export default function ImageModal({
   isOpen,
@@ -50,16 +55,6 @@ export default function ImageModal({
   const currentImage = images[currentIndex] || {};
   const autoTimer = useRef();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-
-  // Debug logging
-  console.log("ImageModal Debug:", {
-    imagesLength: images.length,
-    hasPrevious,
-    hasNext,
-    onPrevious: !!onPrevious,
-    onNext: !!onNext,
-    imageId: image?.id,
-  });
 
   // Reset loading and error states when image or index changes
   useEffect(() => {
@@ -110,7 +105,6 @@ export default function ImageModal({
       highQualityImg.onload = () => setHighQualityLoaded(true);
       highQualityImg.onerror = () => {
         // If high quality fails, keep using preview
-        console.warn("High quality image failed to load, using preview");
       };
     } else {
       setHighQualityLoaded(false);
@@ -118,7 +112,7 @@ export default function ImageModal({
   }, [isOpen, currentImage?.url, currentImage?.cloudinary_public_id]);
 
   // Carousel navigation handlers
-  const goPrev = (e) => {
+  const goPrev = useCallback((e) => {
     e && e.stopPropagation();
     // Prioritize carousel navigation. If at the start, use artwork navigation.
     if (images.length > 1 && currentIndex > 0) {
@@ -126,8 +120,9 @@ export default function ImageModal({
     } else if (onPrevious && hasPrevious) {
       onPrevious();
     }
-  };
-  const goNext = (e) => {
+  }, [images.length, currentIndex, onPrevious, hasPrevious]);
+
+  const goNext = useCallback((e) => {
     e && e.stopPropagation();
     // Prioritize carousel navigation. If at the end, use artwork navigation.
     if (images.length > 1 && currentIndex < images.length - 1) {
@@ -135,8 +130,9 @@ export default function ImageModal({
     } else if (onNext && hasNext) {
       onNext();
     }
-  };
-  const goTo = (idx) => setCurrentIndex(idx);
+  }, [images.length, currentIndex, onNext, hasNext]);
+
+  const goTo = useCallback((idx) => setCurrentIndex(idx), []);
 
   // Determine if navigation is possible
   const canGoPrev =
@@ -150,21 +146,21 @@ export default function ImageModal({
     setCurrentIndex(0);
   }, [image?.id]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     setIsLoading(false);
     setHasError(false);
     if (image) {
       trackArtworkInteraction("artwork_view", image.id, image.title);
     }
-  };
+  }, [image]);
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     setIsLoading(false);
     setHasError(true);
     if (image) {
       trackArtworkInteraction("artwork_view_error", image.id, image.title);
     }
-  };
+  }, [image]);
 
   const handleClose = () => {
     // Only close if social media modal is not open
@@ -227,10 +223,7 @@ export default function ImageModal({
               leaveTo="opacity-0 scale-95"
             >
               <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                {...modalVariants}
                 className="relative w-full max-w-5xl min-w-[320px] sm:min-w-[480px] md:min-w-[600px] lg:min-w-[700px] flex flex-col xl:flex-row bg-transparent backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 ring-1 ring-white/5"
                 style={{
                   height: "calc(100dvh - 5rem)",

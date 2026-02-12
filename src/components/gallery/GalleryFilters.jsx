@@ -1,11 +1,8 @@
 import { Fragment, useState, useEffect, useRef } from "react";
 import { Menu, Transition, Dialog } from "@headlessui/react";
-import {
-  FunnelIcon,
-  ArrowsUpDownIcon,
-  XMarkIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
+import FunnelIcon from "@heroicons/react/24/outline/FunnelIcon";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import { useAuth } from "../../contexts/AuthContext";
 import InfiniteScroll from "react-infinite-scroll-component";
 
@@ -31,6 +28,36 @@ function maskEmailInLabel(label) {
   }
   return label;
 }
+
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "price-high", label: "Price: High to Low" },
+  { value: "price-low", label: "Price: Low to High" },
+  { value: "year-new", label: "Year: Newest to Oldest" },
+  { value: "year-old", label: "Year: Oldest to Newest" },
+  { value: "artist-az", label: "Artist: A to Z" },
+  { value: "artist-za", label: "Artist: Z to A" },
+];
+
+const FEATURED_OPTIONS = [
+  { value: "all", label: "All Artworks" },
+  { value: "featured", label: "Featured Only" },
+  { value: "non-featured", label: "Non-Featured" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "INACTIVE", label: "Inactive" },
+  { value: "EXPIRED", label: "Expired" },
+];
+
+const AVAILABILITY_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "available", label: "Available" },
+  { value: "sold", label: "Sold" },
+];
 
 // Reusable search filter component
 function SearchableFilterSection({
@@ -259,6 +286,7 @@ export default function GalleryFilters({
   const { isSuperAdmin, isArtist, user } = useAuth();
   const [isDesktopFiltersOpen, setIsDesktopFiltersOpen] = useState(false);
 
+
   // Helper to decide if full email should be shown for an artist
   function shouldShowFullEmail(artistId) {
     if (isSuperAdmin) return true;
@@ -334,25 +362,7 @@ export default function GalleryFilters({
                       Sort by
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { value: "newest", label: "Newest First" },
-                        { value: "oldest", label: "Oldest First" },
-                        {
-                          value: "price-high",
-                          label: "Price: High to Low",
-                        },
-                        { value: "price-low", label: "Price: Low to High" },
-                        {
-                          value: "year-new",
-                          label: "Year: Newest to Oldest",
-                        },
-                        {
-                          value: "year-old",
-                          label: "Year: Oldest to Newest",
-                        },
-                        { value: "artist-az", label: "Artist: A to Z" },
-                        { value: "artist-za", label: "Artist: Z to A" },
-                      ].map((option) => (
+                      {SORT_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           onClick={() => handleSortChange(option.value)}
@@ -374,11 +384,7 @@ export default function GalleryFilters({
                       Featured Status
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { value: "all", label: "All Artworks" },
-                        { value: "featured", label: "Featured Only" },
-                        { value: "non-featured", label: "Non-Featured" },
-                      ].map((option) => (
+                      {FEATURED_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           onClick={() =>
@@ -403,12 +409,7 @@ export default function GalleryFilters({
                         Active Status
                       </h3>
                       <div className="space-y-3">
-                        {[
-                          { value: "all", label: "All Statuses" },
-                          { value: "ACTIVE", label: "Active" },
-                          { value: "INACTIVE", label: "Inactive" },
-                          { value: "EXPIRED", label: "Expired" },
-                        ].map((option) => (
+                        {STATUS_OPTIONS.map((option) => (
                           <button
                             key={option.value}
                             onClick={() =>
@@ -496,11 +497,7 @@ export default function GalleryFilters({
                       Availability
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { value: "all", label: "All" },
-                        { value: "available", label: "Available" },
-                        { value: "sold", label: "Sold" },
-                      ].map((option) => (
+                      {AVAILABILITY_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           onClick={() =>
@@ -598,11 +595,7 @@ export default function GalleryFilters({
                   Featured Status
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    { value: "all", label: "All Artworks" },
-                    { value: "featured", label: "Featured Only" },
-                    { value: "non-featured", label: "Non-Featured" },
-                  ].map((option) => (
+                  {FEATURED_OPTIONS.map((option) => (
                     <button
                       key={option.value}
                       onClick={() =>
@@ -626,12 +619,7 @@ export default function GalleryFilters({
                     Active Status
                   </h3>
                   <div className="space-y-2">
-                    {[
-                      { value: "all", label: "All Statuses" },
-                      { value: "ACTIVE", label: "Active" },
-                      { value: "INACTIVE", label: "Inactive" },
-                      { value: "EXPIRED", label: "Expired" },
-                    ].map((option) => (
+                    {STATUS_OPTIONS.map((option) => (
                       <button
                         key={option.value}
                         onClick={() =>
@@ -655,11 +643,7 @@ export default function GalleryFilters({
                   Availability
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    { value: "all", label: "All" },
-                    { value: "available", label: "Available" },
-                    { value: "sold", label: "Sold" },
-                  ].map((option) => (
+                  {AVAILABILITY_OPTIONS.map((option) => (
                     <button
                       key={option.value}
                       onClick={() =>
@@ -874,16 +858,7 @@ export default function GalleryFilters({
           >
             <Menu.Items className="absolute left-0 z-50 mt-2 w-56 origin-top-left rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
               <div className="py-2">
-                {[
-                  { value: "newest", label: "Newest First" },
-                  { value: "oldest", label: "Oldest First" },
-                  { value: "price-high", label: "Price: High to Low" },
-                  { value: "price-low", label: "Price: Low to High" },
-                  { value: "year-new", label: "Year: Newest to Oldest" },
-                  { value: "year-old", label: "Year: Oldest to Newest" },
-                  { value: "artist-az", label: "Artist: A to Z" },
-                  { value: "artist-za", label: "Artist: Z to A" },
-                ].map((option) => (
+                {SORT_OPTIONS.map((option) => (
                   <Menu.Item key={option.value}>
                     {({ active }) => (
                       <button
@@ -962,16 +937,7 @@ export default function GalleryFilters({
                       Sort by
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { value: "newest", label: "Newest First" },
-                        { value: "oldest", label: "Oldest First" },
-                        { value: "price-high", label: "Price: High to Low" },
-                        { value: "price-low", label: "Price: Low to High" },
-                        { value: "year-new", label: "Year: Newest to Oldest" },
-                        { value: "year-old", label: "Year: Oldest to Newest" },
-                        { value: "artist-az", label: "Artist: A to Z" },
-                        { value: "artist-za", label: "Artist: Z to A" },
-                      ].map((option) => (
+                      {SORT_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           onClick={() => handleSortChange(option.value)}
@@ -993,11 +959,7 @@ export default function GalleryFilters({
                       Featured Status
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { value: "all", label: "All Artworks" },
-                        { value: "featured", label: "Featured Only" },
-                        { value: "non-featured", label: "Non-Featured" },
-                      ].map((option) => (
+                      {FEATURED_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           onClick={() =>
@@ -1022,12 +984,7 @@ export default function GalleryFilters({
                         Active Status
                       </h3>
                       <div className="space-y-3">
-                        {[
-                          { value: "all", label: "All Statuses" },
-                          { value: "ACTIVE", label: "Active" },
-                          { value: "INACTIVE", label: "Inactive" },
-                          { value: "EXPIRED", label: "Expired" },
-                        ].map((option) => (
+                        {STATUS_OPTIONS.map((option) => (
                           <button
                             key={option.value}
                             onClick={() =>
@@ -1115,11 +1072,7 @@ export default function GalleryFilters({
                       Availability
                     </h3>
                     <div className="space-y-3">
-                      {[
-                        { value: "all", label: "All" },
-                        { value: "available", label: "Available" },
-                        { value: "sold", label: "Sold" },
-                      ].map((option) => (
+                      {AVAILABILITY_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           onClick={() =>

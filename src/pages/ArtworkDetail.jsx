@@ -1,16 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { trpc } from "../utils/trpc";
-import {
-  ShareIcon,
-  PhotoIcon,
-  StarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  XMarkIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
+import ShareIcon from "@heroicons/react/24/outline/ShareIcon";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import StarIcon from "@heroicons/react/24/outline/StarIcon";
+import ChevronLeftIcon from "@heroicons/react/24/outline/ChevronLeftIcon";
+import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 
 import { motion } from "framer-motion";
 import { getFullSizeUrl } from "../config/cloudinary";
@@ -28,6 +26,43 @@ import PurchaseRequestModal from "../components/PurchaseRequestModal";
 import useOptimizedImage from "../hooks/useOptimizedImage";
 import ImageModal from "../components/ImageModal";
 import SocialMediaModal from "../components/SocialMediaModal";
+
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20, scale: 0.95 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  transition: { duration: 0.4, ease: "easeOut" },
+};
+
+const detailsSectionMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.2 },
+};
+
+const titleMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.3 },
+};
+
+const priceMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.4 },
+};
+
+const descriptionMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.5 },
+};
+
+const metadataMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.6 },
+};
 
 export default function ArtworkDetail() {
   const { id } = useParams();
@@ -55,12 +90,12 @@ export default function ArtworkDetail() {
   } = trpc.artwork.getArtworkById.useQuery({ id }, { enabled: !!id });
 
   useEffect(() => {
-    if (artwork) {
+    if (artwork?.id && artwork?.title) {
       trackArtworkView(artwork.id, artwork.title);
     }
-  }, [artwork]);
+  }, [artwork?.id, artwork?.title]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     const shareUrl = window.location.href;
     try {
       await navigator.share({
@@ -79,10 +114,10 @@ export default function ArtworkDetail() {
         // Track clipboard share
         trackShare(artwork.id, "clipboard");
       } catch (clipboardError) {
-        console.error("Failed to copy to clipboard:", clipboardError);
+        // Clipboard copy failed silently
       }
     }
-  };
+  }, [artwork?.id, artwork?.title, artwork?.artist]);
 
   // Determine if the current user is the owner (artist) of this artwork
   const isOwner = user && artwork?.userId && user.id === artwork.userId;
@@ -104,8 +139,10 @@ export default function ArtworkDetail() {
   const [currentIndex, setCurrentIndex] = useState(0);
   // Only call the hook for the current image
   const currentImage = images[currentIndex] || {};
+  // Check for both public_id and cloudinary_public_id (some images use one, some use the other)
+  const publicId = currentImage.public_id || currentImage.cloudinary_public_id || null;
   const imageState = useOptimizedImage(
-    currentImage.cloudinary_public_id || null,
+    publicId,
     {
       lazy: false,
       width: 900,
@@ -134,6 +171,64 @@ export default function ArtworkDetail() {
     }, 3500); // Toggles every 3.5s
     return () => clearInterval(timer);
   }, [currentIndex, artwork?.id]);
+
+  // Memoized handlers (rerender-functional-setstate)
+  const handlePreviousImage = useCallback(() => {
+    setCurrentIndex((idx) => (idx - 1 + images.length) % images.length);
+  }, [images.length]);
+
+  const handleNextImage = useCallback(() => {
+    setCurrentIndex((idx) => (idx + 1) % images.length);
+  }, [images.length]);
+
+  const handleDotClick = useCallback((idx) => {
+    setCurrentIndex(idx);
+  }, []);
+
+  const handleFullScreenOpen = useCallback(() => {
+    setFullScreenImageOpen(true);
+  }, []);
+
+  const handleFullScreenClose = useCallback(() => {
+    setFullScreenImageOpen(false);
+  }, []);
+
+  const handlePurchaseModalOpen = useCallback(() => {
+    setShowPurchaseModal(true);
+  }, []);
+
+  const handlePurchaseModalClose = useCallback(() => {
+    setShowPurchaseModal(false);
+  }, []);
+
+  const handleInstagramModalOpen = useCallback(() => {
+    if (!artwork?.instagramReelLink) return;
+    setSocialMediaModal({
+      isOpen: true,
+      type: "instagram",
+      url: artwork.instagramReelLink,
+      title: `Instagram - ${artwork.title}`,
+    });
+  }, [artwork?.instagramReelLink, artwork?.title]);
+
+  const handleYoutubeModalOpen = useCallback(() => {
+    if (!artwork?.youtubeVideoLink) return;
+    setSocialMediaModal({
+      isOpen: true,
+      type: "youtube",
+      url: artwork.youtubeVideoLink,
+      title: `YouTube Video - ${artwork.title}`,
+    });
+  }, [artwork?.youtubeVideoLink, artwork?.title]);
+
+  const handleSocialMediaModalClose = useCallback(() => {
+    setSocialMediaModal({
+      isOpen: false,
+      type: null,
+      url: null,
+      title: null,
+    });
+  }, []);
 
   if (artworkLoading) {
     return (
@@ -179,9 +274,7 @@ export default function ArtworkDetail() {
     <div className="relative min-h-[calc(100vh-5rem)] bg-gradient-to-br from-gray-50 via-indigo-50 to-purple-50">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          {...containerMotion}
           className="bg-transparent backdrop-blur-xl rounded-3xl shadow-lg md:shadow-2xl border border-white/20 overflow-hidden md:ring-1 ring-white/10 min-h-[85vh]"
         >
           <div className="flex flex-col xl:flex-row h-full min-h-[85vh]">
@@ -206,7 +299,7 @@ export default function ArtworkDetail() {
                   <div className="absolute inset-0 w-full h-full">
                     <img
                       src={
-                        currentImage.cloudinary_public_id
+                        publicId
                           ? imageState.previewUrl
                           : currentImage.url
                       }
@@ -228,11 +321,7 @@ export default function ArtworkDetail() {
                     <>
                       <button
                         className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 sm:p-3 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
-                        onClick={() =>
-                          setCurrentIndex(
-                            (idx) => (idx - 1 + images.length) % images.length
-                          )
-                        }
+                        onClick={handlePreviousImage}
                         aria-label="Previous image"
                         type="button"
                       >
@@ -240,9 +329,7 @@ export default function ArtworkDetail() {
                       </button>
                       <button
                         className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 sm:p-3 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md border border-white/20 hover:scale-110 hover:border-white/30"
-                        onClick={() =>
-                          setCurrentIndex((idx) => (idx + 1) % images.length)
-                        }
+                        onClick={handleNextImage}
                         aria-label="Next image"
                         type="button"
                       >
@@ -266,7 +353,7 @@ export default function ArtworkDetail() {
                           `}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCurrentIndex(idx);
+                            handleDotClick(idx);
                           }}
                           aria-label={`Go to image ${idx + 1}`}
                           type="button"
@@ -278,16 +365,14 @@ export default function ArtworkDetail() {
                   {/* Enhanced progressive image loading */}
                   <div
                     className="relative z-10 w-full h-[50vh] md:h-[60vh] xl:h-full flex items-center justify-center cursor-zoom-in group"
-                    onClick={() => {
-                      setFullScreenImageOpen(true);
-                    }}
+                    onClick={handleFullScreenOpen}
                   >
                     <div className="relative overflow-hidden shadow-lg md:shadow-2xl md:ring-1 md:ring-white/20 group-hover:ring-white/30 transition-all duration-300 group-hover:scale-[1.02]">
                       <img
                         src={
-                          currentImage.cloudinary_public_id
-                            ? getFullSizeUrl(currentImage.cloudinary_public_id)
-                            : currentImage.url
+                          imageState.fullSizeUrl ||
+                          currentImage.url ||
+                          "placeholder.png"
                         }
                         alt={artwork.title}
                         className={`max-w-full max-h-full object-contain transition-all duration-500 ${
@@ -385,8 +470,7 @@ export default function ArtworkDetail() {
               {/* Enhanced header with title and share button */}
               <div className="flex items-start justify-between mb-4 sm:mb-6">
                 <motion.h1
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  {...titleMotion}
                   className="font-artistic text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-wide leading-tight pr-4"
                 >
                   {artwork?.title}
@@ -406,9 +490,7 @@ export default function ArtworkDetail() {
 
               {/* Enhanced Artist section */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+                {...detailsSectionMotion}
                 className="mb-6 sm:mb-8"
               >
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-3 sm:p-4 border border-indigo-100">
@@ -427,9 +509,7 @@ export default function ArtworkDetail() {
               {/* Enhanced Price */}
               {artwork?.price && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
+                  {...priceMotion}
                   className="mb-6 sm:mb-8"
                 >
                   <p className="font-artistic text-xl sm:text-2xl xl:text-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent font-bold tracking-wide">
@@ -441,9 +521,7 @@ export default function ArtworkDetail() {
               {/* Enhanced scrollable content */}
               <div className="flex-1 overflow-y-auto overscroll-contain">
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  {...descriptionMotion}
                   className="space-y-6 sm:space-y-8"
                 >
                   {/* Enhanced Description */}
@@ -508,14 +586,7 @@ export default function ArtworkDetail() {
                     {/* Instagram Link */}
                     {artwork?.instagramReelLink && (
                       <div
-                        onClick={() =>
-                          setSocialMediaModal({
-                            isOpen: true,
-                            type: "instagram",
-                            url: artwork.instagramReelLink,
-                            title: `Instagram - ${artwork.title}`,
-                          })
-                        }
+                        onClick={handleInstagramModalOpen}
                         className="bg-gradient-to-r from-pink-50/80 to-purple-50/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-pink-200/60 hover:border-pink-300/70 transition-all duration-200 cursor-pointer hover:shadow-lg"
                       >
                         <h3 className="text-xs font-sans font-semibold text-pink-700 mb-2 uppercase tracking-wider flex items-center">
@@ -537,14 +608,7 @@ export default function ArtworkDetail() {
                     {/* YouTube Video Link */}
                     {artwork?.youtubeVideoLink && (
                       <div
-                        onClick={() =>
-                          setSocialMediaModal({
-                            isOpen: true,
-                            type: "youtube",
-                            url: artwork.youtubeVideoLink,
-                            title: `YouTube Video - ${artwork.title}`,
-                          })
-                        }
+                        onClick={handleYoutubeModalOpen}
                         className="bg-gradient-to-r from-red-50/80 to-orange-50/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-red-200/60 hover:border-red-300/70 transition-all duration-200 cursor-pointer hover:shadow-lg"
                       >
                         <h3 className="text-xs font-sans font-semibold text-red-700 mb-2 uppercase tracking-wider flex items-center">
@@ -596,7 +660,7 @@ export default function ArtworkDetail() {
                   <div className="flex sm:justify-start border-t border-gray-200/50 bg-gradient-to-r from-white/90 to-gray-50/90 backdrop-blur-xl py-3 sm:py-4 mt-4 sm:mt-6">
                     <button
                       className="w-full sm:w-auto max-w-60 px-4 sm:px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold shadow-lg hover:shadow-xl hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
-                      onClick={() => setShowPurchaseModal(true)}
+                      onClick={handlePurchaseModalOpen}
                     >
                       Request to Purchase
                     </button>
@@ -708,7 +772,7 @@ export default function ArtworkDetail() {
               <div className="absolute inset-0 w-full h-full">
                 <img
                   src={
-                    currentImage.cloudinary_public_id
+                    publicId
                       ? imageState.previewUrl
                       : currentImage.url
                   }
@@ -728,9 +792,9 @@ export default function ArtworkDetail() {
               {/* Main image */}
               <img
                 src={
-                  currentImage.cloudinary_public_id
-                    ? getFullSizeUrl(currentImage.cloudinary_public_id)
-                    : currentImage.url
+                  imageState.fullSizeUrl ||
+                  currentImage.url ||
+                  "placeholder.png"
                 }
                 alt={artwork?.title}
                 className="relative z-10 max-w-[85vw] max-h-[85vh] w-auto h-auto object-contain rounded-lg shadow-lg md:shadow-2xl shadow-black/50"
@@ -745,7 +809,7 @@ export default function ArtworkDetail() {
                     return (
                       <button
                         key={img.id}
-                        onClick={() => setCurrentIndex(index)}
+                        onClick={() => handleDotClick(index)}
                         className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300 focus:outline-none  ${
                           isActive
                             ? "bg-white scale-110 shadow-lg shadow-white/25"
@@ -766,7 +830,7 @@ export default function ArtworkDetail() {
               {/* Click outside to close */}
               <div
                 className="absolute inset-0 -z-10"
-                onClick={() => setFullScreenImageOpen(false)}
+                onClick={handleFullScreenClose}
               />
             </div>
           </div>,
@@ -784,14 +848,7 @@ export default function ArtworkDetail() {
       {socialMediaModal.isOpen && (
         <SocialMediaModal
           isOpen={socialMediaModal.isOpen}
-          onClose={() =>
-            setSocialMediaModal({
-              isOpen: false,
-              type: null,
-              url: null,
-              title: null,
-            })
-          }
+          onClose={handleSocialMediaModalClose}
           type={socialMediaModal.type}
           url={socialMediaModal.url}
           title={socialMediaModal.title}

@@ -7,11 +7,9 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
-import {
-  XMarkIcon,
-  HandRaisedIcon,
-  ScissorsIcon,
-} from "@heroicons/react/24/outline";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
+import HandRaisedIcon from "@heroicons/react/24/outline/HandRaisedIcon";
+import ScissorsIcon from "@heroicons/react/24/outline/ScissorsIcon";
 import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
@@ -30,6 +28,13 @@ function centerAspectCrop(mediaWidth, mediaHeight, aspect) {
     mediaHeight
   );
 }
+
+const modalVariants = {
+  initial: { opacity: 0, scale: 0.95, y: 20 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.95, y: 20 },
+  transition: { duration: 0.2, ease: "easeOut" },
+};
 
 export default function ImageCropper({
   image,
@@ -167,7 +172,6 @@ export default function ImageCropper({
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            console.error("Canvas is empty");
             return;
           }
           blob.name = "cropped-image.jpg";
@@ -187,7 +191,7 @@ export default function ImageCropper({
         onCropComplete(croppedResult);
       }
     } catch (error) {
-      console.error("Error cropping image:", error);
+      // Crop error is handled by returning null from getCroppedImg
     }
   }, [getCroppedImg, onCropComplete]);
 
@@ -325,9 +329,7 @@ export default function ImageCropper({
       {/* Modal Content */}
       <motion.div
         ref={modalContentRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        {...modalVariants}
         className="relative mx-auto bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-white/20 z-[70] flex flex-col overflow-y-auto max-w-6xl"
         style={{
           overflowX: "hidden",

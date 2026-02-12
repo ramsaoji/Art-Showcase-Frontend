@@ -6,8 +6,23 @@ import { trpc } from "../../utils/trpc";
 import { motion } from "framer-motion";
 import Alert from "../../components/Alert";
 import Loader from "../../components/ui/Loader";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
+import EyeSlashIcon from "@heroicons/react/24/outline/EyeSlashIcon";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
+import { useCallback } from "react";
+
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
+
+const formContainerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.1 },
+};
 
 const schema = yup.object().shape({
   currentPassword: yup.string().required("Current password is required"),
@@ -29,6 +44,19 @@ export default function ChangePassword() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Memoized handlers (rerender-functional-setstate)
+  const handleCurrentPasswordToggle = useCallback(() => {
+    setShowCurrentPassword((p) => !p);
+  }, []);
+
+  const handleNewPasswordToggle = useCallback(() => {
+    setShowNewPassword((p) => !p);
+  }, []);
+
+  const handleConfirmPasswordToggle = useCallback(() => {
+    setShowConfirmPassword((p) => !p);
+  }, []);
 
   const {
     register,
@@ -62,7 +90,7 @@ export default function ChangePassword() {
             return;
           }
         } catch (e) {
-          console.error("Failed to parse error message:", e);
+          // Failed to parse error message
         }
       }
 
@@ -106,9 +134,7 @@ export default function ChangePassword() {
       </div>
       <div className="relative">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          {...containerMotion}
           className="text-center mb-12"
         >
           <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
@@ -120,9 +146,7 @@ export default function ChangePassword() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          {...formContainerMotion}
           className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 p-8 sm:p-10"
         >
           <div className="space-y-6">
@@ -165,7 +189,7 @@ export default function ChangePassword() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowCurrentPassword((p) => !p)}
+                      onClick={handleCurrentPasswordToggle}
                       className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
                     >
                       {showCurrentPassword ? (
@@ -197,7 +221,7 @@ export default function ChangePassword() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowNewPassword((p) => !p)}
+                      onClick={handleNewPasswordToggle}
                       className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
                     >
                       {showNewPassword ? (
@@ -229,7 +253,7 @@ export default function ChangePassword() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword((p) => !p)}
+                      onClick={handleConfirmPasswordToggle}
                       className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
                     >
                       {showConfirmPassword ? (

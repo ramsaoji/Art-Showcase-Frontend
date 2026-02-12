@@ -1,15 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  PhotoIcon,
-  StarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "@heroicons/react/24/outline";
-// import { format } from "date-fns";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import StarIcon from "@heroicons/react/24/outline/StarIcon";
+import ChevronLeftIcon from "@heroicons/react/24/outline/ChevronLeftIcon";
+import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
 import { formatPrice, formatLocalDateTime } from "../utils/formatters";
-// import { getThumbnailUrl } from "../config/cloudinary";
 import useOptimizedImage from "../hooks/useOptimizedImage";
 import ArtworkActions from "./ArtworkActions";
 import Badge from "./Badge";
@@ -17,7 +13,20 @@ import { useAuth } from "../contexts/AuthContext";
 import PurchaseRequestModal from "./PurchaseRequestModal";
 import SocialMediaModal from "./SocialMediaModal";
 
-export default function ArtworkCard({
+const cardVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+};
+
+const imageFadeVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.3 },
+};
+
+const ArtworkCard = memo(function ArtworkCard({
   artwork,
   onDelete,
   onQuickView,
@@ -49,8 +58,10 @@ export default function ArtworkCard({
 
   // Get optimized URLs for the current image only
   const currentImage = images[currentIndex] || {};
+  // Check for both public_id and cloudinary_public_id (some images use one, some use the other)
+  const publicId = currentImage.public_id || currentImage.cloudinary_public_id || null;
   const imageState = useOptimizedImage(
-    currentImage.cloudinary_public_id || null,
+    publicId,
     {
       width: 600,
       quality: 80,
@@ -68,21 +79,23 @@ export default function ArtworkCard({
   }, [currentIndex, images.length]);
 
   // Manual navigation
-  const goTo = (idx) => {
+  const goTo = useCallback((idx) => {
     if (idx === currentIndex) return;
     clearTimeout(autoTimer.current);
     setCurrentIndex(idx);
-  };
-  const goPrev = (e) => {
+  }, [currentIndex]);
+
+  const goPrev = useCallback((e) => {
     e && e.stopPropagation();
     clearTimeout(autoTimer.current);
     setCurrentIndex((idx) => (idx - 1 + images.length) % images.length);
-  };
-  const goNext = (e) => {
+  }, [images.length]);
+
+  const goNext = useCallback((e) => {
     e && e.stopPropagation();
     clearTimeout(autoTimer.current);
     setCurrentIndex((idx) => (idx + 1) % images.length);
-  };
+  }, [images.length]);
 
   // Check if text is truncated
   const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
@@ -126,18 +139,18 @@ export default function ArtworkCard({
     };
   }, [priority]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     setImageLoaded(true);
-  };
+  }, []);
 
-  const handleImageError = (e) => {
+  const handleImageError = useCallback((e) => {
     // Try to fallback to the original URL if the optimized image fails
     if (currentImage.url && e.target.src !== currentImage.url) {
       e.target.src = currentImage.url;
     } else {
       setImageError(true);
     }
-  };
+  }, [currentImage.url]);
 
   useEffect(() => {
     if (imageState.isError) {
@@ -149,10 +162,10 @@ export default function ArtworkCard({
   useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
-  }, [currentIndex, currentImage.cloudinary_public_id, currentImage.url]);
+  }, [currentIndex, publicId, currentImage.url]);
 
   // Safe fallbacks for missing data
-  const safeArtwork = {
+  const safeArtwork = useMemo(() => ({
     title: artwork.title || "Untitled",
     artist: artwork.artist || "Unknown Artist",
     year: artwork.year || "Year Unknown",
@@ -162,7 +175,28 @@ export default function ArtworkCard({
     material: artwork.material || "Material Unknown",
     dimensions: artwork.dimensions || "Dimensions Unknown",
     ...artwork,
-  };
+  }), [artwork]);
+
+  // Memoize social media modal handlers to avoid creating new objects on every render (rerender-functional-setstate)
+  const handleInstagramModalOpen = useCallback(() => {
+    if (!safeArtwork?.instagramReelLink) return;
+    setSocialMediaModal({
+      isOpen: true,
+      type: "instagram",
+      url: safeArtwork.instagramReelLink,
+      title: `Instagram - ${safeArtwork.title}`,
+    });
+  }, [safeArtwork?.instagramReelLink, safeArtwork?.title]);
+
+  const handleYoutubeModalOpen = useCallback(() => {
+    if (!safeArtwork?.youtubeVideoLink) return;
+    setSocialMediaModal({
+      isOpen: true,
+      type: "youtube",
+      url: safeArtwork.youtubeVideoLink,
+      title: `YouTube Video - ${safeArtwork.title}`,
+    });
+  }, [safeArtwork?.youtubeVideoLink, safeArtwork?.title]);
 
   // Determine if the current user is the owner (artist) of this artwork
   const isOwner = user && artwork?.userId && user.id === artwork.userId;
@@ -177,9 +211,7 @@ export default function ArtworkCard({
     <motion.div
       ref={cardRef}
       layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
+      {...cardVariants}
       className={`group relative bg-gradient-to-br from-white/90 via-white/95 to-gray-50/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 ring-1 ring-white/10 hover:shadow-3xl hover:shadow-indigo-500/10 transition-all duration-500 
         h-[680px] flex flex-col justify-between overflow-hidden`}
     >
@@ -262,10 +294,7 @@ export default function ArtworkCard({
                       "placeholder.png"
                     }
                     alt={safeArtwork.title}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    {...imageFadeVariants}
                     className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-110"
                     onLoad={handleImageLoad}
                     onError={handleImageError}
@@ -449,14 +478,7 @@ export default function ArtworkCard({
             {/* Instagram Link */}
             {safeArtwork.instagramReelLink && (
               <button
-                onClick={() =>
-                  setSocialMediaModal({
-                    isOpen: true,
-                    type: "instagram",
-                    url: safeArtwork.instagramReelLink,
-                    title: `Instagram - ${safeArtwork.title}`,
-                  })
-                }
+                onClick={handleInstagramModalOpen}
                 className="px-3 py-1 text-sm font-sans font-medium bg-gradient-to-r from-pink-50/80 to-purple-50/80 text-pink-600 rounded-xl shadow-sm border border-pink-200/60 hover:border-pink-300/70 transition-all duration-200 hover:scale-105 flex items-center gap-1"
                 title="View Instagram"
               >
@@ -473,14 +495,7 @@ export default function ArtworkCard({
             {/* YouTube Video Link */}
             {safeArtwork.youtubeVideoLink && (
               <button
-                onClick={() =>
-                  setSocialMediaModal({
-                    isOpen: true,
-                    type: "youtube",
-                    url: safeArtwork.youtubeVideoLink,
-                    title: `YouTube Video - ${safeArtwork.title}`,
-                  })
-                }
+                onClick={handleYoutubeModalOpen}
                 className="px-3 py-1 text-sm font-sans font-medium bg-gradient-to-r from-red-50/80 to-orange-50/80 text-red-600 rounded-xl shadow-sm border border-red-200/60 hover:border-red-300/70 transition-all duration-200 hover:scale-105 flex items-center gap-1"
                 title="Watch YouTube Video"
               >
@@ -571,4 +586,6 @@ export default function ArtworkCard({
       )}
     </motion.div>
   );
-}
+});
+
+export default ArtworkCard;

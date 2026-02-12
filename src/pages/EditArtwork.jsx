@@ -6,6 +6,27 @@ import Loader from "../components/ui/Loader";
 import { useAuth } from "../contexts/AuthContext";
 import Alert from "../components/Alert";
 import { getFriendlyErrorMessage } from "../utils/formatters";
+import { useCallback } from "react";
+import { motion } from "framer-motion";
+
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
+
+const headerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.1 },
+};
+
+const formContainerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.2 },
+};
 
 export default function EditArtwork() {
   const navigate = useNavigate();
@@ -14,7 +35,7 @@ export default function EditArtwork() {
   const [error, setError] = useState(null);
   const [artwork, setArtwork] = useState(null);
 
-  console.log("Route ID from useParams:", id, "Type:", typeof id);
+
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
@@ -30,7 +51,6 @@ export default function EditArtwork() {
     {
       enabled: !!id, // Only run query if ID exists
       onError: (error) => {
-        console.error("Error loading artwork:", error);
         setError(getFriendlyErrorMessage(error));
       },
     }
@@ -111,7 +131,6 @@ export default function EditArtwork() {
       };
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (err) {
-      console.error("Artwork update failed:", err);
       setError(getFriendlyErrorMessage(err));
     }
   };
@@ -166,8 +185,7 @@ export default function EditArtwork() {
       ? artists.find((a) => a.id === artworkData.userId)
       : null;
 
-  // Debug: log the artwork object to check monthlyUploadLimit
-  console.log("EditArtwork: artwork data passed to form", artworkData);
+
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 sm:py-16 bg-white/50">
@@ -184,8 +202,11 @@ export default function EditArtwork() {
         </div>
       </div>
 
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+      <motion.div
+        {...containerMotion}
+        className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"
+      >
+        <motion.div {...headerMotion} className="text-center mb-12">
           <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
             Edit Artwork
           </h2>
@@ -193,9 +214,12 @@ export default function EditArtwork() {
             Update your artwork details below. Make changes to your masterpiece
             and save to keep your gallery up to date.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100">
+        <motion.div
+          {...formContainerMotion}
+          className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
+        >
           <div className="p-6 sm:p-8">
             <ArtworkForm
               initialData={artworkData}
@@ -207,8 +231,8 @@ export default function EditArtwork() {
               selectedArtist={selectedArtist}
             />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 import { trpc } from "../utils/trpc";
 import {
   trackArtworkInteraction,
@@ -121,17 +121,17 @@ export default function useGallery() {
     () => ({
       searchQuery: searchQuery.trim(),
       material: filters.material,
-      artist: filters.artist, // Added artist to query input
+      artist: filters.artist,
       availability: filters.availability,
       featured: filters.featured,
-      status: filters.status, // Ensure status is sent to backend
-      style: filters.style, // <-- add style to query input
+      status: filters.status,
+      style: filters.style,
       sortBy,
       page: currentPage,
       limit: ITEMS_PER_PAGE,
     }),
     [
-      searchQuery.trim(),
+      searchQuery,
       filters.material,
       filters.artist,
       filters.availability,
@@ -140,7 +140,6 @@ export default function useGallery() {
       filters.style,
       sortBy,
       currentPage,
-      ITEMS_PER_PAGE,
     ]
   );
 
@@ -160,19 +159,14 @@ export default function useGallery() {
     cacheTime: 300000,
     keepPreviousData: true,
     enabled: !authLoading, // Only enable when auth is not loading
-    onSuccess: (data) => {
-      console.log("Query succeeded with data:", data);
-    },
-    onError: (error) => {
-      console.error("Query failed with error:", error);
-    },
+
   });
 
   // Reset pagination when filters change (using stable queryKey)
   const prevQueryKey = useRef(queryKey);
   useEffect(() => {
     if (initialized.current && prevQueryKey.current !== queryKey) {
-      console.log("Filter/search change detected, resetting pagination");
+
       setCurrentPage(1);
       setAllArtworks([]);
       setHasMore(true);
@@ -184,7 +178,7 @@ export default function useGallery() {
   // Handle page data updates more efficiently
   useEffect(() => {
     if (pageData) {
-      console.log("Page data received:", pageData);
+
 
       if (currentPage === 1) {
         // First page or filter change - replace all artworks
@@ -282,10 +276,10 @@ export default function useGallery() {
 
   // Load more function with better state management
   const loadMore = useCallback(() => {
-    console.log("Load more called:", { isFetching, hasMore, currentPage });
+
 
     if (!isFetching && hasMore) {
-      console.log("Loading next page:", currentPage + 1);
+
       setCurrentPage((prev) => prev + 1);
 
       // Track infinite scroll interaction
@@ -326,13 +320,13 @@ export default function useGallery() {
   );
 
   const handleFilterChange = useCallback((filterType, value) => {
-    console.log("Filter change:", filterType, value);
+
     setFilters((prev) => ({ ...prev, [filterType]: value }));
     trackUserAction("gallery_filter", { type: filterType, value });
   }, []);
 
   const handleSortChange = useCallback((value) => {
-    console.log("Sort change:", value);
+
     setSortBy(value);
     trackUserAction("gallery_sort", { sort_by: value });
   }, []);
@@ -365,7 +359,7 @@ export default function useGallery() {
 
   // Manual refetch for debugging
   const handleManualRefetch = useCallback(() => {
-    console.log("Manual refetch triggered");
+
     refetch();
   }, [refetch]);
 
@@ -460,7 +454,11 @@ export default function useGallery() {
     return active;
   }, [
     searchQuery,
-    filters,
+    filters.material,
+    filters.artist,
+    filters.availability,
+    filters.featured,
+    filters.status,
     sortBy,
     clearSearch,
     handleFilterChange,

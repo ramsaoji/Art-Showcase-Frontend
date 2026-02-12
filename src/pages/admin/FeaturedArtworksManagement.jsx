@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useRef } from "react";
+import React, { useState, useEffect, memo, useRef, useCallback } from "react";
 import { trpc } from "../../utils/trpc";
 import {
   DndContext,
@@ -21,17 +21,22 @@ import { CSS } from "@dnd-kit/utilities";
 import Loader from "../../components/ui/Loader";
 import Alert from "../../components/Alert";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
-import { ChevronUpDownIcon } from "@heroicons/react/24/solid";
+import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
 import Badge from "../../components/Badge";
 import { getThumbnailUrl } from "../../config/cloudinary";
-import {
-  ArrowRightCircleIcon,
-  ArrowLeftCircleIcon,
-  ArrowDownCircleIcon,
-  ArrowUpCircleIcon,
-} from "@heroicons/react/24/solid";
+import ArrowRightCircleIcon from "@heroicons/react/24/solid/ArrowRightCircleIcon";
+import ArrowLeftCircleIcon from "@heroicons/react/24/solid/ArrowLeftCircleIcon";
+import ArrowDownCircleIcon from "@heroicons/react/24/solid/ArrowDownCircleIcon";
+import ArrowUpCircleIcon from "@heroicons/react/24/solid/ArrowUpCircleIcon";
 import { motion, AnimatePresence } from "framer-motion";
 import useMediaQuery from "../../hooks/useMediaQuery";
+
+// Hoisted static motion configuration (rendering-hoist-jsx)
+const emptyStateMotion = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+};
 
 const SortableArtwork = memo(function SortableArtwork({
   id,
@@ -340,9 +345,7 @@ const FeaturedArtworksManagement = () => {
       // Reset saving state
       setIsSaving(false);
 
-      // Show error message
-      console.error("Failed to update featured artworks:", error);
-      // You could add error state here if needed
+      // Error is handled by mutation error state
     },
   });
 
@@ -394,10 +397,9 @@ const FeaturedArtworksManagement = () => {
   );
 
   const handleDragStart = (event) => {
-    console.log("Drag started", event);
+    // Drag started
   };
   const handleDragEnd = (event) => {
-    console.log("Drag ended", event);
     const { active, over } = event;
     if (!over) return;
     if (active.id !== over.id) {
@@ -409,10 +411,10 @@ const FeaturedArtworksManagement = () => {
     }
   };
   const handleDragCancel = () => {
-    console.log("Drag cancelled");
+    // Drag cancelled
   };
 
-  const toggleFeatured = (artwork) => {
+  const toggleFeatured = useCallback((artwork) => {
     if (featured.some((a) => a.id === artwork.id)) {
       setFeatured((prev) => prev.filter((a) => a.id !== artwork.id));
       setAvailable((prev) => [artwork, ...prev]);
@@ -420,9 +422,9 @@ const FeaturedArtworksManagement = () => {
       setAvailable((prev) => prev.filter((a) => a.id !== artwork.id));
       setFeatured((prev) => [artwork, ...prev]);
     }
-  };
+  }, [featured, available]);
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = useCallback(() => {
     const payload = featured
       .map((artwork, index) => ({
         id: artwork.id,
@@ -448,7 +450,7 @@ const FeaturedArtworksManagement = () => {
 
     // Perform the actual update
     updateFeatured.mutate({ artworks: payload });
-  };
+  }, [featured, available, updateFeatured]);
 
   if (
     (isLoadingAvailable && available.length === 0) ||
@@ -505,9 +507,7 @@ const FeaturedArtworksManagement = () => {
               <AnimatePresence>
                 {available.length === 0 && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    {...emptyStateMotion}
                     className="text-center text-gray-400 py-8"
                   >
                     No available artworks.
@@ -586,9 +586,7 @@ const FeaturedArtworksManagement = () => {
                   <AnimatePresence>
                     {featured.length === 0 && (
                       <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                        {...emptyStateMotion}
                         className="text-center text-gray-400 py-8"
                       >
                         No featured artworks.

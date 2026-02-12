@@ -33,6 +33,12 @@ const variants = {
   },
 };
 
+const animationConfig = {
+  initial: { scale: 0 },
+  animate: { scale: 1 },
+  whileHover: { scale: 1.05 },
+};
+
 export default function Badge({
   type = "default",
   variant = "base",
@@ -44,14 +50,14 @@ export default function Badge({
   const style = variants[type] || variants.default;
   const variantStyle = style[variant] || style.base;
 
-  const BadgeContent = () => (
+  const badgeContent = (
     <span
       className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold font-sans ${variantStyle} ${
         animate ? "animate-bounce" : ""
       } ${className}`}
     >
       {children}
-      {withPing && (
+      {withPing ? (
         <span className="absolute inline-flex h-full w-full rounded-full opacity-30 animate-ping"
           style={{
             backgroundColor: type === 'active' ? 'rgba(74, 222, 128, 0.3)' : 
@@ -62,21 +68,17 @@ export default function Badge({
                            'rgba(209, 213, 219, 0.3)'
           }}
         />
-      )}
+      ) : null}
     </span>
   );
 
   if (!animate) {
-    return <BadgeContent />;
+    return badgeContent;
   }
 
   return (
-    <motion.div
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      whileHover={{ scale: 1.05 }}
-    >
-      <BadgeContent />
+    <motion.div {...animationConfig}>
+      {badgeContent}
     </motion.div>
   );
 }

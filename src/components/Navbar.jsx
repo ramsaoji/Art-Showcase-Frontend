@@ -1,11 +1,9 @@
-import { Fragment, useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, Transition } from "@headlessui/react";
-import {
-  Bars3Icon,
-  XMarkIcon,
-  ChevronDownIcon,
-} from "@heroicons/react/24/outline";
+import Bars3Icon from "@heroicons/react/24/outline/Bars3Icon";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
+import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -25,15 +23,16 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isSuperAdmin, isArtist, user, logout } = useAuth();
+  const { isSuperAdmin, isArtist, user, logout, loading, token } = useAuth();
   const mobileMenuRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      const scrolled = window.scrollY > 10;
+      startTransition(() => setIsScrolled(scrolled));
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -63,44 +62,50 @@ export default function Navbar() {
     }
   }, [location.pathname]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       setIsMobileMenuOpen(false);
       navigate("/");
     } catch (error) {
-      console.error("Failed to log out", error);
+      // Logout error is silently handled
     }
-  };
+  }, [logout, navigate]);
 
-  const handleMobileNav = (href) => {
-    setIsMobileMenuOpen(false);
-    setTimeout(() => {
-      navigate(href);
-    }, 300); // Corresponds to the framer-motion exit transition
-  };
+  const handleMobileNav = useCallback(
+    (href) => {
+      setIsMobileMenuOpen(false);
+      setTimeout(() => {
+        navigate(href);
+      }, 300); // Corresponds to the framer-motion exit transition
+    },
+    [navigate]
+  );
 
-  const handleLogoClick = (e) => {
-    e.preventDefault();
+  const handleLogoClick = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    if (location.pathname !== "/") {
-      navigate("/");
-    }
+      if (location.pathname !== "/") {
+        navigate("/");
+      }
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    },
+    [location.pathname, navigate]
+  );
 
   // Get user display name or email
-  const getUserDisplayName = () => {
+  const getUserDisplayName = useCallback(() => {
     if (!user) return "";
     return user.artistName || user.email?.split("@")[0] || "User";
-  };
+  }, [user]);
 
   // Get user initials for avatar
-  const getUserInitials = () => {
+  const getUserInitials = useCallback(() => {
     const displayName = getUserDisplayName();
     return displayName
       .split(" ")
@@ -108,16 +113,19 @@ export default function Navbar() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
+  }, [getUserDisplayName]);
 
   // Dynamically build navigation array
-  const navLinks = [
-    ...navigation,
-    ...(isSuperAdmin && user ? [{ name: "Admin", href: "/admin" }] : []),
-    ...((isSuperAdmin || isArtist) && user
-      ? [{ name: "Add Artwork", href: "/add-artwork" }]
-      : []),
-  ];
+  const navLinks = useMemo(
+    () => [
+      ...navigation,
+      ...(isSuperAdmin && user ? [{ name: "Admin", href: "/admin" }] : []),
+      ...((isSuperAdmin || isArtist) && user
+        ? [{ name: "Add Artwork", href: "/add-artwork" }]
+        : []),
+    ],
+    [isSuperAdmin, isArtist, user]
+  );
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50">
@@ -242,7 +250,13 @@ export default function Navbar() {
 
               {/* Right side - User actions */}
               <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 ml-auto">
-                {user ? (
+                {loading && token ? (
+                   // Skeleton Loader for Auth Section
+                   <div className="hidden lg:flex items-center space-x-4 animate-pulse">
+                     <div className="h-8 w-24 bg-gray-200 rounded-xl" />
+                     <div className="h-9 w-9 bg-gray-200 rounded-full" />
+                   </div>
+                ) : user ? (
                   <>
                     {/* Desktop: Add Artwork button and User Menu in same flex row with gap */}
                     <div className="hidden lg:flex items-center space-x-4">
@@ -305,7 +319,7 @@ export default function Navbar() {
                             leaveFrom="transform opacity-100 scale-100"
                             leaveTo="transform opacity-0 scale-95"
                           >
-                            <Menu.Items className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            <Menu.Items className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden">
                               <div className="px-4 py-2 border-b border-gray-100">
                                 <p className="text-sm font-medium text-gray-900 truncate font-sans">
                                   {getUserDisplayName()}

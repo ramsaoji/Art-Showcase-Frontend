@@ -1,8 +1,51 @@
 import { Fragment, useState, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import { motion } from "framer-motion";
 import Loader from "./ui/Loader";
+
+const YOUTUBE_PATTERNS = [
+  /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+  /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+  /youtube\.com\/shorts\/([^\/\n?#]+)/,
+];
+
+const INSTAGRAM_PATTERNS = [
+  /instagram\.com\/p\/([^\/\n?#]+)/,
+  /instagram\.com\/reel\/([^\/\n?#]+)/,
+  /instagram\.com\/tv\/([^\/\n?#]+)/,
+];
+
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return null;
+  for (const pattern of YOUTUBE_PATTERNS) {
+    const match = url.match(pattern);
+    if (match) {
+      // Enable autoplay for all YouTube videos
+      return `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&mute=1`;
+    }
+  }
+  return null;
+};
+
+const getInstagramEmbedUrl = (url) => {
+  if (!url) return null;
+  for (const pattern of INSTAGRAM_PATTERNS) {
+    const match = url.match(pattern);
+    if (match) {
+      // Add autoplay parameter for Instagram videos
+      return `https://www.instagram.com/p/${match[1]}/embed/captioned/?autoplay=1`;
+    }
+  }
+  return null;
+};
+
+const modalVariants = {
+  initial: { opacity: 0, y: 20, scale: 0.95 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -20, scale: 0.95 },
+  transition: { duration: 0.4, ease: "easeOut" },
+};
 
 export default function SocialMediaModal({
   isOpen,
@@ -25,40 +68,6 @@ export default function SocialMediaModal({
     setIsLoading(true);
     setError(null);
     onClose();
-  };
-
-  const getYouTubeEmbedUrl = (url) => {
-    if (!url) return null;
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
-      /youtube\.com\/shorts\/([^\/\n?#]+)/,
-    ];
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) {
-        // Enable autoplay for all YouTube videos
-        return `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&mute=1`;
-      }
-    }
-    return null;
-  };
-
-  const getInstagramEmbedUrl = (url) => {
-    if (!url) return null;
-    const patterns = [
-      /instagram\.com\/p\/([^\/\n?#]+)/,
-      /instagram\.com\/reel\/([^\/\n?#]+)/,
-      /instagram\.com\/tv\/([^\/\n?#]+)/,
-    ];
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) {
-        // Add autoplay parameter for Instagram videos
-        return `https://www.instagram.com/p/${match[1]}/embed/captioned/?autoplay=1`;
-      }
-    }
-    return null;
   };
 
   const getEmbedUrl = () => {
@@ -113,10 +122,7 @@ export default function SocialMediaModal({
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                {...modalVariants}
                 className={`relative w-full mx-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden flex flex-col ${
                   isVertical ? "max-w-sm" : "max-w-7xl"
                 }`}

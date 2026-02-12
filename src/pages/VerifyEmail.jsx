@@ -1,11 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { trpc } from "../utils/trpc";
 import Loader from "../components/ui/Loader";
 import Alert from "../components/Alert";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import CheckCircleIcon from "@heroicons/react/24/outline/CheckCircleIcon";
+import XCircleIcon from "@heroicons/react/24/outline/XCircleIcon";
 import { motion } from "framer-motion";
 import { getFriendlyErrorMessage } from "../utils/formatters";
+
+// Hoisted static motion configuration (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();

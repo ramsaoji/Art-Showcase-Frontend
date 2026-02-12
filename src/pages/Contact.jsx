@@ -9,6 +9,19 @@ import Loader from "../components/ui/Loader";
 import Alert from "../components/Alert";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 
+// Hoisted static motion configurations (rendering-hoist-jsx)
+const containerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
+
+const formContainerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, delay: 0.1 },
+};
+
 const schema = yup.object().shape({
   name: yup.string().required("Name is required"),
   email: yup
@@ -49,7 +62,6 @@ const Contact = () => {
       setSubmitted(true);
       reset();
     } catch (err) {
-      console.error("Contact form submission error:", err);
       setServerError(getFriendlyErrorMessage(err));
     }
   };

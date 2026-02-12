@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { PhotoIcon } from "@heroicons/react/24/outline";
+import { useMemo } from "react";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import InfiniteScroll from "react-infinite-scroll-component";
 import ArtworkCard from "../ArtworkCard";
 import Loader from "../ui/Loader";
-import { Virtuoso } from "react-virtuoso";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function GalleryGrid({
@@ -20,25 +19,26 @@ export default function GalleryGrid({
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
   // Filter artworks based on role
-  let filteredArtworks = isSuperAdmin
-    ? allArtworks
-    : isArtist && user
-    ? allArtworks.filter(
-        (art) =>
-          // For own artworks, apply status filter if set
-          (art.userId === user.id &&
-            (filters.status === "all" || art.status === filters.status)) ||
-          // For others' artworks, only show ACTIVE
-          (art.userId !== user.id && art.status === "ACTIVE")
-      )
-    : allArtworks.filter((art) => art.status === "ACTIVE");
+  const filteredArtworks = useMemo(() => {
+    let result = isSuperAdmin
+      ? allArtworks
+      : isArtist && user
+      ? allArtworks.filter(
+          (art) =>
+            // For own artworks, apply status filter if set
+            (art.userId === user.id &&
+              (filters.status === "all" || art.status === filters.status)) ||
+            // For others' artworks, only show ACTIVE
+            (art.userId !== user.id && art.status === "ACTIVE")
+        )
+      : allArtworks.filter((art) => art.status === "ACTIVE");
 
-  // For super admin, apply status filter if not 'all'
-  if (isSuperAdmin && filters.status && filters.status !== "all") {
-    filteredArtworks = filteredArtworks.filter(
-      (art) => art.status === filters.status
-    );
-  }
+    // For super admin, apply status filter if not 'all'
+    if (isSuperAdmin && filters.status && filters.status !== "all") {
+      result = result.filter((art) => art.status === filters.status);
+    }
+    return result;
+  }, [allArtworks, isSuperAdmin, isArtist, user, filters.status]);
   // State to track if we should use virtualization (for larger datasets)
   // const [useVirtualization, setUseVirtualization] = useState(false);
 

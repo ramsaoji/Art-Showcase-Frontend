@@ -1,14 +1,14 @@
-import React from "react";
+import React, { memo } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Loader from "./ui/Loader";
 
-export default function ProtectedRoute({
+function ProtectedRoute({
   children,
   requireRole,
   superAdminOnly,
 }) {
-  const { user, role, isSuperAdmin, isArtist, loading } = useAuth();
+  const { user, role, isSuperAdmin, loading } = useAuth();
 
   // Show loading state while checking authentication
   if (loading) {
@@ -41,3 +41,6 @@ export default function ProtectedRoute({
 
   return children;
 }
+
+ProtectedRoute.displayName = "ProtectedRoute";
+export default memo(ProtectedRoute);

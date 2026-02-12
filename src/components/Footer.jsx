@@ -1,6 +1,47 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, useAnimation } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
+
+const floatingElementMotion = {
+  animate: {
+    y: [-8, 8, -8],
+  },
+  transition: {
+    duration: 5,
+    repeat: Infinity,
+    ease: "easeInOut",
+  },
+};
+
+const sectionMotion = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+};
+
+const bottomBarMotion = {
+  initial: { opacity: 0 },
+  whileInView: { opacity: 1 },
+  viewport: { once: true },
+  transition: { delay: 0.3 },
+};
+
+const heartMotion = {
+  whileHover: { scale: 1.4, y: -6 },
+  whileTap: { scale: 0.9 },
+  transition: {
+    type: "spring",
+    stiffness: 400,
+    damping: 10,
+  },
+};
+
+const QUICK_LINKS = [
+  { name: "Gallery", path: "/gallery" },
+  { name: "About Us", path: "/about" },
+  { name: "Contact", path: "/contact" },
+  { name: "Sign Up", path: "/signup" },
+];
 
 export default function Footer() {
   const heartControls = useAnimation();
@@ -20,7 +61,7 @@ export default function Footer() {
     });
   }, [heartControls]);
 
-  const handleLogoClick = (e) => {
+  const handleLogoClick = useCallback((e) => {
     e.preventDefault();
 
     // If we're not on the home page, navigate home first
@@ -33,7 +74,7 @@ export default function Footer() {
       top: 0,
       behavior: "smooth",
     });
-  };
+  }, [location.pathname, navigate]);
 
   return (
     <footer className="relative bg-white pt-2">
@@ -102,9 +143,7 @@ export default function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Brand Section */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              {...sectionMotion}
               className="space-y-3"
             >
               <Link
@@ -128,21 +167,14 @@ export default function Footer() {
 
             {/* Quick Links */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              {...sectionMotion}
               transition={{ delay: 0.1 }}
             >
               <h3 className="font-artistic text-base font-semibold mb-4 text-gray-900">
                 Quick Links
               </h3>
               <ul className="space-y-2 font-sans">
-                {[
-                  { name: "Gallery", path: "/gallery" },
-                  { name: "About Us", path: "/about" },
-                  { name: "Contact", path: "/contact" },
-                  { name: "Sign Up", path: "/signup" },
-                ].map((link) => (
+                {QUICK_LINKS.map((link) => (
                   <li key={link.path}>
                     <Link
                       to={link.path}
@@ -158,9 +190,7 @@ export default function Footer() {
 
             {/* Contact Info */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              {...sectionMotion}
               transition={{ delay: 0.2 }}
             >
               <h3 className="font-artistic text-base font-semibold mb-4 text-gray-900">
@@ -195,10 +225,7 @@ export default function Footer() {
 
           {/* Bottom Bar */}
           <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
+            {...bottomBarMotion}
             className="relative mt-8 pt-6"
           >
             {/* Top separator */}
@@ -218,13 +245,7 @@ export default function Footer() {
                   fill="currentColor"
                   viewBox="0 0 20 20"
                   style={{ display: "inline-block", verticalAlign: "middle" }}
-                  whileHover={{ scale: 1.4, y: -6 }}
-                  whileTap={{ scale: 0.9 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 10,
-                  }}
+                  {...heartMotion}
                 >
                   <path
                     fillRule="evenodd"

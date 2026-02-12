@@ -1,10 +1,8 @@
 import { motion } from "framer-motion";
-import {
-  ExclamationTriangleIcon,
-  XCircleIcon,
-  CheckCircleIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
+import ExclamationTriangleIcon from "@heroicons/react/24/outline/ExclamationTriangleIcon";
+import XCircleIcon from "@heroicons/react/24/outline/XCircleIcon";
+import CheckCircleIcon from "@heroicons/react/24/outline/CheckCircleIcon";
+import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 
 const variants = {
   error: {
@@ -45,6 +43,13 @@ const variants = {
   },
 };
 
+const animationConfig = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+  transition: { duration: 0.2 },
+};
+
 export default function Alert({
   type = "info",
   message,
@@ -58,7 +63,7 @@ export default function Alert({
   const style = variants[type];
   const Icon = style.icon;
 
-  const AlertContent = () => (
+  const alertContent = (
     <div
       className={`flex items-center justify-between gap-3 p-4 rounded-xl border backdrop-blur-sm font-sans ${style.bg} ${style.border} ${style.text} ${className}`}
     >
@@ -81,17 +86,12 @@ export default function Alert({
   );
 
   if (!animate) {
-    return <AlertContent />;
+    return alertContent;
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
-    >
-      <AlertContent />
+    <motion.div {...animationConfig}>
+      {alertContent}
     </motion.div>
   );
 }

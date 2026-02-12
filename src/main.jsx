@@ -6,15 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
 import { trpc, trpcClient } from "./utils/trpc";
 import PageLoader from "./components/ui/PageLoader";
-import VerifyEmail from "./pages/VerifyEmail";
 
 // Performance monitoring
 const reportWebVitals = (metric) => {
-  // Analytics or console logging based on your needs
-  if (process.env.NODE_ENV !== "production") {
-    console.log(metric);
-  }
   // In production, you could send to an analytics service
+  // In development, metrics are silently collected
 };
 
 // Lazy load the main App component
@@ -24,17 +20,13 @@ const App = lazy(() => import("./App"));
 if ("PerformanceObserver" in window) {
   try {
     const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        // Log long tasks (tasks that block the main thread for more than 50ms)
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("Long task detected:", entry.duration, "ms");
-        }
-      }
+      // Long tasks (>50ms) are observed for monitoring
+      // Could be sent to an analytics service
     });
 
     observer.observe({ entryTypes: ["longtask"] });
   } catch (e) {
-    console.error("PerformanceObserver for longtask not supported", e);
+    // PerformanceObserver for longtask not supported
   }
 }
 

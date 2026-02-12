@@ -1,4 +1,5 @@
-import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 
 export default function GallerySearch({
   searchInput,

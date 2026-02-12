@@ -22,22 +22,21 @@ const ChangePassword = lazy(() => import("./pages/user/ChangePassword"));
 
 // Analytics wrapper component
 function AnalyticsWrapper({ children }) {
-  const location = useLocation();
+  const pathname = useLocation().pathname;
 
   useEffect(() => {
-    // Track page view in Firebase Analytics
     try {
-      trackPageView(location.pathname);
-    } catch (error) {
-      console.debug("Failed to track page view:", error);
+      trackPageView(pathname);
+    } catch {
+      // Page view tracking failed silently
     }
-  }, [location]);
+  }, [pathname]);
 
   return children;
 }
 
-// Loading fallback component
-const PageLoader = () => (
+// Hoist static fallback to avoid re-creating on every Suspense show (Vercel 6.3)
+const PAGE_LOADER_FALLBACK = (
   <div className="min-h-screen flex items-center justify-center">
     <Loader size="large" />
   </div>
@@ -56,8 +55,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
-    console.error("Uncaught error:", error, errorInfo);
+    // Error is displayed in the UI via getDerivedStateFromError
     this.setState({ errorInfo });
   }
 
@@ -104,7 +102,7 @@ function App() {
       <ScrollToTop />
       <AnalyticsWrapper>
         <ErrorBoundary>
-          <Suspense fallback={<PageLoader />}>
+          <Suspense fallback={PAGE_LOADER_FALLBACK}>
             <Routes>
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route element={<Layout />}>
@@ -134,7 +132,7 @@ function App() {
                 <Route
                   path="/admin"
                   element={
-                    <Suspense fallback={<PageLoader />}>
+                    <Suspense fallback={PAGE_LOADER_FALLBACK}>
                       <ProtectedRoute superAdminOnly>
                         <AdminManagement />
                       </ProtectedRoute>

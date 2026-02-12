@@ -7,6 +7,14 @@ import GalleryGrid from "../components/gallery/GalleryGrid";
 import Alert from "../components/Alert";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 import ScrollToTopButton from "../components/ScrollToTopButton";
+import { useCallback, useMemo } from "react";
+
+// Hoisted static motion configuration (rendering-hoist-jsx)
+const galleryContainerMotion = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 },
+};
 
 export default function Gallery() {
   const {
@@ -59,6 +67,29 @@ export default function Gallery() {
     loadMore,
   } = useGallery();
 
+  // Memoized selectedArtworkIndex (js-cache-function-results)
+  const selectedArtworkIndex = useMemo(() => {
+    if (!selectedImage || !allArtworks) return -1;
+    return allArtworks.findIndex((img) => img.id === selectedImage.id);
+  }, [selectedImage, allArtworks]);
+
+  // Memoized modal handlers (rerender-functional-setstate)
+  const handleModalClose = useCallback(() => {
+    setSelectedImage(null);
+  }, [setSelectedImage]);
+
+  const handleModalPrevious = useCallback(() => {
+    if (selectedArtworkIndex > 0 && allArtworks) {
+      setSelectedImage(allArtworks[selectedArtworkIndex - 1]);
+    }
+  }, [selectedArtworkIndex, allArtworks, setSelectedImage]);
+
+  const handleModalNext = useCallback(() => {
+    if (allArtworks && selectedArtworkIndex < allArtworks.length - 1) {
+      setSelectedImage(allArtworks[selectedArtworkIndex + 1]);
+    }
+  }, [selectedArtworkIndex, allArtworks, setSelectedImage]);
+
   if (isError) {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -88,9 +119,7 @@ export default function Gallery() {
         </div>
       </div>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        {...galleryContainerMotion}
         className="text-center"
       >
         <div className="relative container mx-auto px-4 sm:px-8 py-12">
@@ -154,35 +183,12 @@ export default function Gallery() {
       {selectedImage && (
         <ImageModal
           isOpen={!!selectedImage}
-          onClose={() => setSelectedImage(null)}
+          onClose={handleModalClose}
           image={selectedImage || {}}
-          onPrevious={() => {
-            const currentIndex =
-              allArtworks?.findIndex((img) => img.id === selectedImage?.id) ||
-              0;
-            if (currentIndex > 0 && allArtworks) {
-              setSelectedImage(allArtworks[currentIndex - 1]);
-            }
-          }}
-          onNext={() => {
-            const currentIndex =
-              allArtworks?.findIndex((img) => img.id === selectedImage?.id) ||
-              0;
-            if (allArtworks && currentIndex < allArtworks.length - 1) {
-              setSelectedImage(allArtworks[currentIndex + 1]);
-            }
-          }}
-          hasPrevious={
-            selectedImage &&
-            allArtworks &&
-            allArtworks.findIndex((img) => img.id === selectedImage.id) > 0
-          }
-          hasNext={
-            selectedImage &&
-            allArtworks &&
-            allArtworks.findIndex((img) => img.id === selectedImage.id) <
-              allArtworks.length - 1
-          }
+          onPrevious={handleModalPrevious}
+          onNext={handleModalNext}
+          hasPrevious={selectedArtworkIndex > 0}
+          hasNext={selectedArtworkIndex < (allArtworks?.length || 0) - 1}
         />
       )}
       <ScrollToTopButton />

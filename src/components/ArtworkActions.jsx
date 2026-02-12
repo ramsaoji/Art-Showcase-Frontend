@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
 import { trpc } from "../utils/trpc"; // Adjust path to your trpc setup
 import { useAuth } from "../contexts/AuthContext";
 import ConfirmationDialog from "./ConfirmationDialog";
 import { motion } from "framer-motion";
 import Alert from "./Alert";
 import { getFriendlyErrorMessage } from "../utils/formatters";
+
+const buttonVariants = {
+  whileHover: { scale: 1.05 },
+  whileTap: { scale: 0.95 },
+};
 
 export default function ArtworkActions({ artworkId, onDelete, artwork }) {
   const { isSuperAdmin, user } = useAuth();
@@ -56,33 +62,32 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
     },
   });
 
-  const handleEdit = (e) => {
+  const handleEdit = useCallback((e) => {
     e.stopPropagation();
     e.preventDefault();
     navigate(`/edit-artwork/${artworkId}`);
-  };
+  }, [navigate, artworkId]);
 
-  const handleDeleteClick = (e) => {
+  const handleDeleteClick = useCallback((e) => {
     e.stopPropagation();
     e.preventDefault();
     setShowDeleteDialog(true);
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     setError(null);
     setIsDeleting(true);
     try {
       await deleteArtworkMutation.mutateAsync({ id: artworkId });
     } catch (error) {
-      console.error("Delete artwork failed:", error);
       setError(getFriendlyErrorMessage(error));
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [deleteArtworkMutation, artworkId]);
 
   // Handle status change
-  const handleStatusChange = async (e) => {
+  const handleStatusChange = useCallback(async (e) => {
     const newStatus = e.target.value;
     setStatus(newStatus);
     setIsStatusUpdating(true);
@@ -101,14 +106,14 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
         payload.expiresAt = oneMonthFromNow.toISOString();
       }
-      console.log("Artwork status update payload:", payload);
+
       await updateArtworkMutation.mutateAsync(payload);
     } catch (err) {
       setError(getFriendlyErrorMessage(err));
     } finally {
       setIsStatusUpdating(false);
     }
-  };
+  }, [artwork?.status, artwork?.expiresAt, artworkId, updateArtworkMutation]);
 
   return (
     <>
@@ -117,8 +122,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         {(isSuperAdmin || isOwner) && (
           <motion.button
             onClick={handleEdit}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            {...buttonVariants}
             className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
             title="Edit artwork"
           >
@@ -129,8 +133,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         {/* Status dropdown: super admin only */}
         {isSuperAdmin && (
           <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            {...buttonVariants}
             className="relative inline-flex items-center align-middle"
           >
             <div className="relative flex items-center">
@@ -173,8 +176,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
         {isSuperAdmin && (
           <motion.button
             onClick={handleDeleteClick}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            {...buttonVariants}
             disabled={isDeleting}
             className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete artwork"

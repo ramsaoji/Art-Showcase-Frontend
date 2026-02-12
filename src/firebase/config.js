@@ -24,7 +24,7 @@ export const analytics = (async () => {
   try {
     return (await isSupported()) ? getAnalytics(app) : null;
   } catch (error) {
-    console.error("[Analytics] Error:", error);
+    // Analytics initialization silently handled
     return null;
   }
 })();

@@ -1,6 +1,7 @@
+import { memo } from "react";
 import GallerySearch from "./GallerySearch";
 
-export default function GalleryHeader({
+function GalleryHeader({
   searchInput,
   handleSearchInput,
   clearSearch,
@@ -25,3 +26,6 @@ export default function GalleryHeader({
     </div>
   );
 }
+
+GalleryHeader.displayName = "GalleryHeader";
+export default memo(GalleryHeader);

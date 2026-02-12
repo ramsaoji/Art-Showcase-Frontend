@@ -1,10 +1,8 @@
 import React from "react";
-import {
-  XMarkIcon,
-  PhotoIcon,
-  PlusIcon,
-  ScissorsIcon,
-} from "@heroicons/react/24/outline";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import PlusIcon from "@heroicons/react/24/outline/PlusIcon";
+import ScissorsIcon from "@heroicons/react/24/outline/ScissorsIcon";
 import {
   DndContext,
   closestCenter,
@@ -167,7 +165,7 @@ export default function ArtworkImageGrid({
   );
 
   // Remove image handler
-  const handleRemoveImage = (idx) => {
+  const handleRemoveImage = React.useCallback((idx) => {
     const removed = images[idx];
 
     // Prevent artists from removing carousel images
@@ -214,10 +212,10 @@ export default function ArtworkImageGrid({
     }
 
     setImages(newImages);
-  };
+  }, [images, isSuperAdmin, setImages, setImageErrors, setIsAutoDismissible]);
 
   // Drag end handler
-  const onDragEnd = ({ active, over }) => {
+  const onDragEnd = React.useCallback(({ active, over }) => {
     if (active.id !== over?.id) {
       const oldIndex = images.findIndex((img) => img.uuid === active.id);
       const newIndex = images.findIndex((img) => img.uuid === over.id);
@@ -231,7 +229,7 @@ export default function ArtworkImageGrid({
       );
       setImages(reordered);
     }
-  };
+  }, [images, setImages]);
 
   // Dropzone drag handlers
   const [isDragActive, setIsDragActive] = React.useState(false);

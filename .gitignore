@@ -37,3 +37,7 @@ dist
 
 # Production files
 
+# Agents
+.agent
+.agents
+.cursor

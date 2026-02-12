@@ -1,20 +1,23 @@
 import React from "react";
 import { motion } from "framer-motion";
 
-const Loader = ({ size = "medium", className = "", color = "indigo-600" }) => {
-  const sizeClasses = {
-    xsmall: "w-3 h-3",
-    small: "w-5 h-5",
-    medium: "w-16 h-16",
-    large: "w-24 h-24",
-  };
+const sizeClasses = {
+  xsmall: "w-3 h-3",
+  small: "w-5 h-5",
+  medium: "w-16 h-16",
+  large: "w-24 h-24",
+};
 
-  const containerSize = {
-    xsmall: "w-5 h-5",
-    small: "w-8 h-8",
-    medium: "w-24 h-24",
-    large: "w-32 h-32",
-  };
+const containerSize = {
+  xsmall: "w-5 h-5",
+  small: "w-8 h-8",
+  medium: "w-24 h-24",
+  large: "w-32 h-32",
+};
+
+const LOADER_POSITIONS = ["top", "right", "bottom", "left"];
+
+const Loader = ({ size = "medium", className = "", color = "indigo-600" }) => {
 
   // Helper to get Tailwind class for bg color
   const bgColor = `bg-${color}`;
@@ -68,7 +71,7 @@ const Loader = ({ size = "medium", className = "", color = "indigo-600" }) => {
         </motion.div>
 
         {/* Decorative dots */}
-        {["top", "right", "bottom", "left"].map((position, index) => (
+        {LOADER_POSITIONS.map((position, index) => (
           <motion.div
             key={position}
             className={`absolute w-2 h-2 rounded-full ${decoDotColor}`}

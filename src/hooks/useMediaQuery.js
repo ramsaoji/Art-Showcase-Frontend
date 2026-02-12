@@ -1,17 +1,29 @@
 import { useState, useEffect } from "react";
 
 export default function useMediaQuery(query) {
-  const [matches, setMatches] = useState(window.matchMedia(query).matches);
+  // Lazy state initialization to avoid calling window.matchMedia during SSR (rerender-lazy-state-init)
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(query).matches;
+  });
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    
     const media = window.matchMedia(query);
+    
+    // Update state if it doesn't match
+    const updateMatches = () => setMatches(media.matches);
+    
+    // Set initial match state
     if (media.matches !== matches) {
       setMatches(media.matches);
     }
-    const listener = () => setMatches(media.matches);
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
-  }, [matches, query]);
+    
+    // Use modern addEventListener with options for better performance
+    media.addEventListener("change", updateMatches);
+    return () => media.removeEventListener("change", updateMatches);
+  }, [query]); // Remove matches from deps to avoid unnecessary re-runs (rerender-dependencies)
 
   return matches;
 }
