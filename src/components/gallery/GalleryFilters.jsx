@@ -76,6 +76,9 @@ function SearchableFilterSection({
   shouldShowFullEmail = () => false,
   /** Optional wrapper for footer (e.g. Menu.Item) so dropdown closes on Apply/Reset */
   renderFooterWrapper,
+  showAllOption = false,
+  showFooter = true,
+  onChange,
 }) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [tempSelectedValues, setTempSelectedValues] = useState(
@@ -138,12 +141,17 @@ function SearchableFilterSection({
 
   const toggleSelection = (value) => {
     setTempSelectedValues((prev) => {
-      if (value === "all") return [];
-      if (prev.includes(value)) {
-        return prev.filter((v) => v !== value);
+      let newValues;
+      if (value === "all") newValues = [];
+      else if (prev.includes(value)) {
+        newValues = prev.filter((v) => v !== value);
       } else {
-        return [...prev, value];
+        newValues = [...prev, value];
       }
+      if (onChange) {
+        onChange(newValues);
+      }
+      return newValues;
     });
   };
 
@@ -196,31 +204,36 @@ function SearchableFilterSection({
           scrollableTarget={scrollableId}
         >
           {/* All Option - same checkbox style as Filters popup */}
-          <div className="mb-2 pb-2 border-b border-gray-100">
-            <button
-              onClick={() => setTempSelectedValues([])}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans flex items-center ${
-                tempSelectedValues.length === 0
-                  ? "bg-indigo-50 text-indigo-900 font-medium"
-                  : "text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <div
-                className={`mr-2 h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
+          {showAllOption && (
+            <div className="mb-2 pb-2 border-b border-gray-100">
+              <button
+                onClick={() => {
+                  setTempSelectedValues([]);
+                  if (onChange) onChange([]);
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans flex items-center ${
                   tempSelectedValues.length === 0
-                    ? "bg-indigo-600 border-indigo-600"
-                    : "border-gray-300 bg-white"
+                    ? "bg-indigo-50 text-indigo-900 font-medium"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                {tempSelectedValues.length === 0 && (
-                  <svg className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <span>{allLabel}</span>
-            </button>
-          </div>
+                <div
+                  className={`mr-2 h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
+                    tempSelectedValues.length === 0
+                      ? "bg-indigo-600 border-indigo-600"
+                      : "border-gray-300 bg-white"
+                  }`}
+                >
+                  {tempSelectedValues.length === 0 && (
+                    <svg className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <span>{allLabel}</span>
+              </button>
+            </div>
+          )}
 
           {isLoading && filteredOptions.length === 0 ? (
             <div className="px-3 py-10 text-sm text-gray-400 font-sans text-center italic">
@@ -284,11 +297,15 @@ function SearchableFilterSection({
       </div>
 
       {/* Footer with Apply/Reset - optionally wrapped so dropdown closes on click */}
-      {(() => {
+      {/* Footer with Apply/Reset - optionally wrapped so dropdown closes on click */}
+      {showFooter && (() => {
         const footer = (
           <div className="p-3 border-t border-gray-100 bg-gray-50/30 rounded-b-xl flex items-center justify-between gap-4">
             <button
-              onClick={() => setTempSelectedValues([])}
+              onClick={() => {
+                setTempSelectedValues([]);
+                if (onChange) onChange([]);
+              }}
               className="px-4 py-2 rounded-lg text-sm font-sans font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
             >
               Reset
@@ -555,6 +572,8 @@ export default function GalleryFilters({
                       hasMore={hasMoreArtists}
                       onLoadMore={loadMoreArtists}
                       shouldShowFullEmail={shouldShowFullEmail}
+                      showFooter={false}
+                      onChange={(values) => handleFilterChange("artist", values)}
                     />
                   </div>
 
@@ -575,6 +594,8 @@ export default function GalleryFilters({
                       isLoading={isMaterialsLoading}
                       hasMore={hasMoreMaterials}
                       onLoadMore={loadMoreMaterials}
+                      showFooter={false}
+                      onChange={(values) => handleFilterChange("material", values)}
                     />
                   </div>
 
@@ -595,6 +616,8 @@ export default function GalleryFilters({
                       isLoading={isStylesLoading}
                       hasMore={hasMoreStyles}
                       onLoadMore={loadMoreStyles}
+                      showFooter={false}
+                      onChange={(values) => handleFilterChange("style", values)}
                     />
                   </div>
 
@@ -633,27 +656,19 @@ export default function GalleryFilters({
                     </div>
                   </div>
 
-                  {/* Reset Filters */}
-                  {(filters.material?.length > 0 ||
-                    filters.artist?.length > 0 ||
-                    filters.availability?.length > 0 ||
-                    filters.featured?.length > 0 ||
-                    filters.status?.length > 0) && (
-                    <div className="mb-4">
-                      <button
-                        onClick={handleResetAllFilters}
-                        className="w-full text-center px-4 py-2.5 rounded-xl text-sm font-sans text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
-                      >
-                        Reset All
-                      </button>
-                    </div>
-                  )}
                 </div>
 
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-gray-200 flex items-center justify-between gap-4">
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center px-4 py-3 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-700 transition-colors"
+                    onClick={handleResetAllFilters}
+                    className="px-6 py-3 rounded-full text-sm font-sans font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 flex items-center justify-center px-4 py-3 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-700 transition-colors"
                     onClick={() => setIsMobileFiltersOpen(false)}
                   >
                     Apply Filters
