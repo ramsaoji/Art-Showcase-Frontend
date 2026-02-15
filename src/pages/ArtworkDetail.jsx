@@ -87,7 +87,15 @@ export default function ArtworkDetail() {
     isLoading: artworkLoading,
     error,
     refetch,
-  } = trpc.artwork.getArtworkById.useQuery({ id }, { enabled: !!id });
+  } = trpc.artwork.getArtworkById.useQuery(
+    { id },
+    {
+      enabled: !!id,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
 
   useEffect(() => {
     if (artwork?.id && artwork?.title) {

@@ -5,6 +5,7 @@ import * as z from "zod";
 
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
+import ProgressBar from "./ui/ProgressBar";
 // import { getPreviewUrl } from "../config/cloudinary"; // Keep this for image preview
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -19,6 +20,7 @@ import ArtistSelect from "./ArtistSelect";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 import { v4 as uuidv4 } from "uuid";
 import ArtworkImageGrid from "./ArtworkImageGrid";
+import ImageCropper from "./ImageCropper";
 
 // Validation schema
 const createValidationSchema = (isSuperAdmin, initialData) => {
@@ -40,21 +42,21 @@ const createValidationSchema = (isSuperAdmin, initialData) => {
     height: z.coerce
       .number({ invalid_type_error: "Height must be a number" })
       .positive("Height must be greater than 0"),
-    instagramReelLink: z
-      .string()
-      .trim()
-      .url("Must be a valid URL")
-      .optional()
-      .or(z.literal("")),
-    youtubeVideoLink: z
-      .string()
-      .trim()
-      .url("Must be a valid URL")
-      .optional()
-      .or(z.literal("")),
+    instagramReelLink: z.preprocess(
+      (val) => (val === "" ? null : val),
+      z.string().trim().url("Must be a valid URL").optional().nullable()
+    ),
+    youtubeVideoLink: z.preprocess(
+      (val) => (val === "" ? null : val),
+      z.string().trim().url("Must be a valid URL").optional().nullable()
+    ),
     images: z.array(z.any()).min(1, "At least one image is required"),
     artistId: z.string().optional(),
     expiresAt: z.any().optional(), // Default optional
+    dimensions: z.string().optional(),
+    status: z.string().optional().default("ACTIVE"),
+    featured: z.boolean().optional().default(false),
+    sold: z.boolean().optional().default(false),
   });
 
   // Conditional validation
@@ -203,12 +205,6 @@ export default function ArtworkForm({
         sold: initialData.sold || false,
         instagramReelLink: initialData.instagramReelLink || "",
         youtubeVideoLink: initialData.youtubeVideoLink || "",
-        monthlyUploadLimit:
-          initialData.monthlyUploadLimit ?? backendLimits?.monthlyUpload ?? 10,
-        aiDescriptionDailyLimit:
-          initialData.aiDescriptionDailyLimit ??
-          backendLimits?.aiDescriptionDaily ??
-          5,
         artistId: "",
         width: width,
         height: height,
@@ -218,11 +214,6 @@ export default function ArtworkForm({
           : "",
         status: initialData.status || "ACTIVE",
         images: initialData.images || [],
-        // Include imageUploadLimit for superadmins in edit mode
-        ...(isSuperAdmin && {
-          imageUploadLimit:
-            initialData.imageUploadLimit ?? backendLimits?.imageUpload ?? 1,
-        }),
       };
     }
     const savedData = localStorage.getItem(FORM_DATA_KEY);
@@ -234,20 +225,11 @@ export default function ArtworkForm({
         return {
           ...cleanData,
           artistId: savedArtistId || cleanData.artistId || "",
-          aiDescriptionDailyLimit:
-            parsedData.aiDescriptionDailyLimit ??
-            backendLimits?.aiDescriptionDaily ??
-            5,
-          monthlyUploadLimit:
-            parsedData.monthlyUploadLimit ?? backendLimits?.monthlyUpload ?? 10,
           status: parsedData.status || "ACTIVE",
-          // Only include expiresAt for super admins
           ...(isSuperAdmin && {
             expiresAt: parsedData.expiresAt
               ? toDatetimeLocalValue(parsedData.expiresAt)
               : "",
-            imageUploadLimit:
-              parsedData.imageUploadLimit ?? backendLimits?.imageUpload ?? 1,
           }),
           images: [],
         };
@@ -271,18 +253,12 @@ export default function ArtworkForm({
       sold: false,
       instagramReelLink: "",
       youtubeVideoLink: "",
-      monthlyUploadLimit: backendLimits?.monthlyUpload ?? 10,
-      aiDescriptionDailyLimit: backendLimits?.aiDescriptionDaily ?? 5,
       artistId: savedArtistId || "",
       width: "",
       height: "",
       dimensions: "",
       status: "ACTIVE",
-      // Only include expiresAt and imageUploadLimit for super admins
-      ...(isSuperAdmin && {
-        expiresAt: expiresAtDefault,
-        imageUploadLimit: backendLimits?.imageUpload ?? 1,
-      }),
+      ...(isSuperAdmin && { expiresAt: expiresAtDefault }),
       images: [],
     };
   };
@@ -329,11 +305,8 @@ export default function ArtworkForm({
   const [savingProgress, setSavingProgress] = useState(0);
   const [error, setError] = useState(null);
   const [artistFieldTouched, setArtistFieldTouched] = useState(false);
-  // Track if the monthly upload limit input has been manually changed
-  const [monthlyLimitTouched, setMonthlyLimitTouched] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [aiLimitTouched, setAiLimitTouched] = useState(false);
   // Add state for editArtistUsageStats
   const [editArtistUsageStats, setEditArtistUsageStats] = useState(null);
   // Add a ref to skip the next persist after reset
@@ -369,6 +342,8 @@ export default function ArtworkForm({
           enabled: shouldFetchArtistUploadCount,
           retry: false,
           refetchOnWindowFocus: false,
+          refetchOnReconnect: false,
+          staleTime: 5 * 60 * 1000,
         }
       )
     : { data: undefined, isLoading: false, error: undefined };
@@ -424,6 +399,7 @@ export default function ArtworkForm({
     clearErrors,
     formState: { errors, isSubmitted, isDirty },
     reset,
+    register,
   } = useForm({
     resolver: customResolver,
     mode: "onSubmit",
@@ -449,8 +425,12 @@ export default function ArtworkForm({
     return initialImages;
   });
 
+  // Artist-level limit: from artwork (edit) or selected artist (add) or backend default
   const imageUploadLimit =
-    initialData?.imageUploadLimit || backendLimits?.imageUpload || 1; // Use backend config, fallback to 1
+    initialData?.imageUploadLimit ??
+    selectedArtistUploadData?.imageUploadLimit ??
+    backendLimits?.imageUpload ??
+    1;
   const [imageErrors, setImageErrors] = useState([]);
   const [validationErrors, setValidationErrors] = useState([]);
   const [isAutoDismissible, setIsAutoDismissible] = useState(false);
@@ -521,9 +501,7 @@ export default function ArtworkForm({
       // Include artistId in the form data being saved, but exclude image data
       const formDataToSave = {
         ...watchedValues,
-        artistId: watchedValues.artistId || artistId, // Use form value or prop value
-        monthlyUploadLimit: watchedValues.monthlyUploadLimit, // Save monthly upload limit
-        aiDescriptionDailyLimit: watchedValues.aiDescriptionDailyLimit, // Save AI limit
+        artistId: watchedValues.artistId || artistId,
       };
 
       // Remove image-related data before saving to localStorage
@@ -593,68 +571,6 @@ export default function ArtworkForm({
       setValue("dimensions", "", { shouldValidate: true });
     }
   };
-
-  // Handle image change
-
-  // Handle monthly upload limit change
-  const handleMonthlyLimitChange = (e) => {
-    setMonthlyLimitTouched(true);
-    const value =
-      e.target.value === ""
-        ? ""
-        : Math.max(1, Math.min(1000, Number(e.target.value)));
-    setValue("monthlyUploadLimit", value);
-  };
-
-  // Update monthlyUploadLimit when selected artist changes (for super admin add mode)
-  useEffect(() => {
-    if (isInitialLoad.current) return;
-    if (
-      isSuperAdmin &&
-      !initialData &&
-      selectedArtistUploadLimit !== undefined &&
-      selectedArtistUploadLimit !== null &&
-      !monthlyLimitTouched
-    ) {
-      setValue("monthlyUploadLimit", selectedArtistUploadLimit, {
-        shouldValidate: true,
-      });
-    }
-  }, [
-    isSuperAdmin,
-    initialData,
-    selectedArtistUploadLimit,
-    setValue,
-    monthlyLimitTouched,
-  ]);
-
-  // Reset touched state when selected artist changes
-  useEffect(() => {
-    setMonthlyLimitTouched(false);
-    setAiLimitTouched(false);
-  }, [artistId]);
-
-  // Update aiDescriptionDailyLimit when selected artist changes (for super admin add mode)
-  useEffect(() => {
-    if (isInitialLoad.current) return;
-    if (
-      isSuperAdmin &&
-      !initialData &&
-      selectedArtistAiLimit !== undefined &&
-      selectedArtistAiLimit !== null &&
-      !aiLimitTouched
-    ) {
-      setValue("aiDescriptionDailyLimit", selectedArtistAiLimit, {
-        shouldValidate: true,
-      });
-    }
-  }, [
-    isSuperAdmin,
-    initialData,
-    selectedArtistAiLimit,
-    setValue,
-    aiLimitTouched,
-  ]);
 
   // Get field error class
   const getFieldErrorClass = (fieldName) => {
@@ -975,14 +891,6 @@ export default function ArtworkForm({
       return;
     }
 
-    // Ensure imageUploadLimit is a number before submit
-    if (
-      formData.imageUploadLimit !== undefined &&
-      formData.imageUploadLimit !== null &&
-      typeof formData.imageUploadLimit !== "number"
-    ) {
-      formData.imageUploadLimit = Number(formData.imageUploadLimit);
-    }
     setIsSubmitting(true);
     setCurrentStep("uploading");
     setUploadProgress(0);
@@ -1055,18 +963,28 @@ export default function ArtworkForm({
     setSavingProgress(0);
     // Simulate saving progress (or update as needed)
     setSavingProgress(100);
-    // Submit form with images array
+    // Submit form with images array (artist-level limits are managed in Admin → Artist Management)
     const payload = {
       ...formData,
       images: uploadedImages,
     };
 
-
-
-    // Remove expiresAt field for artists (only super admins should have this field)
-    if (!isSuperAdmin) {
+    // Handle boolean fields and status - ONLY for Super Admins
+    if (isSuperAdmin) {
+      payload.featured = Boolean(formData.featured);
+      payload.sold = Boolean(formData.sold);
+      // Status is already in formData, no need to touch it
+    } else {
+      // For non-admins, REMOVE these fields from payload so backend doesn't overwrite them
+      delete payload.featured;
+      delete payload.sold;
+      delete payload.status;
       delete payload.expiresAt;
     }
+
+    delete payload.monthlyUploadLimit;
+    delete payload.aiDescriptionDailyLimit;
+    delete payload.imageUploadLimit;
 
     try {
       await onSubmit(payload);
@@ -1099,16 +1017,6 @@ export default function ArtworkForm({
       default:
         return "Processing...";
     }
-  };
-
-  // Add a handler for the AI limit field
-  const handleAiLimitChange = (e) => {
-    setAiLimitTouched(true);
-    const value =
-      e.target.value === ""
-        ? ""
-        : Math.max(1, Math.min(100, Number(e.target.value)));
-    setValue("aiDescriptionDailyLimit", value);
   };
 
   // Fetch usage stats for the artist in edit mode (super admin)
@@ -1161,27 +1069,6 @@ export default function ArtworkForm({
       }
     };
   }, [croppingImage]);
-
-  // When images change, auto-update imageUploadLimit to match images.length for super admins
-  useEffect(() => {
-    if (
-      isSuperAdmin &&
-      images.length >
-        (watch("imageUploadLimit") ||
-          initialData?.imageUploadLimit ||
-          backendLimits?.imageUpload ||
-          1)
-    ) {
-      setValue("imageUploadLimit", images.length);
-    }
-  }, [
-    images.length,
-    isSuperAdmin,
-    initialData,
-    setValue,
-    watch,
-    backendLimits?.imageUpload,
-  ]);
 
   // Add a ref to the top of the form for scrolling
   const formTopRef = useRef(null);
@@ -1624,6 +1511,9 @@ export default function ArtworkForm({
           )}
         </div>
 
+        {/* Hidden input for dimensions to ensure it's included in form submission */}
+        <input type="hidden" {...register("dimensions")} />
+
         {/* Dimensions - Split into Width and Height */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-700 font-sans mb-1">
@@ -2000,72 +1890,6 @@ export default function ArtworkForm({
           </div>
         )}
 
-        {/* Super Admin: Set monthly upload limit for selected artist */}
-        {isSuperAdmin && (
-          <div className="col-span-2 sm:col-span-1">
-            <label
-              htmlFor="monthlyUploadLimit"
-              className="block text-sm font-medium text-gray-700 font-sans mb-1"
-            >
-              Monthly Upload Limit for Artist
-            </label>
-            <Controller
-              name="monthlyUploadLimit"
-              control={control}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  type="number"
-                  id="monthlyUploadLimit"
-                  placeholder={`Default is ${
-                    backendLimits?.monthlyUpload ?? 10
-                  }. Leave blank or set to ${
-                    backendLimits?.monthlyUpload ?? 10
-                  } for standard limit.`}
-                  min={1}
-                  max={1000}
-                  onChange={handleMonthlyLimitChange}
-                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
-                    "monthlyUploadLimit"
-                  )}`}
-                />
-              )}
-            />
-          </div>
-        )}
-
-        {/* Super Admin: Set AI description daily limit for selected artist */}
-        {isSuperAdmin && (
-          <div className="col-span-2 sm:col-span-1">
-            <label
-              htmlFor="aiDescriptionDailyLimit"
-              className="block text-sm font-medium text-gray-700 font-sans mb-1"
-            >
-              AI Description Daily Limit for Artist
-            </label>
-            <Controller
-              name="aiDescriptionDailyLimit"
-              control={control}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  type="number"
-                  id="aiDescriptionDailyLimit"
-                  placeholder={`Default is ${
-                    backendLimits?.aiDescriptionDaily ?? 5
-                  } or set any other.`}
-                  min={1}
-                  max={100}
-                  onChange={handleAiLimitChange}
-                  className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
-                    "aiDescriptionDailyLimit"
-                  )}`}
-                />
-              )}
-            />
-          </div>
-        )}
-
         {/* Super Admin: Expires At */}
         {isSuperAdmin && (
           <div className="col-span-2 sm:col-span-1">
@@ -2102,110 +1926,83 @@ export default function ArtworkForm({
           </div>
         )}
 
-        {/* Super Admin: Set image upload limit for selected artist */}
-        {isSuperAdmin && (
-          <div className="col-span-2 sm:col-span-1 mt-4">
-            <label
-              htmlFor="imageUploadLimit"
-              className="block text-sm font-medium text-gray-700 font-sans mb-1"
-            >
-              Image Upload Limit for Artist
-            </label>
-            <Controller
-              name="imageUploadLimit"
-              control={control}
-              render={({ field }) => (
-                <div className="relative">
-                  <input
-                    {...field}
-                    type="number"
-                    id="imageUploadLimit"
-                    min={Math.max(1, images.length)}
-                    max={1000}
-                    value={
-                      field.value ??
-                      (initialData?.imageUploadLimit ||
-                        backendLimits?.imageUpload ||
-                        1)
-                    }
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const numVal = val === "" ? "" : Number(val);
-                      // Ensure the limit is at least equal to the number of selected images
-                      const minLimit = Math.max(1, images.length);
-                      if (numVal !== "" && numVal < minLimit) {
-                        field.onChange(minLimit);
-                      } else {
-                        field.onChange(numVal);
-                      }
-                    }}
-                    className={`mt-1 block w-full border rounded-xl shadow-sm py-3 px-4 focus:ring-2 focus:border-transparent focus:outline-none font-sans ${getFieldErrorClass(
-                      "imageUploadLimit"
-                    )}`}
-                  />
-                  {images.length > (field.value || 1) && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                        Auto-updated
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            />
-            <p className="text-xs text-gray-500 mt-1 font-sans">
-              Artist's image limit for this artwork (1-1000). You can upload up
-              to 1000 images.
-            </p>
-            {images.length > 0 && (
-              <p className="text-xs text-blue-600 mt-1 font-sans">
-                Current images: {images.length} - limit auto-updates to{" "}
-                {Math.max(images.length, watch("imageUploadLimit") || 1)}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Checkboxes */}
         {isSuperAdmin && (
           <div className="col-span-2 flex flex-wrap gap-6 my-2">
             {isSuperAdmin && (
-              <label className="flex items-center space-x-3">
-                <Controller
-                  name="featured"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type="checkbox"
-                      checked={field.value}
-                      className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                  )}
-                />
-                <span className="text-sm font-medium text-gray-700 font-sans">
-                  Featured Artwork
-                </span>
-              </label>
+              <Controller
+                name="featured"
+                control={control}
+                render={({ field }) => (
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(!field.value)}
+                    className="flex items-center space-x-3 group text-left focus:outline-none"
+                  >
+                    <div
+                      className={`h-5 w-5 shrink-0 rounded border flex items-center justify-center transition-colors duration-200 ${
+                        field.value
+                          ? "bg-indigo-600 border-indigo-600"
+                          : "border-gray-300 bg-white group-hover:border-indigo-400 ring-2 ring-transparent group-focus:ring-indigo-200"
+                      }`}
+                    >
+                      {field.value && (
+                        <svg
+                          className="h-3.5 w-3.5 text-white"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 font-sans group-hover:text-indigo-800 transition-colors">
+                      Featured Artwork
+                    </span>
+                  </button>
+                )}
+              />
             )}
             {isSuperAdmin && (
-              <label className="flex items-center space-x-3">
-                <Controller
-                  name="sold"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      {...field}
-                      type="checkbox"
-                      checked={field.value}
-                      className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                  )}
-                />
-                <span className="text-sm font-medium text-gray-700 font-sans">
-                  Mark as Sold
-                </span>
-              </label>
+              <Controller
+                name="sold"
+                control={control}
+                render={({ field }) => (
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(!field.value)}
+                    className="flex items-center space-x-3 group text-left focus:outline-none"
+                  >
+                    <div
+                      className={`h-5 w-5 shrink-0 rounded border flex items-center justify-center transition-colors duration-200 ${
+                        field.value
+                          ? "bg-indigo-600 border-indigo-600"
+                          : "border-gray-300 bg-white group-hover:border-indigo-400 ring-2 ring-transparent group-focus:ring-indigo-200"
+                      }`}
+                    >
+                      {field.value && (
+                        <svg
+                          className="h-3.5 w-3.5 text-white"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 font-sans group-hover:text-indigo-800 transition-colors">
+                      Mark as Sold
+                    </span>
+                  </button>
+                )}
+              />
             )}
           </div>
         )}
@@ -2284,15 +2081,9 @@ export default function ArtworkForm({
                 sold: false,
                 instagramReelLink: "",
                 youtubeVideoLink: "",
-                monthlyUploadLimit: backendLimits?.monthlyUpload ?? 10,
-                aiDescriptionDailyLimit: backendLimits?.aiDescriptionDaily ?? 5,
                 artistId: "",
                 status: "ACTIVE",
-                // Only include expiresAt and imageUploadLimit for super admins
-                ...(isSuperAdmin && {
-                  expiresAt: defaultExpiresAt,
-                  imageUploadLimit: backendLimits?.imageUpload ?? 1,
-                }),
+                ...(isSuperAdmin && { expiresAt: defaultExpiresAt }),
                 width: "",
                 height: "",
                 dimensions: "",

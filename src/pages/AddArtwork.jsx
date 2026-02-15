@@ -43,12 +43,11 @@ export default function AddArtwork() {
       onSuccess: () => {
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
-        // Invalidate user data to refresh monthlyUploadLimit
         utils.user.listUsers.invalidate();
-        // Invalidate artist's monthly upload count
         if (artistId) {
-          utils.artwork.getArtistMonthlyUploadCount.invalidate({ artistId });
+          utils.artwork.getArtistUsageStats.invalidate({ artistId });
         }
+        utils.misc.getRemainingQuota.invalidate();
         navigate("/gallery");
       },
       onError: (err) => {
@@ -74,23 +73,11 @@ export default function AddArtwork() {
         return;
       }
 
-      // For superadmins, ensure imageUploadLimit is at least equal to the number of images
-      let imageUploadLimit = formData.imageUploadLimit;
-      if (isSuperAdmin) {
-        // Super admins can upload up to 1000 images, ensure the limit is at least equal to images
-        imageUploadLimit = Math.max(
-          formData.images.length,
-          formData.imageUploadLimit || backendLimits?.imageUpload || 1
-        );
-        if (imageUploadLimit > 1000) imageUploadLimit = 1000;
-      }
-
-      // Prepare data for tRPC mutation
+      // Artist-level limits are managed in Admin → Artist Management; do not send from artwork form.
       const artworkData = {
         ...formData,
         artistId: isSuperAdmin ? artistId : undefined,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        imageUploadLimit: isSuperAdmin ? imageUploadLimit : undefined,
       };
       await createArtworkMutation.mutateAsync(artworkData);
       setArtistId("");

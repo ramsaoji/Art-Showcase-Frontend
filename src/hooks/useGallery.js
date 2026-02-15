@@ -26,13 +26,18 @@ export default function useGallery() {
 
   const [filters, setFilters] = useState(() => {
     const params = new URLSearchParams(location.search);
+    const getParam = (key) => {
+      const val = params.get(key);
+      if (!val || val === "all") return [];
+      return val.split(",");
+    };
     return {
-      material: params.get("material") || "all",
-      artist: params.get("artist") || "all",
-      availability: params.get("availability") || "all",
-      featured: params.get("featured") || "all",
-      status: params.get("status") || "all",
-      style: params.get("style") || "all", // Ensure style is always present
+      material: getParam("material"),
+      artist: getParam("artist"),
+      availability: getParam("availability"),
+      featured: getParam("featured"),
+      status: getParam("status"),
+      style: getParam("style"),
     };
   });
 
@@ -107,10 +112,10 @@ export default function useGallery() {
   const queryKey = useMemo(() => {
     const key = {
       searchQuery: searchQuery.trim(),
-      material: filters.material,
-      artist: filters.artist, // Added artist to query key
-      availability: filters.availability,
-      featured: filters.featured,
+      material: filters.material.sort().join(","),
+      artist: filters.artist.sort().join(","),
+      availability: filters.availability.sort().join(","),
+      featured: filters.featured.sort().join(","),
       sortBy,
     };
     return JSON.stringify(key);
@@ -155,11 +160,11 @@ export default function useGallery() {
     retry: 2,
     retryDelay: 1000,
     refetchOnWindowFocus: false,
-    staleTime: 30000,
-    cacheTime: 300000,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000, // 5 min — no refetch on minimize/restore
+    gcTime: 10 * 60 * 1000, // 10 min cache (React Query v5; was cacheTime)
     keepPreviousData: true,
-    enabled: !authLoading, // Only enable when auth is not loading
-
+    enabled: !authLoading,
   });
 
   // Reset pagination when filters change (using stable queryKey)
@@ -216,14 +221,18 @@ export default function useGallery() {
         const params = new URLSearchParams();
         if (searchQuery && searchQuery.trim())
           params.set("searchQuery", searchQuery);
-        if (filters.material && filters.material !== "all")
-          params.set("material", filters.material);
-        if (filters.artist && filters.artist !== "all")
-          params.set("artist", filters.artist); // Added artist to URL params
-        if (filters.availability && filters.availability !== "all")
-          params.set("availability", filters.availability);
-        if (filters.featured && filters.featured !== "all")
-          params.set("featured", filters.featured);
+        
+        const setArrayParam = (key, arr) => {
+          if (arr && arr.length > 0 && !arr.includes("all")) {
+            params.set(key, arr.join(","));
+          }
+        };
+
+        setArrayParam("material", filters.material);
+        setArrayParam("artist", filters.artist);
+        setArrayParam("availability", filters.availability);
+        setArrayParam("featured", filters.featured);
+        
         if (sortBy && sortBy !== "newest") params.set("sortBy", sortBy);
 
         const newSearch = params.toString();
@@ -341,12 +350,12 @@ export default function useGallery() {
     setIsSearching(false);
     setSortBy("newest");
     setFilters({
-      material: "all",
-      artist: "all",
-      availability: "all",
-      featured: "all",
-      status: "all",
-      style: "all", // Reset style as well
+      material: [],
+      artist: [],
+      availability: [],
+      featured: [],
+      status: [],
+      style: [], // Reset style as well
     });
   }, [debouncedSearch]);
 
@@ -376,59 +385,56 @@ export default function useGallery() {
       });
     }
 
-    if (filters.material && filters.material !== "all") {
+    if (filters.material && filters.material.length > 0) {
       active.push({
         type: "material",
-        label: `Material: ${filters.material}`,
+        label: `Material: ${filters.material.join(", ")}`,
         value: filters.material,
-        onRemove: () => handleFilterChange("material", "all"),
+        onRemove: () => handleFilterChange("material", []),
       });
     }
 
-    if (filters.artist && filters.artist !== "all") {
-      const selectedArtist = artists.find((a) => a.id === filters.artist);
+    if (filters.artist && filters.artist.length > 0) {
+      // For multiple artists, we might want to show "Multiple Artists" or count
+      // Or map ids to labels if available
+      const labels = filters.artist.map(id => {
+         const found = artists.find(a => a.id === id);
+         return found ? found.label.split(" (")[0] : id; // Simple label
+      });
+      
       active.push({
         type: "artist",
-        label: `Artist: ${
-          selectedArtist ? selectedArtist.label : filters.artist
-        }`,
+        label: `Artist: ${labels.join(", ")}`,
         value: filters.artist,
-        onRemove: () => handleFilterChange("artist", "all"),
+        onRemove: () => handleFilterChange("artist", []),
       });
     }
 
-    if (filters.availability && filters.availability !== "all") {
+    if (filters.availability && filters.availability.length > 0) {
       active.push({
         type: "availability",
-        label: `Availability: ${filters.availability}`,
+        label: `Availability: ${filters.availability.join(", ")}`,
         value: filters.availability,
-        onRemove: () => handleFilterChange("availability", "all"),
+        onRemove: () => handleFilterChange("availability", []),
       });
     }
 
-    if (filters.featured && filters.featured !== "all") {
+    if (filters.featured && filters.featured.length > 0) {
       active.push({
         type: "featured",
-        label: `Featured: ${filters.featured === "featured" ? "Yes" : "No"}`,
+        label: `Featured: ${filters.featured.includes("featured") ? "Yes" : "No"}`, // Simplified
         value: filters.featured,
-        onRemove: () => handleFilterChange("featured", "all"),
+        onRemove: () => handleFilterChange("featured", []),
       });
     }
 
-    if (filters.status && filters.status !== "all") {
-      active.push({
+    if (filters.status && filters.status.length > 0) {
+       // ... status logic
+       active.push({
         type: "status",
-        label: `Status: ${
-          filters.status === "ACTIVE"
-            ? "Active"
-            : filters.status === "INACTIVE"
-            ? "Inactive"
-            : filters.status === "EXPIRED"
-            ? "Expired"
-            : filters.status
-        }`,
+        label: `Status: ${filters.status.join(", ")}`,
         value: filters.status,
-        onRemove: () => handleFilterChange("status", "all"),
+        onRemove: () => handleFilterChange("status", []),
       });
     }
 
@@ -472,10 +478,10 @@ export default function useGallery() {
     if (
       isArtist &&
       user &&
-      filters.artist === "all" &&
+      filters.artist.length === 0 &&
       !didAutoApplyArtistFilter.current
     ) {
-      setFilters((prev) => ({ ...prev, artist: user.id }));
+      setFilters((prev) => ({ ...prev, artist: [user.id] }));
       didAutoApplyArtistFilter.current = true;
     }
     // Reset the flag if user logs out or changes
@@ -502,12 +508,13 @@ export default function useGallery() {
 
   // Check if we need to load artist data for the active filter
   useEffect(() => {
-    if (filters.artist !== "all" && !shouldLoadArtistForFilter) {
-      // Check if the artist is already in our results
-      const artistExists = artistResults.some(
-        (artist) => artist.id === filters.artist
+    if (filters.artist.length > 0 && !shouldLoadArtistForFilter) {
+      // Check if all selected artists are already in our results
+      const allExist = filters.artist.every(id => 
+         artistResults.some(artist => artist.id === id)
       );
-      if (!artistExists) {
+      
+      if (!allExist) {
         setShouldLoadArtistForFilter(true);
         // Mark artist dropdown as opened to enable the query
         setOpenedDropdowns((prev) => ({ ...prev, artist: true }));
@@ -534,23 +541,23 @@ export default function useGallery() {
   // Handle artist filter data
   useEffect(() => {
     if (artistFilterData && shouldLoadArtistForFilter) {
-      const foundArtist = artistFilterData.artists.find(
-        (a) => a.id === filters.artist
-      );
-      if (foundArtist) {
-        const artistWithLabel = {
-          id: foundArtist.id,
-          label: `${foundArtist.artistName} (${foundArtist.email})`,
-        };
-        // Add to artist results if not already present
-        setArtistResults((prev) => {
-          const exists = prev.some((a) => a.id === artistWithLabel.id);
-          if (!exists) {
-            return [...prev, artistWithLabel];
-          }
-          return prev;
-        });
-      }
+        filters.artist.forEach(id => {
+            const foundArtist = artistFilterData.artists.find(a => a.id === id);
+             if (foundArtist) {
+                const artistWithLabel = {
+                  id: foundArtist.id,
+                  label: `${foundArtist.artistName} (${foundArtist.email})`,
+                };
+                // Add to artist results if not already present
+                setArtistResults((prev) => {
+                  const exists = prev.some((a) => a.id === artistWithLabel.id);
+                  if (!exists) {
+                    return [...prev, artistWithLabel];
+                  }
+                  return prev;
+                });
+             }
+        })
       setShouldLoadArtistForFilter(false);
     }
   }, [artistFilterData, shouldLoadArtistForFilter, filters.artist]);

@@ -91,7 +91,11 @@ export default function Home() {
     isLoading,
     refetch,
     error,
-  } = trpc.artwork.getFeaturedArtworks.useQuery();
+  } = trpc.artwork.getFeaturedArtworks.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const handleDelete = useCallback(
     (deletedId) => {

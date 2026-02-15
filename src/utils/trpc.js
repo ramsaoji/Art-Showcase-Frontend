@@ -1,5 +1,6 @@
 import { httpLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
+import { NO_REFETCH_ON_FOCUS } from "./queryOptions";
 
 export const trpc = createTRPCReact();
 
@@ -44,25 +45,32 @@ export function useArtistUsageStats(artistId, enabled = true) {
 
   return trpc.useQuery(
     ["artwork.getArtistUsageStats", { artistId: artistId.trim() }],
-    {
-      enabled: enabled && isValidArtistId,
-    }
+    { enabled: enabled && isValidArtistId, ...NO_REFETCH_ON_FOCUS }
   );
 }
 
 // Artists search (infinite scroll, search)
 export function useArtistsSearch(params, options = {}) {
-  return trpc.user.listArtistsPublic.useQuery(params, options);
+  return trpc.user.listArtistsPublic.useQuery(params, {
+    ...NO_REFETCH_ON_FOCUS,
+    ...options,
+  });
 }
 
 // Materials search (infinite scroll, search)
 export function useMaterialsSearch(params, options = {}) {
-  return trpc.artwork.getMaterials.useQuery(params, options);
+  return trpc.artwork.getMaterials.useQuery(params, {
+    ...NO_REFETCH_ON_FOCUS,
+    ...options,
+  });
 }
 
 // Styles search (infinite scroll, search)
 export function useStylesSearch(params, options = {}) {
-  return trpc.artwork.getStyles.useQuery(params, options);
+  return trpc.artwork.getStyles.useQuery(params, {
+    ...NO_REFETCH_ON_FOCUS,
+    ...options,
+  });
 }
 
 /**
@@ -93,10 +101,13 @@ export async function uploadToCloudinary(file) {
 
 // Helper for backend config limits (tRPC)
 export function useBackendLimits() {
-  return trpc.misc.getConfigLimits.useQuery();
+  return trpc.misc.getConfigLimits.useQuery(undefined, NO_REFETCH_ON_FOCUS);
 }
 
 // Helper for remaining AI quota (tRPC)
 export function useRemainingQuota(options = {}) {
-  return trpc.misc.getRemainingQuota.useQuery(undefined, options);
+  return trpc.misc.getRemainingQuota.useQuery(undefined, {
+    ...NO_REFETCH_ON_FOCUS,
+    ...options,
+  });
 }

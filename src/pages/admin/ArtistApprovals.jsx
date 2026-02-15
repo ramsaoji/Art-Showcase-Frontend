@@ -5,6 +5,7 @@ import Alert from "../../components/Alert";
 import Loader from "../../components/ui/Loader";
 import ConfirmationDialog from "../../components/ConfirmationDialog";
 import { getFriendlyErrorMessage } from "../../utils/formatters";
+import { ADMIN_LIST_QUERY_OPTIONS } from "../../utils/queryOptions";
 import { useCallback } from "react";
 
 // Hoisted static motion configuration (rendering-hoist-jsx)
@@ -28,7 +29,10 @@ export default function ArtistApprovals() {
     refetch,
     isLoading,
     isFetching,
-  } = trpc.user.listUsers.useQuery({ page, limit, search });
+  } = trpc.user.listUsers.useQuery(
+    { page, limit, search },
+    ADMIN_LIST_QUERY_OPTIONS
+  );
 
   const allUsers = userPage?.users || [];
   const totalPages = userPage?.totalPages || 1;
@@ -196,8 +200,7 @@ export default function ArtistApprovals() {
           value={search}
           onChange={handleSearchChange}
           placeholder="Search by name or email..."
-          className="w-full sm:w-80 px-5 py-3 rounded-xl border border-gray-200 bg-white/90 backdrop-blur-sm text-gray-900 font-sans placeholder-gray-400 shadow-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all duration-200 outline-none hover:border-indigo-200"
-          style={{ boxShadow: "0 2px 12px 0 rgba(80, 80, 180, 0.04)" }}
+          className="w-full sm:w-80 px-5 py-3 rounded-xl bg-white border border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder-gray-400 text-gray-900 font-sans"
         />
       </div>
       {error && (

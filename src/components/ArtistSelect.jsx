@@ -78,8 +78,8 @@ export default function ArtistSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative w-full border rounded-xl shadow-sm py-3 px-4 pr-10 text-left bg-white focus:ring-2 focus:border-transparent focus:outline-none font-sans ${
-          error ? "border-red-500" : "border-gray-200"
+        className={`relative w-full border rounded-xl shadow-sm py-3 px-4 pr-10 text-left bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-sans ${
+          error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-gray-200"
         }`}
       >
         <span className="block truncate">
@@ -107,22 +107,23 @@ export default function ArtistSelect({
 
       {isOpen && (
         <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 flex flex-col">
-          <div className="p-2 border-b">
-            <div className="relative">
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative group">
               <input
                 type="text"
                 placeholder="Search artists..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm font-sans rounded-lg bg-white border border-gray-200 focus:border-indigo-400 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-400/30"
+                className="w-full pl-9 pr-8 py-2 text-sm font-sans rounded-xl bg-white border border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder-gray-400 text-gray-900"
               />
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <XMarkIcon className="h-3 w-3" />
+                  <XMarkIcon className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>

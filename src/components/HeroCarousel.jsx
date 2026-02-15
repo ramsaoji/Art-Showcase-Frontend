@@ -60,7 +60,11 @@ export default function HeroCarousel() {
     isLoading,
     error,
     refetch,
-  } = trpc.artwork.getArtworksForHeroCarousel.useQuery();
+  } = trpc.artwork.getArtworksForHeroCarousel.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Create slides array with welcome slide + artwork slides
   const slides = useMemo(() => {

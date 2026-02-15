@@ -296,7 +296,12 @@ const FeaturedArtworksManagement = () => {
     refetch: refetchAvailable,
   } = trpc.artwork.getAvailableArtworksAdmin.useQuery(
     { limit, offset: availableOffset },
-    { keepPreviousData: true }
+    {
+      keepPreviousData: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 2 * 60 * 1000,
+    }
   );
   const {
     data: featuredData,
@@ -306,7 +311,12 @@ const FeaturedArtworksManagement = () => {
     refetch: refetchFeatured,
   } = trpc.artwork.getFeaturedArtworksAdmin.useQuery(
     { limit, offset: featuredOffset },
-    { keepPreviousData: true }
+    {
+      keepPreviousData: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 2 * 60 * 1000,
+    }
   );
   const updateFeatured = trpc.artwork.updateFeaturedArtworks.useMutation({
     onMutate: () => {

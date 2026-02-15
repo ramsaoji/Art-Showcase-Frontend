@@ -5,6 +5,7 @@ import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
 import { trpc, trpcClient } from "./utils/trpc";
+import { STALE_TIME_MS } from "./utils/queryOptions";
 import PageLoader from "./components/ui/PageLoader";
 
 // Performance monitoring
@@ -30,7 +31,15 @@ if ("PerformanceObserver" in window) {
   }
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: STALE_TIME_MS, // 5 min — no refetch on minimize/restore or tab switch
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

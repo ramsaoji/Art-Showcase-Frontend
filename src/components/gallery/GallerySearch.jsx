@@ -23,17 +23,18 @@ export default function GallerySearch({
 
       {/* Search Bar */}
       <div className="mt-8 mx-auto">
-        <div className="relative">
+        <div className="relative group">
           <input
             type="text"
             value={searchInput}
             onChange={(e) => handleSearchInput(e.target.value)}
             placeholder="Search by title, artist, style, or material..."
-            className="w-full pl-12 pr-4 py-4 text-base font-sans rounded-full bg-white/80 border border-gray-200 focus:border-indigo-400 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all duration-300 shadow-sm hover:shadow-md"
+            className="w-full pl-12 pr-12 py-4 text-base font-sans rounded-full bg-white/80 border border-gray-200 shadow-sm hover:shadow-md focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-300 placeholder-gray-500 text-gray-900"
           />
-          <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 group-focus-within:text-indigo-500 transition-colors duration-300" />
           {searchInput && (
             <button
+              type="button"
               onClick={clearSearch}
               className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
             >

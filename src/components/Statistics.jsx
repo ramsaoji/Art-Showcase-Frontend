@@ -81,7 +81,11 @@ StatCard.displayName = "StatCard";
 
 export default function Statistics() {
   const { data, isLoading, error, refetch } =
-    trpc.artwork.getArtworkStats.useQuery();
+    trpc.artwork.getArtworkStats.useQuery(undefined, {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
+    });
   const { isSuperAdmin, isArtist } = useAuth();
   const {
     totalArtworksCount = 0,

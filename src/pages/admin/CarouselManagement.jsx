@@ -225,7 +225,12 @@ const CarouselManagement = () => {
   const { data, isLoading, error, refetch, isFetching } =
     trpc.artwork.getCarouselImages.useQuery(
       { limit, offset },
-      { keepPreviousData: true }
+      {
+        keepPreviousData: true,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 2 * 60 * 1000,
+      }
     );
   const updateCarouselOrder = trpc.artwork.updateCarouselOrder.useMutation({
     onMutate: () => {

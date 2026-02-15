@@ -18,62 +18,45 @@ export default function GalleryGrid({
   filters,
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
-  // Filter artworks based on role
+  // Filter artworks based on user role and filters
   const filteredArtworks = useMemo(() => {
+    // Helper to check if status is selected (handle array or string)
+    const isStatusMatch = (artStatus) => {
+      if (!filters.status || filters.status === "all" || filters.status.length === 0) return true;
+      if (Array.isArray(filters.status)) {
+        return filters.status.includes(artStatus);
+      }
+      return filters.status === artStatus;
+    };
+
     let result = isSuperAdmin
       ? allArtworks
       : isArtist && user
       ? allArtworks.filter(
           (art) =>
             // For own artworks, apply status filter if set
-            (art.userId === user.id &&
-              (filters.status === "all" || art.status === filters.status)) ||
+            (art.userId === user.id && isStatusMatch(art.status)) ||
             // For others' artworks, only show ACTIVE
             (art.userId !== user.id && art.status === "ACTIVE")
         )
       : allArtworks.filter((art) => art.status === "ACTIVE");
 
-    // For super admin, apply status filter if not 'all'
-    if (isSuperAdmin && filters.status && filters.status !== "all") {
-      result = result.filter((art) => art.status === filters.status);
+    // For super admin, apply status filter if set
+    if (isSuperAdmin && filters.status && filters.status !== "all" && filters.status.length > 0) {
+      result = result.filter((art) => isStatusMatch(art.status));
     }
     return result;
   }, [allArtworks, isSuperAdmin, isArtist, user, filters.status]);
-  // State to track if we should use virtualization (for larger datasets)
-  // const [useVirtualization, setUseVirtualization] = useState(false);
-
-  // Update virtualization state when artwork count changes
-  // useEffect(() => {
-  //   // Enable virtualization for larger datasets (more than 20 items)
-  //   setUseVirtualization(filteredArtworks.length > 20);
-  // }, [filteredArtworks.length]);
-
-  // Memoized item renderer for virtualization
-  // const ItemRenderer = useCallback(
-  //   (index) => {
-  //     const image = filteredArtworks[index];
-  //     return (
-  //       <div className="p-2">
-  //         <ArtworkCard
-  //           key={image.id}
-  //           artwork={image}
-  //           onDelete={handleDelete}
-  //           onQuickView={handleImageClick}
-  //         />
-  //       </div>
-  //     );
-  //   },
-  //   [filteredArtworks, handleDelete, handleImageClick]
-  // );
 
   // Helper: check if any filter or search is active
   const filtersActive =
     (typeof searchQuery === "string" && searchQuery.trim() !== "") ||
     (typeof filters !== "undefined" &&
-      (filters?.material !== "all" ||
-        filters?.artist !== "all" ||
-        filters?.availability !== "all" ||
-        filters?.featured !== "all"));
+      ((Array.isArray(filters.material) && filters.material.length > 0 && !filters.material.includes("all")) ||
+        (Array.isArray(filters.artist) && filters.artist.length > 0 && !filters.artist.includes("all")) ||
+        (Array.isArray(filters.availability) && filters.availability.length > 0 && !filters.availability.includes("all")) ||
+        (Array.isArray(filters.featured) && filters.featured.length > 0 && !filters.featured.includes("all")) ||
+        (Array.isArray(filters.status) && filters.status.length > 0 && !filters.status.includes("all"))));
 
   return (
     <div className="relative">
@@ -103,12 +86,12 @@ export default function GalleryGrid({
       )}
 
       {isCardsLoading && filteredArtworks.length === 0 ? (
-        // Loading skeleton for initial load
+        // Initial load: skeleton only (no loading text to avoid duplicate)
         <div className="space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4"></div>
+                <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4" />
               </div>
             ))}
           </div>
@@ -119,14 +102,16 @@ export default function GalleryGrid({
           next={loadMore}
           hasMore={hasMore}
           loader={
-            <div className="text-center py-8">
-              <div className="inline-flex items-center space-x-2 text-gray-600">
-                <Loader size="small" />
-                <span className="text-base font-sans">
-                  Loading more artworks...
-                </span>
+            filteredArtworks.length > 0 ? (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center space-x-2 text-gray-600">
+                  <Loader size="small" />
+                  <span className="text-base font-sans">
+                    Loading more artworks...
+                  </span>
+                </div>
               </div>
-            </div>
+            ) : null
           }
           endMessage={
             filteredArtworks.length > 0 ? (

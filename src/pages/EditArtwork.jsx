@@ -49,10 +49,11 @@ export default function EditArtwork() {
   } = trpc.artwork.getArtworkById.useQuery(
     { id: id },
     {
-      enabled: !!id, // Only run query if ID exists
-      onError: (error) => {
-        setError(getFriendlyErrorMessage(error));
-      },
+      enabled: !!id,
+      onError: (error) => setError(getFriendlyErrorMessage(error)),
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5 * 60 * 1000,
     }
   );
 
@@ -61,6 +62,9 @@ export default function EditArtwork() {
     trpc.user.listUsers.useQuery(undefined, {
       enabled: isSuperAdmin,
       select: (users) => users.filter((u) => u.role === "ARTIST"),
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 2 * 60 * 1000,
     });
   const artists = artistsRaw.filter((a) => a.approved && a.active);
 
@@ -96,16 +100,8 @@ export default function EditArtwork() {
         galleryOrder: img.galleryOrder,
         showInCarousel: img.showInCarousel,
       }));
-      // For admins/super admins, ensure imageUploadLimit is at least equal to the number of images
-      let imageUploadLimit = formData.imageUploadLimit;
-      if (isSuperAdmin) {
-        // Super admins can upload up to 1000 images, ensure the limit is at least equal to images
-        imageUploadLimit = Math.max(
-          images.length,
-          formData.imageUploadLimit || artworkData.imageUploadLimit || 1
-        );
-        if (imageUploadLimit > 1000) imageUploadLimit = 1000;
-      }
+      // Artist-level limits are managed in Admin → Artist Management; do not send from artwork form.
+      // Always send featured/sold as booleans (fallback to existing artwork when form value is missing)
       const updateData = {
         id: artworkData.id,
         title: formData.title,
@@ -115,16 +111,13 @@ export default function EditArtwork() {
         material: formData.material,
         style: formData.style,
         year: Number(formData.year),
-        featured: !!formData.featured,
-        sold: !!formData.sold,
+        featured: typeof formData.featured === "boolean" ? formData.featured : !!artworkData.featured,
+        sold: typeof formData.sold === "boolean" ? formData.sold : !!artworkData.sold,
         instagramReelLink: formData.instagramReelLink,
         youtubeVideoLink: formData.youtubeVideoLink,
         status: formData.status || "ACTIVE",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         images,
-        imageUploadLimit,
-        monthlyUploadLimit: formData.monthlyUploadLimit,
-        aiDescriptionDailyLimit: formData.aiDescriptionDailyLimit,
         expiresAt: formData.expiresAt
           ? new Date(formData.expiresAt)
           : undefined,

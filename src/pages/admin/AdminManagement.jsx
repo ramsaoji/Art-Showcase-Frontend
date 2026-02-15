@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import CarouselManagement from "./CarouselManagement";
 import FeaturedArtworksManagement from "./FeaturedArtworksManagement";
-import ArtistApprovals from "./ArtistApprovals";
+import ArtistsManagement from "./ArtistsManagement";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Hoisted static motion configurations (rendering-hoist-jsx)
@@ -41,8 +41,7 @@ const AdminManagement = () => {
             Admin Management
           </h1>
           <p className="text-lg text-gray-600 font-sans">
-            Manage artist approvals, the homepage carousel, and featured
-            artworks.
+            Manage artists, the homepage carousel, and featured artworks.
           </p>
         </div>
 
@@ -69,7 +68,7 @@ const AdminManagement = () => {
               whileTap={{ scale: 0.97 }}
               transition={tabButtonTransition}
             >
-              Artist Approvals
+              Artists
             </motion.button>
           </div>
           <div className="flex w-full sm:w-auto relative">
@@ -131,7 +130,7 @@ const AdminManagement = () => {
                 key="artist-approvals"
                 {...tabContentMotion}
               >
-                <ArtistApprovals />
+                <ArtistsManagement />
               </motion.div>
             )}
             {activeTab === "carousel" && (
