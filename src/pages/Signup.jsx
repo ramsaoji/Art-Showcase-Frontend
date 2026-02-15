@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { trpc } from "../utils/trpc";
 import { motion } from "framer-motion";
 import Alert from "../components/Alert";
@@ -24,26 +24,27 @@ const formContainerMotion = {
   transition: { duration: 0.5, delay: 0.1 },
 };
 
-const schema = yup.object().shape({
-  artistName: yup.string().required("Artist name is required"),
-  email: yup
-    .string()
-    .email("Please enter a valid email address")
-    .test(
-      "no-dot-before-at",
-      "Email cannot have a dot right before @",
-      (value) => !value || !/\.@/.test(value)
-    )
-    .required("Email is required"),
-  password: yup
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .required("Password is required"),
-  confirmPassword: yup
-    .string()
-    .oneOf([yup.ref("password"), null], "Passwords must match")
-    .required("Please confirm your password"),
-});
+const schema = z
+  .object({
+    artistName: z.string().min(1, "Artist name is required"),
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Please enter a valid email address")
+      .refine(
+        (value) => !value || !/\.@/.test(value),
+        "Email cannot have a dot right before @"
+      ),
+    password: z
+      .string()
+      .min(1, "Password is required")
+      .min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords must match",
+    path: ["confirmPassword"],
+  });
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -68,7 +69,13 @@ export default function Signup() {
     setError: setFormError,
     reset,
   } = useForm({
-    resolver: yupResolver(schema),
+    resolver: zodResolver(schema),
+    defaultValues: {
+      artistName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
   });
 
   const registerMutation = trpc.user.register.useMutation({

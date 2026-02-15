@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 import Alert from "./Alert";
 import Loader from "./ui/Loader";
@@ -20,75 +20,57 @@ import { getFriendlyErrorMessage } from "../utils/formatters";
 import { v4 as uuidv4 } from "uuid";
 import ArtworkImageGrid from "./ArtworkImageGrid";
 
-// Lazy load ImageCropper (heavy component with react-image-crop) - Vercel 2.4
-const ImageCropper = lazy(() => import("./ImageCropper"));
-
-// Progress bar component
-const ProgressBar = React.memo(({ progress, label }) => {
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm text-gray-600 font-sans">
-        <span>{label}</span>
-        <span>{progress}%</span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  );
-});
-
 // Validation schema
-const createValidationSchema = (
-  isSuperAdmin,
-  initialData
-) => {
-  return yup.object().shape({
-    title: yup.string().trim().required("Title is required"),
-    material: yup.string().trim().required("Material is required"),
-    style: yup.string().trim().required("Style is required"),
-    description: yup.string().trim().required("Description is required"),
-    price: yup
-      .number()
-      .typeError("Price must be a number")
-      .positive("Price must be greater than 0")
-      .required("Price is required"),
-    year: yup
-      .number()
-      .typeError("Year must be a number")
+const createValidationSchema = (isSuperAdmin, initialData) => {
+  let schema = z.object({
+    title: z.string().trim().min(1, "Title is required"),
+    material: z.string().trim().min(1, "Material is required"),
+    style: z.string().trim().min(1, "Style is required"),
+    description: z.string().trim().min(1, "Description is required"),
+    price: z.coerce
+      .number({ invalid_type_error: "Price must be a number" })
+      .positive("Price must be greater than 0"),
+    year: z.coerce
+      .number({ invalid_type_error: "Year must be a number" })
       .min(1900, "Year must be at least 1900")
-      .max(new Date().getFullYear() + 1, "Year cannot be in the future")
-      .required("Year is required"),
-    width: yup
-      .number()
-      .typeError("Width must be a number")
-      .positive("Width must be greater than 0")
-      .required("Width is required"),
-    height: yup
-      .number()
-      .typeError("Height must be a number")
-      .positive("Height must be greater than 0")
-      .required("Height is required"),
-    instagramReelLink: yup.string().url("Must be a valid URL").optional(),
-    youtubeVideoLink: yup.string().url("Must be a valid URL").optional(),
-    artistId: yup.string().when([], {
-      is: () => isSuperAdmin && !initialData,
-      then: (schema) => schema.required("Artist is required"),
-      otherwise: (schema) => schema.optional(),
-    }),
-    images: yup.array().min(1, "At least one image is required"),
-    // Only include expiresAt validation for super admins
-    ...(isSuperAdmin && {
-      expiresAt: yup
-        .date()
-        .nullable()
-        .typeError("Expiry date must be a valid date")
-        .optional(),
-    }),
+      .max(new Date().getFullYear() + 1, "Year cannot be in the future"),
+    width: z.coerce
+      .number({ invalid_type_error: "Width must be a number" })
+      .positive("Width must be greater than 0"),
+    height: z.coerce
+      .number({ invalid_type_error: "Height must be a number" })
+      .positive("Height must be greater than 0"),
+    instagramReelLink: z
+      .string()
+      .trim()
+      .url("Must be a valid URL")
+      .optional()
+      .or(z.literal("")),
+    youtubeVideoLink: z
+      .string()
+      .trim()
+      .url("Must be a valid URL")
+      .optional()
+      .or(z.literal("")),
+    images: z.array(z.any()).min(1, "At least one image is required"),
+    artistId: z.string().optional(),
+    expiresAt: z.any().optional(), // Default optional
   });
+
+  // Conditional validation
+  if (isSuperAdmin && !initialData) {
+    schema = schema.extend({
+      artistId: z.string().min(1, "Artist is required"),
+    });
+  }
+
+  if (isSuperAdmin) {
+    schema = schema.extend({
+      expiresAt: z.coerce.date().nullable().optional(),
+    });
+  }
+
+  return schema;
 };
 
 // Compress image file to base64 (JPEG, quality 0.7, max width/height 1024px)
@@ -429,7 +411,7 @@ export default function ArtworkForm({
 
   // Custom resolver that handles dynamic validation by passing a reactive context
   const customResolver = useMemo(() => {
-    return yupResolver(validationSchema);
+    return zodResolver(validationSchema);
   }, [validationSchema]);
 
   // Initialize form with React Hook Form

@@ -2,30 +2,29 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import Loader from "./ui/Loader";
 import Alert from "./Alert";
 import { trpc } from "../utils/trpc";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 
-const schema = yup.object().shape({
-  name: yup.string().required("Name is required"),
-  email: yup
+const schema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z
     .string()
+    .min(1, "Email is required")
     .email("Please enter a valid email address")
-    .test(
-      "no-dot-before-at",
-      "Email cannot have a dot right before @",
-      (value) => !value || !/\.@/.test(value)
-    )
-    .required("Email is required"),
-  phone: yup
+    .refine(
+      (value) => !value || !/\.@/.test(value),
+      "Email cannot have a dot right before @"
+    ),
+  phone: z
     .string()
-    .matches(/^\d{10}$/, "Enter a valid 10-digit phone number")
-    .required("Phone number is required"),
-  address: yup.string().required("Address is required"),
+    .min(1, "Phone number is required")
+    .regex(/^\d{10}$/, "Enter a valid 10-digit phone number"),
+  address: z.string().min(1, "Address is required"),
 });
 
 const modalVariants = {
@@ -51,7 +50,13 @@ export default function PurchaseRequestModal({
     formState: { errors, isSubmitting },
     reset,
   } = useForm({
-    resolver: yupResolver(schema),
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+    },
     // mode: "onTouched",
   });
   const { ref: formRef, ...nameProps } = register("name");

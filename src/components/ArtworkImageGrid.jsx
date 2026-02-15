@@ -268,7 +268,7 @@ export default function ArtworkImageGrid({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-lg font-semibold text-gray-900 tracking-tight">
-            Artwork Gallery
+            Artwork Gallery <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">

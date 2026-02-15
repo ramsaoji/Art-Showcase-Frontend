@@ -135,7 +135,7 @@ export default function VerifyEmail() {
                   <div className="w-full max-w-xs flex flex-col gap-2 items-center">
                     <p className="text-gray-600 text-sm font-sans mb-1 text-center">
                       If your verification link expired, enter your email to
-                      resend:
+                      resend: <span className="text-red-500">*</span>
                     </p>
                     <input
                       type="email"

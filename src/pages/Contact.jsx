@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { trackFormSubmission } from "../services/analytics";
 import { trpcClient } from "../utils/trpc";
 import Loader from "../components/ui/Loader";
@@ -22,18 +22,17 @@ const formContainerMotion = {
   transition: { duration: 0.5, delay: 0.1 },
 };
 
-const schema = yup.object().shape({
-  name: yup.string().required("Name is required"),
-  email: yup
+const schema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z
     .string()
+    .min(1, "Email is required")
     .email("Please enter a valid email address")
-    .test(
-      "no-dot-before-at",
-      "Email cannot have a dot right before @",
-      (value) => !value || !/\.@/.test(value)
-    )
-    .required("Email is required"),
-  message: yup.string().required("Message is required"),
+    .refine(
+      (value) => !value || !/\.@/.test(value),
+      "Email cannot have a dot right before @"
+    ),
+  message: z.string().min(1, "Message is required"),
 });
 
 const Contact = () => {
@@ -46,7 +45,12 @@ const Contact = () => {
     formState: { errors, isSubmitting },
     reset,
   } = useForm({
-    resolver: yupResolver(schema),
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: "",
+      email: "",
+      message: "",
+    },
     // mode: "onTouched",
   });
 
@@ -130,7 +134,7 @@ const Contact = () => {
                       htmlFor="name"
                       className="block font-sans text-sm font-medium text-gray-700 mb-2"
                     >
-                      Name
+                      Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -156,7 +160,7 @@ const Contact = () => {
                       htmlFor="email"
                       className="block font-sans text-sm font-medium text-gray-700 mb-2"
                     >
-                      Email
+                      Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
@@ -181,7 +185,7 @@ const Contact = () => {
                       htmlFor="message"
                       className="block font-sans text-sm font-medium text-gray-700 mb-2"
                     >
-                      Message
+                      Message <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       id="message"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { trpc } from "../../utils/trpc";
 import { motion } from "framer-motion";
 import Alert from "../../components/Alert";
@@ -24,21 +24,23 @@ const formContainerMotion = {
   transition: { duration: 0.5, delay: 0.1 },
 };
 
-const schema = yup.object().shape({
-  currentPassword: yup.string().required("Current password is required"),
-  newPassword: yup
-    .string()
-    .min(8, "New password must be at least 8 characters")
-    .notOneOf(
-      [yup.ref("currentPassword"), null],
-      "New password cannot be the same as the current one."
-    )
-    .required("New password is required"),
-  confirmNewPassword: yup
-    .string()
-    .oneOf([yup.ref("newPassword"), null], "Passwords must match")
-    .required("Please confirm your new password"),
-});
+const schema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(1, "New password is required")
+      .min(8, "New password must be at least 8 characters"),
+    confirmNewPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "New password cannot be the same as the current one.",
+    path: ["newPassword"],
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords must match",
+    path: ["confirmNewPassword"],
+  });
 
 export default function ChangePassword() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -65,7 +67,12 @@ export default function ChangePassword() {
     setError: setFormError,
     reset,
   } = useForm({
-    resolver: yupResolver(schema),
+    resolver: zodResolver(schema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    },
     // mode: "onTouched",
   });
 

@@ -7,8 +7,8 @@ import { motion } from "framer-motion";
 import Alert from "../components/Alert";
 import Loader from "../components/ui/Loader";
 import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { getFriendlyErrorMessage } from "../utils/formatters";
 
 // Hoisted static motion configurations (rendering-hoist-jsx)
@@ -24,17 +24,16 @@ const formContainerMotion = {
   transition: { duration: 0.5, delay: 0.1 },
 };
 
-const schema = yup.object().shape({
-  email: yup
+const schema = z.object({
+  email: z
     .string()
+    .min(1, "Email is required")
     .email("Please enter a valid email")
-    .test(
-      "no-dot-before-at",
-      "Email cannot have a dot right before @",
-      (value) => !value || !/\.@/.test(value)
-    )
-    .required("Email is required"),
-  password: yup.string().required("Password is required"),
+    .refine(
+      (value) => !value || !/\.@/.test(value),
+      "Email cannot have a dot right before @"
+    ),
+  password: z.string().min(1, "Password is required"),
 });
 
 export default function Login() {
@@ -57,7 +56,11 @@ export default function Login() {
     setError,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: yupResolver(schema),
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
   // Memoize password toggle handler (rerender-functional-setstate)
@@ -170,7 +173,7 @@ export default function Login() {
                       htmlFor="email-address"
                       className="block text-sm font-medium text-gray-700 mb-2 font-sans"
                     >
-                      Email address
+                      Email address <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="email-address"
@@ -194,7 +197,7 @@ export default function Login() {
                       htmlFor="password"
                       className="block text-sm font-medium text-gray-700 mb-2 font-sans"
                     >
-                      Password
+                      Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
