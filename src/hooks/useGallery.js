@@ -372,105 +372,7 @@ export default function useGallery() {
     refetch();
   }, [refetch]);
 
-  // Helper function to get active filters for display
-  const getActiveFilters = useCallback(() => {
-    const active = [];
 
-    if (searchQuery && searchQuery.trim()) {
-      active.push({
-        type: "search",
-        label: `Search: "${searchQuery}"`,
-        value: searchQuery,
-        onRemove: () => clearSearch(),
-      });
-    }
-
-    if (filters.material && filters.material.length > 0) {
-      active.push({
-        type: "material",
-        label: `Material: ${filters.material.join(", ")}`,
-        value: filters.material,
-        onRemove: () => handleFilterChange("material", []),
-      });
-    }
-
-    if (filters.artist && filters.artist.length > 0) {
-      // For multiple artists, we might want to show "Multiple Artists" or count
-      // Or map ids to labels if available
-      const labels = filters.artist.map(id => {
-         const found = artists.find(a => a.id === id);
-         return found ? found.label.split(" (")[0] : id; // Simple label
-      });
-      
-      active.push({
-        type: "artist",
-        label: `Artist: ${labels.join(", ")}`,
-        value: filters.artist,
-        onRemove: () => handleFilterChange("artist", []),
-      });
-    }
-
-    if (filters.availability && filters.availability.length > 0) {
-      active.push({
-        type: "availability",
-        label: `Availability: ${filters.availability.join(", ")}`,
-        value: filters.availability,
-        onRemove: () => handleFilterChange("availability", []),
-      });
-    }
-
-    if (filters.featured && filters.featured.length > 0) {
-      active.push({
-        type: "featured",
-        label: `Featured: ${filters.featured.includes("featured") ? "Yes" : "No"}`, // Simplified
-        value: filters.featured,
-        onRemove: () => handleFilterChange("featured", []),
-      });
-    }
-
-    if (filters.status && filters.status.length > 0) {
-       // ... status logic
-       active.push({
-        type: "status",
-        label: `Status: ${filters.status.join(", ")}`,
-        value: filters.status,
-        onRemove: () => handleFilterChange("status", []),
-      });
-    }
-
-    if (sortBy && sortBy !== "newest") {
-      const sortLabels = {
-        oldest: "Oldest First",
-        "price-high": "Price: High to Low",
-        "price-low": "Price: Low to High",
-        "year-new": "Year: Newest First",
-        "year-old": "Year: Oldest First",
-        "artist-az": "Artist: A-Z",
-        "artist-za": "Artist: Z-A",
-      };
-
-      active.push({
-        type: "sort",
-        label: `Sort: ${sortLabels[sortBy] || sortBy}`,
-        value: sortBy,
-        onRemove: () => handleSortChange("newest"),
-      });
-    }
-
-    return active;
-  }, [
-    searchQuery,
-    filters.material,
-    filters.artist,
-    filters.availability,
-    filters.featured,
-    filters.status,
-    sortBy,
-    clearSearch,
-    handleFilterChange,
-    handleSortChange,
-    artists,
-  ]);
 
   // Auto-apply artist filter for logged-in artists only once
   const didAutoApplyArtistFilter = useRef(false);
@@ -482,6 +384,21 @@ export default function useGallery() {
       !didAutoApplyArtistFilter.current
     ) {
       setFilters((prev) => ({ ...prev, artist: [user.id] }));
+      
+      // Optimistically add logged-in artist to results to avoid "Loading..."
+      setArtistResults((prev) => {
+        const alreadyExists = prev.some((a) => a.id === user.id);
+        if (alreadyExists) return prev;
+        
+        return [
+          ...prev,
+          {
+            id: user.id,
+            label: `${user.artistName || "Artist"} (${user.email})`,
+          },
+        ];
+      });
+
       didAutoApplyArtistFilter.current = true;
     }
     // Reset the flag if user logs out or changes
@@ -753,6 +670,106 @@ export default function useGallery() {
       [dropdownType]: true,
     }));
   }, []);
+
+  // Helper function to get active filters for display
+  const getActiveFilters = useCallback(() => {
+    const active = [];
+
+    if (searchQuery && searchQuery.trim()) {
+      active.push({
+        type: "search",
+        label: `Search: "${searchQuery}"`,
+        value: searchQuery,
+        onRemove: () => clearSearch(),
+      });
+    }
+
+    if (filters.material && filters.material.length > 0) {
+      active.push({
+        type: "material",
+        label: `Material: ${filters.material.join(", ")}`,
+        value: filters.material,
+        onRemove: () => handleFilterChange("material", []),
+      });
+    }
+
+    if (filters.artist && filters.artist.length > 0) {
+      const labels = filters.artist.map((id) => {
+        const found = artistResults.find((a) => a.id === id);
+        return found ? found.label.split(" (")[0] : id;
+      });
+
+      active.push({
+        type: "artist",
+        label: `Artist: ${labels.join(", ")}`,
+        value: filters.artist,
+        onRemove: () => handleFilterChange("artist", []),
+      });
+    }
+
+    if (filters.availability && filters.availability.length > 0) {
+      active.push({
+        type: "availability",
+        label: `Availability: ${filters.availability.join(", ")}`,
+        value: filters.availability,
+        onRemove: () => handleFilterChange("availability", []),
+      });
+    }
+
+    if (filters.featured && filters.featured.length > 0) {
+      active.push({
+        type: "featured",
+        label: `Featured: ${filters.featured.includes("featured")
+          ? "Yes"
+          : "No"}`,
+        value: filters.featured,
+        onRemove: () => handleFilterChange("featured", []),
+      });
+    }
+
+    if (filters.status && filters.status.length > 0) {
+      active.push({
+        type: "status",
+        label: `Status: ${filters.status.join(", ")}`,
+        value: filters.status,
+        onRemove: () => handleFilterChange("status", []),
+      });
+    }
+
+    if (sortBy && sortBy !== "newest") {
+      const sortLabels = {
+        oldest: "Oldest First",
+        "price-high": "Price: High to Low",
+        "price-low": "Price: Low to High",
+        "year-new": "Year: Newest First",
+        "year-old": "Year: Oldest First",
+        "artist-az": "Artist: A-Z",
+        "artist-za": "Artist: Z-A",
+      };
+
+      active.push({
+        type: "sort",
+        label: `Sort: ${sortLabels[sortBy] || sortBy}`,
+        value: sortBy,
+        onRemove: () => handleSortChange("newest"),
+      });
+    }
+
+    return active;
+  }, [
+    searchQuery,
+    filters.material,
+    filters.artist,
+    filters.availability,
+    filters.featured,
+    filters.status,
+    sortBy,
+    clearSearch,
+    handleFilterChange,
+    handleSortChange,
+    artistResults,
+  ]);
+
 
   return {
     // State
