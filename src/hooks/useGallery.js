@@ -18,6 +18,8 @@ export default function useGallery() {
   const navigate = useNavigate();
   const initialized = useRef(false);
   const { isArtist, user, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
+  const prevUserRef = useRef(user?.id);
 
   // State management
   const [sortBy, setSortBy] = useState(() => {
@@ -641,27 +643,35 @@ export default function useGallery() {
     }
   };
 
-  // Functions to handle filter section expansion
-  const expandFilter = useCallback((filterType) => {
-    setOpenedDropdowns((prev) => ({
-      ...prev,
-      [filterType]: true,
-    }));
-  }, []);
+  // Invalidate queries when user/auth state changes
+  useEffect(() => {
+    // Only run if user ID has changed (login/logout/switch user)
+    if (prevUserRef.current !== user?.id) {
+      prevUserRef.current = user?.id;
 
-  const collapseFilter = useCallback((filterType) => {
-    setOpenedDropdowns((prev) => ({
-      ...prev,
-      [filterType]: false,
-    }));
-  }, []);
+      // Reset queries to clear cache and trigger loading state
+      utils.user.listArtistsPublic.reset();
+      utils.artwork.getMaterials.reset();
+      utils.artwork.getStyles.reset();
+      // Also reset main artwork list
+      utils.artwork.getAllArtworks.reset();
+      
+      // Reset dropdown states to ensure fresh data and valid pagination
+      setArtistResults([]);
+      setArtistPage(1);
+      setMaterialResults([]);
+      setMaterialPage(1);
+      setStyleResults([]);
+      setStylePage(1);
+      
+      // Reset main gallery pagination
+      setCurrentPage(1);
+      setAllArtworks([]);
+      setHasMore(true);
+    }
+  }, [user?.id, utils]);
 
-  const toggleFilter = useCallback((filterType) => {
-    setOpenedDropdowns((prev) => ({
-      ...prev,
-      [filterType]: !prev[filterType],
-    }));
-  }, []);
+
 
   // Functions to mark dropdowns as opened (for lazy loading)
   const markDropdownOpened = useCallback((dropdownType) => {

@@ -79,6 +79,7 @@ function SearchableFilterSection({
   showAllOption = false,
   showFooter = true,
   onChange,
+  loadingMessage = "Loading...",
 }) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [tempSelectedValues, setTempSelectedValues] = useState(
@@ -197,8 +198,8 @@ function SearchableFilterSection({
           next={handleLoadMore}
           hasMore={hasMore}
           loader={
-            <div className="px-3 py-2 text-sm text-gray-400 font-sans text-center italic">
-              Loading...
+            <div className="px-3 py-2 text-sm text-gray-500 font-sans text-center">
+              Loading more...
             </div>
           }
           scrollableTarget={scrollableId}
@@ -236,8 +237,8 @@ function SearchableFilterSection({
           )}
 
           {isLoading && filteredOptions.length === 0 ? (
-            <div className="px-3 py-10 text-sm text-gray-400 font-sans text-center italic">
-              Loading options...
+            <div className="px-3 py-10 text-sm text-gray-500 font-sans text-center">
+              {loadingMessage}
             </div>
           ) : filteredOptions.length > 0 ? (
             <div className="space-y-1">
@@ -574,6 +575,7 @@ export default function GalleryFilters({
                       shouldShowFullEmail={shouldShowFullEmail}
                       showFooter={false}
                       onChange={(values) => handleFilterChange("artist", values)}
+                      loadingMessage="Loading artists..."
                     />
                   </div>
 
@@ -596,6 +598,7 @@ export default function GalleryFilters({
                       onLoadMore={loadMoreMaterials}
                       showFooter={false}
                       onChange={(values) => handleFilterChange("material", values)}
+                      loadingMessage="Loading materials..."
                     />
                   </div>
 
@@ -618,6 +621,7 @@ export default function GalleryFilters({
                       onLoadMore={loadMoreStyles}
                       showFooter={false}
                       onChange={(values) => handleFilterChange("style", values)}
+                      loadingMessage="Loading styles..."
                     />
                   </div>
 
@@ -909,6 +913,7 @@ export default function GalleryFilters({
                   onLoadMore={loadMoreArtists}
                   shouldShowFullEmail={shouldShowFullEmail}
                   renderFooterWrapper={(footer) => <Menu.Item as="div">{footer}</Menu.Item>}
+                  loadingMessage="Loading artists..."
                 />
               </Menu.Items>
             </Transition>
@@ -967,6 +972,7 @@ export default function GalleryFilters({
                   hasMore={hasMoreMaterials}
                   onLoadMore={loadMoreMaterials}
                   renderFooterWrapper={(footer) => <Menu.Item as="div">{footer}</Menu.Item>}
+                  loadingMessage="Loading materials..."
                 />
               </Menu.Items>
             </Transition>
@@ -1025,6 +1031,7 @@ export default function GalleryFilters({
                   hasMore={hasMoreStyles}
                   onLoadMore={loadMoreStyles}
                   renderFooterWrapper={(footer) => <Menu.Item as="div">{footer}</Menu.Item>}
+                  loadingMessage="Loading styles..."
                 />
               </Menu.Items>
             </Transition>
@@ -1252,6 +1259,7 @@ export default function GalleryFilters({
                       hasMore={hasMoreArtists}
                       onLoadMore={loadMoreArtists}
                       shouldShowFullEmail={shouldShowFullEmail}
+                      loadingMessage="Loading artists..."
                     />
                   </div>
 
@@ -1272,6 +1280,7 @@ export default function GalleryFilters({
                       isLoading={isMaterialsLoading}
                       hasMore={hasMoreMaterials}
                       onLoadMore={loadMoreMaterials}
+                      loadingMessage="Loading materials..."
                     />
                   </div>
 
@@ -1292,6 +1301,7 @@ export default function GalleryFilters({
                       isLoading={isStylesLoading}
                       hasMore={hasMoreStyles}
                       onLoadMore={loadMoreStyles}
+                      loadingMessage="Loading styles..."
                     />
                   </div>
 

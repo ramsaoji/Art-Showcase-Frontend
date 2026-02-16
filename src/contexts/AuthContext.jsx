@@ -101,9 +101,9 @@ export function AuthProvider({ children }) {
         saveToken(res.token);
         setUser(res.user);
 
-        // Invalidate getAllArtworks query after successful login
-        // This ensures fresh data is fetched with the new user context
-        utils.artwork.getAllArtworks.invalidate();
+        // Reset queries to ensure fresh data and show loading state
+        // This solves the issue of stale data when switching users/roles
+        utils.reset();
 
         return res.user;
       } catch (err) {
@@ -131,7 +131,7 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     },
-    [utils.artwork.getAllArtworks]
+    [utils]
   );
 
   // Logout function
@@ -143,10 +143,9 @@ export function AuthProvider({ children }) {
     // Clear all artwork-related localStorage data
     clearArtworkLocalStorage();
 
-    // Invalidate getAllArtworks query after logout
-    // This ensures fresh data is fetched with the public context
-    utils.artwork.getAllArtworks.invalidate();
-  }, [utils.artwork.getAllArtworks]);
+    // Reset all queries to ensure fresh public data is fetched and show loading state
+    utils.reset();
+  }, [utils]);
 
   // Clear error function for external use
   const clearError = useCallback(() => setError(null), []);
