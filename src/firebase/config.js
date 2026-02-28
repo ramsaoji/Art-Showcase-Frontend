@@ -1,5 +1,4 @@
 import { initializeApp } from "firebase/app";
-import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Your Firebase configuration
@@ -15,9 +14,6 @@ const firebaseConfig = {
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
-
-// Get Firebase services
-export const storage = getStorage(app);
 
 // Initialize Analytics
 export const analytics = (async () => {

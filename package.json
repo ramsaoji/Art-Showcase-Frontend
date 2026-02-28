@@ -31,7 +31,6 @@
     "lodash": "^4.17.23",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-firebase-hooks": "^5.1.1",
     "react-hook-form": "^7.58.1",
     "react-image-crop": "^11.0.10",
     "react-infinite-scroll-component": "^6.1.0",
