@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { trpc } from "../utils/trpc";
+import { trpc } from "@/lib/trpc";
 import ShareIcon from "@heroicons/react/24/outline/ShareIcon";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import StarIcon from "@heroicons/react/24/outline/StarIcon";
@@ -9,23 +9,20 @@ import ChevronLeftIcon from "@heroicons/react/24/outline/ChevronLeftIcon";
 import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
-
 import { motion } from "framer-motion";
-import { getFullSizeUrl } from "../config/cloudinary";
-import {
-  formatPrice,
-  formatLocalDateTime,
-  getFriendlyErrorMessage,
-} from "../utils/formatters";
-import Alert from "../components/Alert";
-import Badge from "../components/Badge";
-import Loader from "../components/ui/Loader";
-import { trackArtworkView, trackShare } from "../services/analytics";
-import { useAuth } from "../contexts/AuthContext";
-import PurchaseRequestModal from "../components/PurchaseRequestModal";
-import useOptimizedImage from "../hooks/useOptimizedImage";
-import ImageModal from "../components/ImageModal";
-import SocialMediaModal from "../components/SocialMediaModal";
+import { formatPrice, formatLocalDateTime, getFriendlyErrorMessage } from "@/utils/formatters";
+import Alert from "@/components/common/Alert";
+import Badge from "@/components/artwork/Badge";
+import StatusBadge from "@/components/artwork/StatusBadge";
+import Loader from "@/components/common/Loader";
+import { Button } from "@/components/ui/button";
+import { trackArtworkView, trackShare } from "@/services/analytics";
+import { useAuth } from "@/contexts/AuthContext";
+import PurchaseRequestModal from "@/features/purchase-request";
+import useOptimizedImage from "@/hooks/useOptimizedImage";
+import ImageModal from "@/components/artwork/ImageModal";
+import SocialMediaModal from "@/components/sections/SocialMediaModal";
+import useScrollLock from "@/hooks/useScrollLock";
 
 // Hoisted static motion configurations (rendering-hoist-jsx)
 const containerMotion = {
@@ -58,12 +55,11 @@ const descriptionMotion = {
   transition: { duration: 0.5, delay: 0.5 },
 };
 
-const metadataMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay: 0.6 },
-};
-
+/**
+ * ArtworkDetail page — full-page view of a single artwork.
+ * Fetches artwork by ID from the URL param, displays a multi-image carousel,
+ * metadata panel, purchase request modal, and social media link modals.
+ */
 export default function ArtworkDetail() {
   const { id } = useParams();
   const [showShareToast, setShowShareToast] = useState(false);
@@ -72,6 +68,9 @@ export default function ArtworkDetail() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [fullScreenImageOpen, setFullScreenImageOpen] = useState(false);
+
+  // Lock background scrolling when full-screen overlay is open
+  useScrollLock(fullScreenImageOpen);
   const [isLoading, setIsLoading] = useState(true);
   const [showZoomHint, setShowZoomHint] = useState(false);
   const [socialMediaModal, setSocialMediaModal] = useState({
@@ -241,9 +240,7 @@ export default function ArtworkDetail() {
   if (artworkLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50">
-        {/* <div className="bg-white/80 backdrop-blur-md rounded-2xl p-8 shadow-xl"> */}
         <Loader size="large" />
-        {/* </div> */}
       </div>
     );
   }
@@ -301,7 +298,6 @@ export default function ArtworkDetail() {
               ) : (
                 <div
                   className="relative w-full h-full flex items-center justify-center select-none overflow-hidden"
-                  // style={{ minHeight: "inherit" }}
                 >
                   {/* Enhanced blurred background image with gradient overlay */}
                   <div className="absolute inset-0 w-full h-full">
@@ -445,28 +441,7 @@ export default function ArtworkDetail() {
                   {/* Status badge */}
                   {artwork?.status && canSeeStatusBadge && (
                     <div className="absolute top-4 right-4 z-30">
-                      <Badge
-                        type={
-                          artwork.status === "ACTIVE"
-                            ? "active"
-                            : artwork.status === "INACTIVE"
-                            ? "inactive"
-                            : artwork.status === "EXPIRED"
-                            ? "expired"
-                            : "default"
-                        }
-                        animate
-                        withPing
-                      >
-                        {artwork.status === "EXPIRED"
-                          ? artwork.expiredBy === "admin"
-                            ? "Expired (admin)"
-                            : artwork.expiredBy === "auto"
-                            ? "Expired (auto)"
-                            : "Expired"
-                          : artwork.status.charAt(0) +
-                            artwork.status.slice(1).toLowerCase()}
-                      </Badge>
+                      <StatusBadge status={artwork.status} expiredBy={artwork.expiredBy} />
                     </div>
                   )}
                 </div>
@@ -476,24 +451,21 @@ export default function ArtworkDetail() {
             {/* Enhanced Details Section */}
             <div className="relative flex-shrink-0 w-full xl:w-[32rem] bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl p-4 sm:p-6 xl:p-8 flex flex-col border-l border-white/20">
               {/* Enhanced header with title and share button */}
-              <div className="flex items-start justify-between mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <motion.h1
                   {...titleMotion}
                   className="font-artistic text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-wide leading-tight pr-4"
                 >
                   {artwork?.title}
                 </motion.h1>
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
+                  type="button"
                   onClick={handleShare}
-                  className="flex-shrink-0 p-2 sm:p-3 text-gray-500 hover:text-indigo-600 rounded-full hover:bg-gray-100/80 backdrop-blur-sm transition-all duration-200 border border-gray-200/50 hover:border-gray-300/70"
+                  className="flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:text-indigo-500 hover:bg-gray-50 border border-gray-100 hover:border-gray-200 h-11 w-11 sm:h-12 sm:w-12 bg-white transition-colors duration-200"
                   title="Share artwork"
                 >
-                  <ShareIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-                </motion.button>
+                  <ShareIcon className="h-6 w-6 sm:h-7 sm:w-7"/>
+                </button>
               </div>
 
               {/* Enhanced Artist section */}
@@ -663,26 +635,25 @@ export default function ArtworkDetail() {
               </div>
 
               {/* Enhanced Purchase Request Button */}
-              {showPurchaseButtons &&
-                (!artwork?.sold ? (
-                  <div className="flex sm:justify-start border-t border-gray-200/50 bg-gradient-to-r from-white/90 to-gray-50/90 backdrop-blur-xl py-3 sm:py-4 mt-4 sm:mt-6">
-                    <button
-                      className="w-full sm:w-auto max-w-60 px-4 sm:px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold shadow-lg hover:shadow-xl hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+              {showPurchaseButtons && (
+                <div className="flex sm:justify-start border-t border-gray-200/50 bg-gradient-to-r from-white/90 to-gray-50/90 backdrop-blur-xl py-3 sm:py-4 mt-4 sm:mt-6">
+                  {!artwork?.sold ? (
+                    <Button
+                      className="w-full sm:w-auto max-w-60"
                       onClick={handlePurchaseModalOpen}
                     >
                       Request to Purchase
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex sm:justify-start border-t border-gray-200/50 bg-gradient-to-r from-white/90 to-gray-50/90 backdrop-blur-xl py-3 sm:py-4 mt-4 sm:mt-6">
-                    <button
-                      className="w-full max-w-60 rounded-xl bg-gradient-to-r from-gray-400 to-gray-500 px-4 sm:px-6 py-2 font-sans font-semibold text-white shadow-lg cursor-not-allowed opacity-80 sm:w-auto"
-                      disabled
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="sold"
+                      className="w-full sm:w-auto max-w-60"
                     >
                       Artwork Sold
-                    </button>
-                  </div>
-                ))}
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Enhanced Back to gallery link */}
               <motion.div
@@ -738,7 +709,10 @@ export default function ArtworkDetail() {
       {/* Enhanced Full-Screen Image Overlay */}
       {fullScreenImageOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-black/95 via-black/98 to-gray-900/95 backdrop-blur-lg">
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-black/95 via-black/98 to-gray-900/95 backdrop-blur-lg"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setFullScreenImageOpen(false); }}
+          >
             {/* Enhanced close button */}
             <button
               onClick={() => setFullScreenImageOpen(false)}
@@ -835,11 +809,7 @@ export default function ArtworkDetail() {
                   {currentIndex + 1} / {images.length}
                 </div>
               )}
-              {/* Click outside to close */}
-              <div
-                className="absolute inset-0 -z-10"
-                onClick={handleFullScreenClose}
-              />
+
             </div>
           </div>,
           document.body

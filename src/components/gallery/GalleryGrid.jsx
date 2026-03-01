@@ -1,10 +1,27 @@
 import { useMemo } from "react";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import InfiniteScroll from "react-infinite-scroll-component";
-import ArtworkCard from "../ArtworkCard";
-import Loader from "../ui/Loader";
-import { useAuth } from "../../contexts/AuthContext";
+import ArtworkCard from "@/components/artwork/ArtworkCard";
+import Loader from "@/components/common/Loader";
+import EmptyState from "@/components/common/EmptyState";
+import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * GalleryGrid — renders the artwork grid with infinite scroll.
+ * Applies role-based visibility filtering (super admin sees all, artists see own + active,
+ * guests see active only).
+ *
+ * @param {boolean} props.isCardsLoading - True while the initial artworks fetch is in flight.
+ * @param {Array} props.allArtworks - Full flat list of loaded artworks.
+ * @param {object} props.pageData - Pagination metadata including totalCount.
+ * @param {boolean} props.hasMore - Whether more pages are available to load.
+ * @param {Function} props.loadMore - Callback to fetch the next page.
+ * @param {Function} props.handleImageClick - Opens the quick-view ImageModal for an artwork.
+ * @param {Function} props.handleDelete - Deletes an artwork by ID.
+ * @param {Function} props.handleResetAllFilters - Clears all active filters.
+ * @param {string} props.searchQuery - The currently applied search query string.
+ * @param {object} props.filters - Active filter state (material, artist, status, etc.).
+ */
 export default function GalleryGrid({
   isCardsLoading,
   allArtworks,
@@ -126,6 +143,7 @@ export default function GalleryGrid({
             ) : null
           }
           scrollThreshold={0.8}
+          scrollableTarget="main-scroll-container"
           style={{ overflow: "visible" }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
@@ -141,29 +159,33 @@ export default function GalleryGrid({
         </InfiniteScroll>
       )}
 
-      {/* No Results State */}
+      {/* No Results State — shared EmptyState component */}
       {!isCardsLoading && filteredArtworks.length === 0 && (
-        <div className="text-center py-16 px-4 sm:px-6 lg:px-8 bg-white/60 backdrop-blur rounded-2xl shadow-sm border border-gray-100">
-          <PhotoIcon className="mx-auto h-16 w-16 text-gray-400/80" />
-          <h3 className="mt-4 text-2xl sm:text-3xl font-artistic font-bold tracking-wide text-gray-900">
-            {filtersActive
+        <EmptyState
+          icon={PhotoIcon}
+          title={
+            filtersActive
               ? "No artworks found matching your criteria."
-              : "No artworks available."}
-          </h3>
-          <p className="mt-3 text-base sm:text-lg font-sans tracking-wide leading-relaxed text-gray-600 max-w-md mx-auto">
-            {filtersActive ? (
-              <>
-                <span>Try adjusting your search or filter settings.</span>
-                <button
-                  onClick={handleResetAllFilters}
-                  className="ml-2 inline-flex font-medium text-indigo-600 hover:text-indigo-800 hover:underline  transition-colors"
-                >
-                  Clear all filters
-                </button>
-              </>
-            ) : null}
-          </p>
-        </div>
+              : "No artworks available."
+          }
+          description={
+            filtersActive
+              ? "Try adjusting your search or filter settings."
+              : undefined
+          }
+          action={
+            filtersActive ? (
+              <button
+                type="button"
+                onClick={handleResetAllFilters}
+                className="inline-flex font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors font-sans"
+              >
+                Clear all filters
+              </button>
+            ) : undefined
+          }
+          className="py-16 px-4 sm:px-6 lg:px-8 bg-white/60 backdrop-blur rounded-2xl shadow-sm border border-gray-100"
+        />
       )}
     </div>
   );

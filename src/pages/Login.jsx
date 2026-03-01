@@ -1,74 +1,48 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
-import EyeSlashIcon from "@heroicons/react/24/outline/EyeSlashIcon";
-import { motion } from "framer-motion";
-import Alert from "../components/Alert";
-import Loader from "../components/ui/Loader";
+import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { getFriendlyErrorMessage } from "../utils/formatters";
+import { toast } from "sonner";
 
-// Hoisted static motion configurations (rendering-hoist-jsx)
-const containerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import PageBackground from "@/components/common/PageBackground";
+import PageHeader from "@/components/common/PageHeader";
+import FormCard from "@/components/common/FormCard";
+import LoadingButton from "@/components/common/LoadingButton";
 
-const formContainerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay: 0.1 },
-};
+// Feature: auth — schema + field config + renderer
+import { loginSchema } from "@/features/auth/schema/authValidation";
+import { loginFieldsConfig } from "@/features/auth/config/loginFields.config";
+import AuthFormFields from "@/features/auth/components/AuthFormFields";
 
-const schema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email")
-    .refine(
-      (value) => !value || !/\.@/.test(value),
-      "Email cannot have a dot right before @"
-    ),
-  password: z.string().min(1, "Password is required"),
-});
+// shadcn components
+import { Form } from "@/components/ui/form";
 
+/**
+ * Login Page
+ * Authenticates artists and admins into the application suite.
+ */
 export default function Login() {
-  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    login,
-    isSuperAdmin,
-    isArtist,
-    user,
-    loading: authLoading,
-    error: authError,
-    clearError,
-  } = useAuth();
+  const { login, user, error: authError, clearError } = useAuth();
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: zodResolver(schema),
+  const form = useForm({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  // Memoize password toggle handler (rerender-functional-setstate)
-  const handlePasswordToggle = useCallback(() => {
-    setShowPassword((prev) => !prev);
-  }, []);
+  const {
+    handleSubmit,
+    setError,
+    formState: { isSubmitting },
+  } = form;
 
-  // Redirect if already logged in
+  // Effect: Route redirection upon successful login verification
   useEffect(() => {
     if (user) {
       const from = location.state?.from?.pathname || "/gallery";
@@ -76,28 +50,38 @@ export default function Login() {
     }
   }, [user?.id, navigate, location]);
 
-  // Handle auth context errors
+  // Effect: Clear stale authentication errors periodically
   useEffect(() => {
     if (authError) {
       const timer = setTimeout(() => {
         clearError();
-      }, 3000); // Clear error after 3 seconds
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [authError, clearError]);
+
+  // Effect: Fire error toast globally when auth context changes
+  useEffect(() => {
+    if (authError) {
+      toast.error(getFriendlyErrorMessage(authError));
+    }
+  }, [authError]);
 
   const onSubmit = async (data) => {
     if (authError) clearError();
     try {
       await login(data.email, data.password);
-      // Navigation is handled by the useEffect above
+      // Navigation is natively handled by the useEffect above
     } catch (err) {
       let parsed;
       try {
         parsed = JSON.parse(err.message);
       } catch {
-        // fallback
+        // Fallback for non-zod errors
       }
+
+      // If server returns multiple scoped field errors, set them on the form fields.
+      // Broad auth failures are already handled by the authError useEffect above.
       if (Array.isArray(parsed)) {
         parsed.forEach((e) => {
           if (e.path && e.path[0]) {
@@ -107,167 +91,58 @@ export default function Login() {
             });
           }
         });
-      } else {
-        setError("root.serverError", {
-          type: "manual",
-          message: getFriendlyErrorMessage(err),
-        });
       }
     }
   };
 
-  const getFieldErrorClass = (fieldName) => {
-    return errors[fieldName]
-      ? "border-red-500 ring-red-500 focus:ring-red-500 focus:border-red-500"
-      : "border-gray-200 focus:ring-indigo-500 focus:border-transparent";
-  };
-
-  // Only show server-side or auth-related errors in the main alert
-  const displayError =
-    errors.root?.serverError?.message ||
-    (authError ? getFriendlyErrorMessage(authError) : "");
-
   return (
     <div className="relative min-h-screen px-4 sm:px-6 lg:px-8 py-12 bg-white/50">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
-        </div>
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
-        </div>
-      </div>
+      <PageBackground />
+
       <div className="relative">
-        <div className="">
-          <motion.div
-          {...containerMotion}
-          className="text-center mb-8 sm:mb-12"
-          >
-            <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
-              Artist Login
-            </h1>
-            <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
-              Sign in to manage artworks
-            </p>
-          </motion.div>
-          <motion.div
-          {...formContainerMotion}
-          className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 p-8 sm:p-10"
-          >
-            <div className="space-y-6">
-              {/* Reserve space for alert */}
-              {displayError && (
-                <div className="min-h-[48px]">
-                  <Alert type="error" message={displayError} />
-                </div>
-              )}
+        <PageHeader title="Artist Login" subtitle="Sign in to manage artworks" />
+
+        <FormCard>
+          <div className="space-y-6">
+            <Form {...form}>
               <form
                 className="space-y-6"
                 onSubmit={handleSubmit(onSubmit)}
                 noValidate
               >
+                {/* Config-driven fields — add/remove/reorder via loginFieldsConfig */}
                 <div className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="email-address"
-                      className="block text-sm font-medium text-gray-700 mb-2 font-sans"
-                    >
-                      Email address <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="email-address"
-                      type="email"
-                      autoComplete="email"
-                      {...register("email")}
-                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${getFieldErrorClass(
-                        "email"
-                      )}`}
-                      placeholder="Enter your email"
-                      autoFocus
-                    />
-                    {errors.email && (
-                      <p className="text-red-500 text-sm font-sans mt-1">
-                        {errors.email.message}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700 mb-2 font-sans"
-                    >
-                      Password <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="current-password"
-                        {...register("password")}
-                        className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 pr-10 ${getFieldErrorClass(
-                          "password"
-                        )}`}
-                        placeholder="Enter your password"
-                      />
-                      <button
-                        type="button"
-                        onClick={handlePasswordToggle}
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-500 transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeSlashIcon
-                            className="h-5 w-5"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <EyeIcon className="h-5 w-5" aria-hidden="true" />
-                        )}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-red-500 text-sm font-sans mt-1">
-                        {errors.password.message}
-                      </p>
-                    )}
-                  </div>
+                  <AuthFormFields config={loginFieldsConfig} />
                 </div>
 
+                {/* Submit Frame */}
                 <div>
-                  <button
+                  <LoadingButton
                     type="submit"
-                    className={`w-full inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans font-semibold hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300 ${
-                      isSubmitting
-                        ? " opacity-60 pointer-events-none cursor-not-allowed"
-                        : ""
-                    }`}
-                    disabled={false}
+                    loading={isSubmitting}
+                    loadingLabel="Signing in..."
+                    className="w-full"
                   >
-                    {isSubmitting ? (
-                      <span className="flex items-center gap-2">
-                        <Loader size="xsmall" color="indigo-600" />
-                        Signing in...
-                      </span>
-                    ) : (
-                      "Sign in"
-                    )}
-                  </button>
+                    Sign in
+                  </LoadingButton>
                 </div>
               </form>
-              <div className="mt-6 text-center">
-                <span className="text-gray-600 text-sm font-sans">
-                  Don't have an account?{" "}
-                </span>
-                <Link
-                  to="/signup"
-                  className="text-indigo-600 font-medium hover:text-indigo-700 hover:underline font-sans transition-colors duration-300"
-                >
-                  Sign up as Artist
-                </Link>
-              </div>
+            </Form>
+
+            {/* Redirect Footer */}
+            <div className="mt-6 text-center">
+              <span className="text-gray-600 text-sm font-sans">
+                Don't have an account?{" "}
+              </span>
+              <Link
+                to="/signup"
+                className="text-indigo-600 font-medium hover:text-indigo-700 hover:underline font-sans transition-colors duration-300"
+              >
+                Sign up as Artist
+              </Link>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </FormCard>
       </div>
     </div>
   );

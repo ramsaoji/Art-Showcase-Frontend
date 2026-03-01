@@ -1,6 +1,14 @@
 import { memo } from "react";
 import GallerySearch from "./GallerySearch";
 
+/**
+ * GalleryHeader — displays the gallery page title, description, and search bar.
+ *
+ * @param {string} props.searchInput - Current controlled search value.
+ * @param {Function} props.handleSearchInput - Called with the new value on each keystroke.
+ * @param {Function} props.clearSearch - Clears the search input.
+ * @param {boolean} props.isSearching - When true, shows the searching indicator inside GallerySearch.
+ */
 function GalleryHeader({
   searchInput,
   handleSearchInput,

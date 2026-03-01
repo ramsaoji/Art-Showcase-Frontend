@@ -1,25 +1,26 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
-import { trpc } from "../../utils/trpc";
-import Alert from "../../components/Alert";
-import Loader from "../../components/ui/Loader";
-import ConfirmationDialog from "../../components/ConfirmationDialog";
-import { getFriendlyErrorMessage } from "../../utils/formatters";
-import { ADMIN_LIST_QUERY_OPTIONS } from "../../utils/queryOptions";
-import { useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import Loader from "@/components/common/Loader";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { ADMIN_LIST_QUERY_OPTIONS } from "@/lib/queryOptions";
+import SectionHeader from "@/components/common/SectionHeader";
+import SearchBar from "@/components/common/SearchBar";
+import ResultCount from "@/components/common/ResultCount";
+import Pagination from "@/components/common/Pagination";
+import EmptyState from "@/components/common/EmptyState";
+import { Badge } from "@/components/ui/badge";
 
-// Hoisted static motion configuration (rendering-hoist-jsx)
-const emptyStateMotion = {
-  initial: { opacity: 0, scale: 0.95 },
-  animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.5 },
-};
-
+/**
+ * ArtistApprovals Page
+ * Admin view for reviewing, approving, activating, and removing artist accounts.
+ * Uses sonner toast for all user-triggered feedback (S4).
+ */
 export default function ArtistApprovals() {
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [page, setPage] = useState(1);
-  const [limit] = useState(10); // You can make this adjustable if desired
+  const [limit] = useState(10);
+
   const [search, setSearch] = useState("");
   const utils = trpc.useContext();
 
@@ -45,34 +46,34 @@ export default function ArtistApprovals() {
   // Approve mutation
   const approveMutation = trpc.user.approveArtist.useMutation({
     onSuccess: () => {
-      setSuccess("Artist approved!");
+      toast.success("Artist approved!");
       refetch();
       utils.user.listUsers.invalidate();
       utils.user.listArtistsPublic.invalidate();
     },
-    onError: (err) => setError(getFriendlyErrorMessage(err)),
+    onError: (err) => toast.error(getFriendlyErrorMessage(err)),
   });
 
   // Activate/deactivate mutation
   const setActiveMutation = trpc.user.setUserActive.useMutation({
     onSuccess: () => {
-      setSuccess("Status updated!");
+      toast.success("Status updated!");
       refetch();
       utils.user.listUsers.invalidate();
       utils.artwork.getAllArtworks.invalidate();
     },
-    onError: (err) => setError(getFriendlyErrorMessage(err)),
+    onError: (err) => toast.error(getFriendlyErrorMessage(err)),
   });
 
   // Delete user mutation
   const deleteUserMutation = trpc.user.deleteUser.useMutation({
     onSuccess: () => {
-      setSuccess("User deleted successfully!");
+      toast.success("User deleted successfully!");
       refetch();
       utils.user.listUsers.invalidate();
       utils.user.listArtistsPublic.invalidate();
     },
-    onError: (err) => setError(getFriendlyErrorMessage(err)),
+    onError: (err) => toast.error(getFriendlyErrorMessage(err)),
   });
 
   // State for delete dialog
@@ -103,37 +104,28 @@ export default function ArtistApprovals() {
   const handleDeleteUserClick = useCallback((user) => {
     setUserToDelete(user);
     setDeleteDialogOpen(true);
-    setError("");
-    setSuccess("");
   }, []);
 
   // Handler to confirm delete
   const handleConfirmDeleteUser = useCallback(async () => {
     if (!userToDelete) return;
     setIsDeletingUser(true);
-    setError("");
-    setSuccess("");
     try {
       await deleteUserMutation.mutateAsync({ id: userToDelete.id });
       setDeleteDialogOpen(false);
       setUserToDelete(null);
     } catch (err) {
-      setError(getFriendlyErrorMessage(err));
+      toast.error(getFriendlyErrorMessage(err));
     } finally {
       setIsDeletingUser(false);
     }
   }, [userToDelete, deleteUserMutation]);
 
   const handleApprove = useCallback((id) => {
-    setError("");
-    setSuccess("");
     approveMutation.mutate({ id });
   }, [approveMutation]);
 
   const handleSetActive = useCallback((id, active, user) => {
-    setError("");
-    setSuccess("");
-
     // If activating, directly call the mutation without confirmation dialog
     if (active) {
       setActiveMutation.mutate({ id, active: true });
@@ -157,22 +149,11 @@ export default function ArtistApprovals() {
       setActiveDialogUser(null);
       setActiveDialogAction(null);
     } catch (err) {
-      setError(getFriendlyErrorMessage(err));
+      toast.error(getFriendlyErrorMessage(err));
     } finally {
       setIsSettingActive(false);
     }
   }, [activeDialogUser, activeDialogAction, setActiveMutation]);
-
-  // Auto-clear success and error messages after 2.5 seconds
-  useEffect(() => {
-    if (success || error) {
-      const timer = setTimeout(() => {
-        setSuccess("");
-        setError("");
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [success, error]);
 
   // Memoize filtered artists to avoid recalculating on every render (js-cache-function-results)
   const artistUsers = useMemo(
@@ -183,57 +164,22 @@ export default function ArtistApprovals() {
 
   return (
     <>
-      <div className="font-sans w-full mb-6">
-        <h2 className="text-xl font-semibold mb-2 text-gray-800">
-          Manage Artist Approvals
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Review, approve, activate, or remove artists. Use the search to find
-          artists by name or email. Only approved and active artists can submit
-          artworks.
-        </p>
-      </div>
-      {/* Search Control Only */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 items-stretch sm:items-center justify-between w-full">
-        <input
-          type="text"
-          value={search}
-          onChange={handleSearchChange}
-          placeholder="Search by name or email..."
-          className="w-full sm:w-80 px-5 py-3 rounded-xl bg-white border border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder-gray-400 text-gray-900 font-sans"
-        />
-      </div>
-      {error && (
-        <Alert
-          type="error"
-          message={error}
-          className="mb-4 items-center font-sans"
-        />
-      )}
-      {success && (
-        <Alert
-          type="success"
-          message={success}
-          className="mb-4 items-center font-sans"
-        />
-      )}
+      <SectionHeader
+        title="Manage Artist Approvals"
+        description="Review, approve, activate, or remove artists. Use the search to find artists by name or email. Only approved and active artists can submit artworks."
+      />
+      <SearchBar
+        value={search}
+        onChange={handleSearchChange}
+        placeholder="Search by name or email..."
+      />
       {isLoading || isFetching ? (
         <div className="flex justify-center py-16">
           <Loader size="medium" />
         </div>
       ) : artistUsers.length > 0 ? (
         <>
-          <div className="mb-4 text-sm text-gray-500 font-sans text-right">
-            Showing{" "}
-            <span className="font-semibold text-gray-900">
-              {artistUsers.length}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-gray-900">
-              {artistTotalCount}
-            </span>{" "}
-            artists
-          </div>
+          <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
           <div className="w-full overflow-x-auto rounded-xl custom-scrollbar">
             <table className="min-w-[600px] w-full text-left font-sans border-separate border-spacing-y-2">
               <thead>
@@ -263,11 +209,8 @@ export default function ArtistApprovals() {
               </thead>
               <tbody>
                 {artistUsers.map((artist) => {
-                    // Check if artist has artworks (by userId)
-                    // We'll use a derived property if available, else fallback to 0
-                    // If artworks count is not available, you may need to fetch it per user (not ideal for large lists)
-                    // For now, assume userPage includes artworksCount per user, else always show delete if not present
                     const canDelete = (artist.artworksCount ?? 0) === 0;
+
                     return (
                       <tr
                         key={artist.id}
@@ -289,47 +232,25 @@ export default function ArtistApprovals() {
                           {artist.artworksCount ?? 0}
                         </td>
                         <td className="px-4 py-3 font-sans align-middle text-center">
-                          {artist.emailVerified ? (
-                            <span className="px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block bg-green-100 text-green-700">
-                              Verified
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block bg-red-100 text-red-700">
-                              Not Verified
-                            </span>
-                          )}
+                          <Badge variant={artist.emailVerified ? "success" : "destructive"}>
+                            {artist.emailVerified ? "Verified" : "Not Verified"}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 font-sans align-middle text-left">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block ${
-                                artist.active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {artist.active ? "Active" : "Inactive"}
-                            </span>
-                          </div>
+                          <Badge variant={artist.active ? "success" : "destructive"}>
+                            {artist.active ? "Active" : "Inactive"}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 font-sans align-middle text-left">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-sans align-middle inline-block ${
-                                artist.approved
-                                  ? "bg-indigo-100 text-indigo-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
-                              {artist.approved ? "Approved" : "Pending"}
-                            </span>
-                          </div>
+                          <Badge variant={artist.approved ? "default" : "warning"}>
+                            {artist.approved ? "Approved" : "Pending"}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 font-sans align-middle whitespace-normal min-w-[120px] text-left">
                           <div className="flex items-center gap-2 justify-start">
                             {artist.emailVerified && !artist.approved && (
                               <button
-                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 font-sans transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm font-semibold"
+                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => handleApprove(artist.id)}
                                 disabled={approveMutation.isLoading}
                               >
@@ -338,18 +259,12 @@ export default function ArtistApprovals() {
                             )}
                             {artist.emailVerified && (
                               <button
-                                className={`min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm ${
+                                className={`min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                                   artist.active
                                     ? "bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 hover:from-amber-400 hover:to-amber-500"
-                                    : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800"
+                                    : "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700"
                                 }`}
-                                onClick={() =>
-                                  handleSetActive(
-                                    artist.id,
-                                    !artist.active,
-                                    artist
-                                  )
-                                }
+                                onClick={() => handleSetActive(artist.id, !artist.active, artist)}
                                 disabled={setActiveMutation.isLoading}
                               >
                                 {artist.active ? "Deactivate" : "Activate"}
@@ -357,11 +272,9 @@ export default function ArtistApprovals() {
                             )}
                             {canDelete && (
                               <button
-                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm"
+                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => handleDeleteUserClick(artist)}
-                                disabled={
-                                  deleteUserMutation.isLoading || isDeletingUser
-                                }
+                                disabled={deleteUserMutation.isLoading || isDeletingUser}
                               >
                                 Delete
                               </button>
@@ -374,56 +287,13 @@ export default function ArtistApprovals() {
               </tbody>
             </table>
           </div>
-          {/* Pagination Controls */}
-          <div className="w-full mt-8">
-            <div className="flex flex-nowrap justify-center sm:justify-between items-center gap-2 sm:gap-4 min-w-0">
-              <button
-                className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
-                onClick={handlePreviousPage}
-                disabled={page === 1}
-              >
-                Previous
-              </button>
-              <div className="flex flex-nowrap gap-2 overflow-x-auto min-w-0 hide-scrollbar py-1 px-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (p) => (
-                    <button
-                      key={p}
-                      className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm min-w-[36px] sm:min-w-[44px] text-sm sm:text-base ${
-                        p === page
-                          ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md"
-                          : "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-indigo-50 hover:to-indigo-100"
-                      }`}
-                      onClick={() => setPage(p)}
-                    >
-                      {p}
-                    </button>
-                  )
-                )}
-              </div>
-              <button
-                className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base"
-                onClick={() => handleNextPage(totalPages)}
-                disabled={page === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       ) : (
-        <motion.div
-          {...emptyStateMotion}
-          className="text-center py-10"
-        >
-          <h3 className="mt-4 font-artistic text-2xl sm:text-3xl font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
-            No artists found
-          </h3>
-          <p className="mt-4 text-lg text-gray-500 font-sans">
-            There are currently no artists to manage. New artists will appear
-            here when they sign up.
-          </p>
-        </motion.div>
+        <EmptyState
+          title="No artists found"
+          description="There are currently no artists to manage. New artists will appear here when they sign up."
+        />
       )}
       {deleteDialogOpen && userToDelete && (
         <ConfirmationDialog

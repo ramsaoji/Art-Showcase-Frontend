@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
-import { trpc } from "../utils/trpc";
+import { trpc, useArtistsSearch, useMaterialsSearch, useStylesSearch } from "@/lib/trpc";
 import {
   trackArtworkInteraction,
   trackUserAction,
-} from "../services/analytics";
-import { useAuth } from "../contexts/AuthContext";
-import {
-  useArtistsSearch,
-  useMaterialsSearch,
-  useStylesSearch,
-} from "../utils/trpc";
+} from "@/services/analytics";
+import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * Custom hook that manages all gallery state: search, filters, sort, infinite
+ * scroll, image modal, and URL-param synchronisation.
+ * @returns {Object} Gallery state and handlers consumed by the Gallery page.
+ */
 export default function useGallery() {
   const location = useLocation();
   const navigate = useNavigate();

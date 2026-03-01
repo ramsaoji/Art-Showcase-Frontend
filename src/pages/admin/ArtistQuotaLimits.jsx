@@ -1,23 +1,26 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
-import { trpc } from "../../utils/trpc";
-import Alert from "../../components/Alert";
-import Loader from "../../components/ui/Loader";
-import ArtistLimitsModal from "../../components/ArtistLimitsModal";
-import { getFriendlyErrorMessage } from "../../utils/formatters";
-import { useBackendLimits } from "../../utils/trpc";
-import { getLimitsSummary } from "../../utils/artistLimits";
-import { ADMIN_LIST_QUERY_OPTIONS } from "../../utils/queryOptions";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import Alert from "@/components/common/Alert";
+import Loader from "@/components/common/Loader";
+import ArtistLimitsModal from "@/features/artist-limits";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { useBackendLimits } from "@/lib/trpc";
+import { getLimitsSummary } from "@/features/artist-limits/utils/artistLimits";
+import { ADMIN_LIST_QUERY_OPTIONS } from "@/lib/queryOptions";
+import SectionHeader from "@/components/common/SectionHeader";
+import SearchBar from "@/components/common/SearchBar";
+import ResultCount from "@/components/common/ResultCount";
+import Pagination from "@/components/common/Pagination";
+import EmptyState from "@/components/common/EmptyState";
+import { Button } from "@/components/ui/button";
 
-const emptyStateMotion = {
-  initial: { opacity: 0, scale: 0.95 },
-  animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.5 },
-};
-
+/**
+ * ArtistQuotaLimits page — admin view for reviewing and editing per-artist
+ * upload and AI quota limits. Uses sonner toast-free inline Alert for feedback (S4).
+ */
 export default function ArtistQuotaLimits() {
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [search, setSearch] = useState("");
@@ -50,7 +53,7 @@ export default function ArtistQuotaLimits() {
 
   const updateUserMutation = trpc.user.updateUser.useMutation({
     onSuccess: () => {
-      setSuccess("Artist limits updated.");
+      toast.success("Artist limits updated.");
       setLimitsDialogOpen(false);
       setLimitsDialogUser(null);
       refetch();
@@ -62,7 +65,6 @@ export default function ArtistQuotaLimits() {
   const openLimitsDialog = useCallback(
     (user) => {
       setError("");
-      setSuccess("");
       setLimitsDialogUser(user);
       const defaultMonthly = backendLimits?.monthlyUpload ?? 10;
       const defaultAi = backendLimits?.aiDescriptionDaily ?? 5;
@@ -140,14 +142,11 @@ export default function ArtistQuotaLimits() {
   );
 
   useEffect(() => {
-    if (success || error) {
-      const t = setTimeout(() => {
-        setSuccess("");
-        setError("");
-      }, 2500);
+    if (error) {
+      const t = setTimeout(() => setError(""), 2500);
       return () => clearTimeout(t);
     }
-  }, [success, error]);
+  }, [error]);
 
   const artistUsers = useMemo(
     () => allUsers.filter((u) => u.role === "ARTIST"),
@@ -157,31 +156,18 @@ export default function ArtistQuotaLimits() {
 
   return (
     <>
-      <div className="font-sans w-full mb-6">
-        <h2 className="text-xl font-semibold mb-2 text-gray-800">
-          Quota & limits
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          View and edit per-artist upload and AI limits. Changes apply to all
-          artworks for that artist.
-        </p>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 items-stretch sm:items-center justify-between w-full">
-        <input
-          type="text"
-          value={search}
-          onChange={handleSearchChange}
-          placeholder="Search by name or email..."
-          className="w-full sm:w-80 px-5 py-3 rounded-xl bg-white border border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder-gray-400 text-gray-900 font-sans"
-        />
-      </div>
+      <SectionHeader
+        title="Quota & limits"
+        description="View and edit per-artist upload and AI limits. Changes apply to all artworks for that artist."
+      />
+      <SearchBar
+        value={search}
+        onChange={handleSearchChange}
+        placeholder="Search by name or email..."
+      />
 
       {error && (
         <Alert type="error" message={error} className="mb-4 items-center font-sans" />
-      )}
-      {success && (
-        <Alert type="success" message={success} className="mb-4 items-center font-sans" />
       )}
 
       {isLoading || isFetching ? (
@@ -190,11 +176,7 @@ export default function ArtistQuotaLimits() {
         </div>
       ) : artistUsers.length > 0 ? (
         <>
-          <div className="mb-4 text-sm text-gray-500 font-sans text-right">
-            Showing{" "}
-            <span className="font-semibold text-gray-900">{artistUsers.length}</span> of{" "}
-            <span className="font-semibold text-gray-900">{artistTotalCount}</span> artists
-          </div>
+          <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
           <div className="w-full overflow-x-auto rounded-xl custom-scrollbar">
             <table className="min-w-[500px] w-full text-left font-sans border-separate border-spacing-y-2">
               <thead>
@@ -240,14 +222,13 @@ export default function ArtistQuotaLimits() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-sans align-middle text-left">
-                      <button
-                        type="button"
-                        className="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 font-sans text-sm font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md focus:ring-2 focus:ring-indigo-300"
+                      <Button
+                        size="sm"
                         onClick={() => openLimitsDialog(artist)}
                         title="Edit quota & limits"
                       >
                         Edit limits
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -255,57 +236,13 @@ export default function ArtistQuotaLimits() {
             </table>
           </div>
 
-          {/* Pagination controls - server-side, same as Approvals */}
-          <div className="w-full mt-8">
-            <div className="flex flex-nowrap justify-center sm:justify-between items-center gap-2 sm:gap-4 min-w-0">
-              <button
-                type="button"
-                className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handlePreviousPage}
-                disabled={page === 1}
-              >
-                Previous
-              </button>
-              <div className="flex flex-nowrap gap-2 overflow-x-auto min-w-0 hide-scrollbar py-1 px-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`flex-shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm min-w-[36px] sm:min-w-[44px] text-sm sm:text-base ${
-                      p === page
-                        ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md"
-                        : "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-indigo-50 hover:to-indigo-100"
-                    }`}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="flex-shrink-0 px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 font-sans font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 border-none outline-none shadow-sm min-w-[64px] sm:min-w-[90px] text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => handleNextPage(totalPages)}
-                disabled={page === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       ) : (
-        <motion.div
-          {...emptyStateMotion}
-          className="text-center py-16 px-4 rounded-2xl bg-white/60 border border-gray-100"
-        >
-          <h3 className="mt-4 font-artistic text-2xl sm:text-3xl font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
-            No artists found
-          </h3>
-          <p className="mt-4 text-lg text-gray-500 font-sans">
-            No artists match your search. Try a different query or check the
-            Approvals tab for pending artists.
-          </p>
-        </motion.div>
+        <EmptyState
+          title="No artists found"
+          description="No artists match your search. Try a different query or check the Approvals tab for pending artists."
+        />
       )}
 
       <ArtistLimitsModal

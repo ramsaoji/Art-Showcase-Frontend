@@ -1,6 +1,15 @@
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 
+/**
+ * GallerySearch — Full-width search bar for the gallery page.
+ * Shows a loading spinner in the top-right corner while a search is in flight.
+ *
+ * @param {string} props.searchInput - Current controlled search value.
+ * @param {Function} props.handleSearchInput - Called with the new value on each keystroke.
+ * @param {Function} props.clearSearch - Clears the search input.
+ * @param {boolean} props.isSearching - When true, shows the "Searching..." indicator.
+ */
 export default function GallerySearch({
   searchInput,
   handleSearchInput,

@@ -1,13 +1,12 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import React, { useEffect, lazy, Suspense } from "react";
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import ScrollToTop from "./components/ScrollToTop";
-import { trackPageView } from "./services/analytics";
-import Loader from "./components/ui/Loader";
-import Home from "./pages/Home";
-import VerifyEmail from "./pages/VerifyEmail";
-
+import Layout from "@/components/layout/Layout";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
+import { trackPageView } from "@/services/analytics";
+import Loader from "@/components/common/Loader";
+const Home = lazy(() => import("./pages/Home"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+import { Toaster } from "@/components/ui/sonner";
 // Lazy load page components
 const Gallery = lazy(() => import("./pages/Gallery"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -97,11 +96,10 @@ class ErrorBoundary extends React.Component {
 
 function App() {
   return (
-    // Removed duplicate AuthProvider and Router
     <>
-      <ScrollToTop />
       <AnalyticsWrapper>
         <ErrorBoundary>
+          <Toaster position="top-right" richColors />
           <Suspense fallback={PAGE_LOADER_FALLBACK}>
             <Routes>
               <Route path="/verify-email" element={<VerifyEmail />} />

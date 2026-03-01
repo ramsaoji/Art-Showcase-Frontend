@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, memo, useCallback } from "react";
-import { trpc } from "../../utils/trpc";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 import {
   DndContext,
   closestCenter,
@@ -17,14 +18,16 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Loader from "../../components/ui/Loader";
-import Alert from "../../components/Alert";
-import { getFriendlyErrorMessage } from "../../utils/formatters";
 import CheckIcon from "@heroicons/react/24/solid/CheckIcon";
 import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
-import ArrowDownCircleIcon from "@heroicons/react/24/outline/ArrowDownCircleIcon";
-import Badge from "../../components/Badge";
-import { getThumbnailUrl } from "../../config/cloudinary";
+import Loader from "@/components/common/Loader";
+import Badge from "@/components/artwork/Badge";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { getThumbnailUrl } from "@/utils/cloudinary";
+import SectionHeader from "@/components/common/SectionHeader";
+import ScrollableListPanel from "@/components/common/ScrollableListPanel";
+import LoadMoreTrigger from "@/components/common/LoadMoreTrigger";
+import LoadingButton from "@/components/common/LoadingButton";
 
 const SortableItem = memo(function SortableItem({
   id,
@@ -209,20 +212,23 @@ const SortableItem = memo(function SortableItem({
   );
 });
 
+/**
+ * CarouselManagement Page
+ * Admin view for selecting and reordering carousel images.
+ * Supports drag-and-drop reordering via @dnd-kit. Uses sonner toast for feedback (S4).
+ */
 const CarouselManagement = () => {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [previousItems, setPreviousItems] = useState([]);
   const [previousSelected, setPreviousSelected] = useState([]);
   const [originalItems, setOriginalItems] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
-  const successTimeout = useRef();
   const limit = 10;
 
-  const { data, isLoading, error, refetch, isFetching } =
+  const { data, isLoading, isFetching } =
     trpc.artwork.getCarouselImages.useQuery(
       { limit, offset },
       {
@@ -251,33 +257,17 @@ const CarouselManagement = () => {
       );
     },
     onSuccess: async () => {
-      // Invalidate query after successful update
       await utils.artwork.getCarouselImages.invalidate();
-
-      // Update original state to match current state
       setOriginalItems([...items]);
-
-      // Reset saving state
       setIsSaving(false);
-
-      // Reset offset and show success
       setOffset(0);
-      setShowSuccess(true);
-      if (successTimeout.current) clearTimeout(successTimeout.current);
-      successTimeout.current = setTimeout(() => setShowSuccess(false), 3000);
-
-      // Scroll to top to show success message
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.success("Carousel updated successfully!");
     },
     onError: (error) => {
-      // Revert optimistic update on error
       setItems(previousItems);
       setSelected(previousSelected);
-
-      // Reset saving state
       setIsSaving(false);
-
-      // Error is handled by mutation error state
+      toast.error(getFriendlyErrorMessage(error));
     },
   });
   const utils = trpc.useContext();
@@ -386,32 +376,14 @@ const CarouselManagement = () => {
         <Loader size="medium" />
       </div>
     );
-  if (error) {
-    // Scroll to top to show error message
-    React.useEffect(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, []);
-
-    return <Alert type="error" message={getFriendlyErrorMessage(error)} />;
-  }
 
   return (
     <div className="font-sans w-full">
-      <h2 className="text-xl font-semibold mb-2 text-gray-800">
-        Manage Carousel Images
-      </h2>
-      <p className="text-sm text-gray-500 mb-4">
-        Select images to display in the homepage carousel and drag to set the
-        order. The top-most selected image will appear first.
-      </p>
-      {showSuccess && (
-        <Alert
-          type="success"
-          message="Carousel updated successfully!"
-          className="mb-4"
-        />
-      )}
-      <div className="space-y-3 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 rounded-xl border border-gray-200 p-4">
+      <SectionHeader
+        title="Manage Carousel Images"
+        description="Select images to display in the homepage carousel and drag to set the order. The top-most selected image will appear first."
+      />
+      <ScrollableListPanel>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -433,48 +405,26 @@ const CarouselManagement = () => {
             ))}
           </SortableContext>
         </DndContext>
-        {isFetching && items.length > 0 && (
-          <div className="flex justify-center py-2">
-            <Loader size="small" />
-          </div>
-        )}
-        {hasMore && !isFetching && (
-          <div className="flex justify-center mt-4">
-            <span
-              onClick={handleLoadMore}
-              className="inline-flex items-center gap-2 text-indigo-600 font-semibold cursor-pointer hover:text-indigo-800 hover:underline hover:-translate-y-0.5 transition"
-              style={{ fontSize: "1rem" }}
-            >
-              <ArrowDownCircleIcon className="w-5 h-5 text-indigo-400" />
-              Load More
-            </span>
-          </div>
-        )}
+        <LoadMoreTrigger
+          onClick={handleLoadMore}
+          isLoading={isFetching && items.length > 0}
+          label={hasMore && !isFetching ? "Load More" : undefined}
+        />
         {!hasMore && items.length > 0 && (
           <div className="text-center text-xs text-gray-400 py-2">
             All carousel images loaded
           </div>
         )}
-      </div>
+      </ScrollableListPanel>
       <div className="mt-8 flex justify-end">
-        <button
+        <LoadingButton
           onClick={handleSaveChanges}
-          className={`px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-200 flex items-center justify-center gap-2${
-            isSaving || !hasUnsavedChanges
-              ? " opacity-60 pointer-events-none cursor-not-allowed"
-              : ""
-          }`}
-          disabled={isSaving || !hasUnsavedChanges}
+          loading={isSaving}
+          loadingLabel="Saving..."
+          disabled={!hasUnsavedChanges}
         >
-          {isSaving ? (
-            <span className="flex items-center gap-2">
-              <Loader size="xsmall" color="indigo-600" />
-              Saving...
-            </span>
-          ) : (
-            "Save Changes"
-          )}
-        </button>
+          Save Changes
+        </LoadingButton>
       </div>
     </div>
   );

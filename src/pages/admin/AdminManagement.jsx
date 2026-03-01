@@ -3,149 +3,55 @@ import CarouselManagement from "./CarouselManagement";
 import FeaturedArtworksManagement from "./FeaturedArtworksManagement";
 import ArtistsManagement from "./ArtistsManagement";
 import { motion, AnimatePresence } from "framer-motion";
+import PageBackground from "@/components/common/PageBackground";
+import PageHeader from "@/components/common/PageHeader";
+import AnimatedTabs from "@/components/common/AnimatedTabs";
+import { containerMotion, tabContentMotion } from "@/lib/motionConfigs";
 
-// Hoisted static motion configurations (rendering-hoist-jsx)
-const containerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
-
-const tabPillTransition = { type: "spring", stiffness: 500, damping: 30 };
-const tabButtonTransition = { type: "spring", stiffness: 400, damping: 20 };
-
-const tabContentMotion = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -16 },
-  transition: { duration: 0.25, ease: "easeInOut" },
-};
+const ADMIN_TABS = [
+  { id: "artist-approvals", label: "Artists" },
+  { id: "carousel", label: "Carousel" },
+  { id: "featured", label: "Featured Artworks" },
+];
 
 const AdminManagement = () => {
   const [activeTab, setActiveTab] = useState("artist-approvals");
 
   return (
     <div className="relative min-h-screen bg-gray-50/50">
-      {/* Decorative background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-64 left-1/2 transform -translate-x-1/3 w-[800px] h-[800px] rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 blur-3xl" />
-        <div className="absolute -bottom-64 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-blue-400/10 to-transparent blur-3xl" />
-      </div>
+      <PageBackground variant="purple" />
 
       <motion.div
         {...containerMotion}
         className="relative container mx-auto px-4 sm:px-8 py-12"
       >
-        <div className="text-center mb-12">
-          <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic tracking-wide text-gray-900">
-            Admin Management
-          </h1>
-          <p className="text-lg text-gray-600 font-sans">
-            Manage artists, the homepage carousel, and featured artworks.
-          </p>
-        </div>
+        <PageHeader
+          title="Admin Management"
+          subtitle="Manage artists, the homepage carousel, and featured artworks."
+        />
 
-        <div className="flex flex-col sm:flex-row justify-center items-stretch sm:items-center gap-2 sm:gap-0 mb-4 relative">
-          <div className="flex w-full sm:w-auto relative">
-            <AnimatePresence>
-              {activeTab === "artist-approvals" && (
-                <motion.div
-                  layoutId="admin-tab-pill"
-                  className="absolute z-0 h-full w-full bg-white/60 rounded-xl"
-                  style={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                  transition={tabPillTransition}
-                />
-              )}
-            </AnimatePresence>
-            <motion.button
-              layout
-              className={`relative z-10 px-6 py-2 font-sans font-semibold text-base transition-all duration-300 rounded-xl w-full sm:w-auto ${
-                activeTab === "artist-approvals"
-                  ? "text-indigo-700 font-bold shadow"
-                  : "text-gray-500 hover:text-indigo-500"
-              }`}
-              onClick={() => setActiveTab("artist-approvals")}
-              whileTap={{ scale: 0.97 }}
-              transition={tabButtonTransition}
-            >
-              Artists
-            </motion.button>
-          </div>
-          <div className="flex w-full sm:w-auto relative">
-            <AnimatePresence>
-              {activeTab === "carousel" && (
-                <motion.div
-                  layoutId="admin-tab-pill"
-                  className="absolute z-0 h-full w-full bg-white/60 rounded-xl"
-                  style={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                  transition={tabPillTransition}
-                />
-              )}
-            </AnimatePresence>
-            <motion.button
-              layout
-              className={`relative z-10 px-6 py-2 font-sans font-semibold text-base transition-all duration-300 rounded-xl w-full sm:w-auto ${
-                activeTab === "carousel"
-                  ? "text-indigo-700 font-bold shadow"
-                  : "text-gray-500 hover:text-indigo-500"
-              }`}
-              onClick={() => setActiveTab("carousel")}
-              whileTap={{ scale: 0.97 }}
-              transition={tabButtonTransition}
-            >
-              Carousel
-            </motion.button>
-          </div>
-          <div className="flex w-full sm:w-auto relative">
-            <AnimatePresence>
-              {activeTab === "featured" && (
-                <motion.div
-                  layoutId="admin-tab-pill"
-                  className="absolute z-0 h-full w-full bg-white/60 rounded-xl"
-                  style={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                  transition={tabPillTransition}
-                />
-              )}
-            </AnimatePresence>
-            <motion.button
-              layout
-              className={`relative z-10 px-6 py-2 font-sans font-semibold text-base transition-all duration-300 rounded-xl w-full sm:w-auto ${
-                activeTab === "featured"
-                  ? "text-indigo-700 font-bold shadow"
-                  : "text-gray-500 hover:text-indigo-500"
-              }`}
-              onClick={() => setActiveTab("featured")}
-              whileTap={{ scale: 0.97 }}
-              transition={tabButtonTransition}
-            >
-              Featured Artworks
-            </motion.button>
-          </div>
-        </div>
+        <AnimatedTabs
+          tabs={ADMIN_TABS}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          layoutId="admin-tab-pill"
+          variant="outer"
+        />
 
         <div className="mt-8 bg-white/80 backdrop-blur-xl shadow-xl rounded-2xl p-4 sm:p-6 md:p-8 border border-white/30 min-h-[400px]">
           <AnimatePresence mode="wait" initial={false}>
             {activeTab === "artist-approvals" && (
-              <motion.div
-                key="artist-approvals"
-                {...tabContentMotion}
-              >
+              <motion.div key="artist-approvals" {...tabContentMotion}>
                 <ArtistsManagement />
               </motion.div>
             )}
             {activeTab === "carousel" && (
-              <motion.div
-                key="carousel"
-                {...tabContentMotion}
-              >
+              <motion.div key="carousel" {...tabContentMotion}>
                 <CarouselManagement />
               </motion.div>
             )}
             {activeTab === "featured" && (
-              <motion.div
-                key="featured"
-                {...tabContentMotion}
-              >
+              <motion.div key="featured" {...tabContentMotion}>
                 <FeaturedArtworksManagement />
               </motion.div>
             )}

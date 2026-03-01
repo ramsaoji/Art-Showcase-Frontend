@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import PageBackground from "@/components/common/PageBackground";
+import { Button } from "@/components/ui/button";
 
 // Hoisted static motion configurations (rendering-hoist-jsx)
 const heroTitleMotion = {
@@ -82,6 +84,14 @@ const floatingDotTransition2 = {
   repeatType: "reverse",
 };
 
+const missionCardMotion = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+};
+
+const getMissionCardTransition = (index) => ({ delay: 0.2 + index * 0.1 });
+
 // Hoist mission cards data to avoid recreating array on every render (rendering-hoist-jsx)
 const MISSION_CARDS = [
   {
@@ -101,18 +111,13 @@ const MISSION_CARDS = [
   },
 ];
 
+/**
+ * About page — static marketing page describing the platform's mission and values.
+ */
 export default function About() {
   return (
     <div className="relative min-h-screen bg-white/50 overflow-x-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-80 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
-          <div className="w-[90vw] max-w-[800px] h-[90vw] max-h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
-        </div>
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-60 sm:w-96 h-60 sm:h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
-        </div>
-      </div>
+      <PageBackground />
 
       {/* Hero section */}
       <section className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -136,18 +141,12 @@ export default function About() {
               {...heroButtonsMotion}
               className="mt-8 flex flex-row items-center justify-center lg:justify-start gap-4"
             >
-              <Link
-                to="/gallery"
-                className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white font-sans text-base hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 transition-all duration-300"
-              >
-                Explore Gallery
-              </Link>
-              <Link
-                to="/contact"
-                className="inline-flex items-center text-base font-sans text-gray-600 hover:text-indigo-700 transition-colors duration-300"
-              >
-                Contact Us <span className="ml-2">→</span>
-              </Link>
+              <Button asChild className="rounded-full px-6 font-artistic">
+                <Link to="/gallery">Explore Gallery</Link>
+              </Button>
+              <Button asChild variant="ghost" className="text-gray-600 hover:text-indigo-700 font-sans">
+                <Link to="/contact">Contact Us →</Link>
+              </Button>
             </motion.div>
           </div>
           <motion.div
@@ -226,10 +225,8 @@ export default function About() {
             {MISSION_CARDS.map((item, index) => (
               <motion.div
                 key={item.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 + index * 0.1 }}
+                {...missionCardMotion}
+                transition={getMissionCardTransition(index)}
                 className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow border border-gray-100 min-h-[220px] flex flex-col"
               >
                 <dt className="font-artistic text-xl font-semibold text-gray-900 mb-4">
@@ -260,18 +257,9 @@ export default function About() {
             growing community.
           </p>
           <div className="relative mt-8 sm:mt-10 flex flex-row items-center justify-center gap-x-4 gap-y-0 flex-wrap">
-            <Link
-              to="/signup"
-              className="inline-flex items-center px-6 py-3 rounded-full bg-white text-gray-900 font-sans text-base hover:bg-gray-50 transition-colors duration-300"
-            >
-              Get Started
-            </Link>
-            {/* <Link
-              to="/gallery"
-              className="inline-flex items-center text-base font-sans text-white hover:text-gray-200 transition-colors duration-300"
-            >
-              Learn More <span className="ml-2">→</span>
-            </Link> */}
+            <Button asChild variant="outline" className="rounded-full px-6 font-artistic bg-white text-gray-900 hover:bg-gray-50 border-white/40">
+              <Link to="/signup">Get Started</Link>
+            </Button>
           </div>
         </motion.div>
       </section>

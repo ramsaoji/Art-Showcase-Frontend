@@ -1,25 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import ArtworkForm from "../components/ArtworkForm";
-import { motion } from "framer-motion";
-import { trpc, uploadToCloudinary } from "../utils/trpc";
-import { useAuth } from "../contexts/AuthContext";
-import { getFriendlyErrorMessage } from "../utils/formatters";
-import { useCallback } from "react";
+import ArtworkForm from "@/features/artwork-form";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/contexts/AuthContext";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import PageBackground from "@/components/common/PageBackground";
+import PageHeader from "@/components/common/PageHeader";
+import Alert from "@/components/common/Alert";
+import FormCard from "@/components/common/FormCard";
 
-// Hoisted static motion configurations (rendering-hoist-jsx)
-const containerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
-
-const formContainerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay: 0.1 },
-};
-
+/**
+ * AddArtwork page — allows artists (and super admins on behalf of an artist)
+ * to create a new artwork. Delegates form rendering to the artwork-form feature.
+ */
 export default function AddArtwork() {
   const navigate = useNavigate();
   const { isSuperAdmin, user } = useAuth();
@@ -99,52 +92,23 @@ export default function AddArtwork() {
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 bg-white/50">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-500/10 via-indigo-600/10 to-indigo-700/10 blur-3xl" />
-        </div>
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-500/8 via-indigo-600/8 to-indigo-700/8 blur-3xl" />
-        </div>
-        <div className="absolute left-0 bottom-0">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-indigo-400/8 via-indigo-500/8 to-indigo-600/8 blur-3xl" />
-        </div>
-      </div>
+      <PageBackground variant="extended" />
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
-            Add Artwork
-          </h2>
-          <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
-            Share your masterpiece with the world. Fill in the details below to
-            add a new artwork to the gallery.
-          </p>
-        </motion.div>
+        <PageHeader
+          title="Add Artwork"
+          subtitle="Share your masterpiece with the world. Fill in the details below to add a new artwork to the gallery."
+          as="h2"
+        />
 
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-xl font-sans text-sm"
-          >
-            {error}
-          </motion.div>
+          <div className="mb-8">
+            <Alert type="error" message={error} />
+          </div>
         )}
 
         {/* Always render the form - artist selection handles its own loading state */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
-        >
+        <FormCard maxWidth="4xl" noPadding>
           <div className="p-6 sm:p-8">
             <ArtworkForm
               onSubmit={handleSubmit}
@@ -152,7 +116,7 @@ export default function AddArtwork() {
               setArtistId={handleSetArtistId}
             />
           </div>
-        </motion.div>
+        </FormCard>
       </div>
     </div>
   );

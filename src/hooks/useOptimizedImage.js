@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getPreviewUrl, getFullSizeUrl } from "../config/cloudinary";
+import { getPreviewUrl, getFullSizeUrl } from "@/utils/cloudinary";
 
 /**
  * Custom hook for optimized image loading with progressive enhancement

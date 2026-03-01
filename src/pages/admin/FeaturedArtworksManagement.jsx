@@ -1,5 +1,7 @@
-import React, { useState, useEffect, memo, useRef, useCallback } from "react";
-import { trpc } from "../../utils/trpc";
+import { useState, useEffect, memo, useCallback } from "react";
+import { toast } from "sonner";
+import { AnimatePresence } from "framer-motion";
+import { trpc } from "@/lib/trpc";
 import {
   DndContext,
   closestCenter,
@@ -8,7 +10,6 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -18,25 +19,19 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Loader from "../../components/ui/Loader";
-import Alert from "../../components/Alert";
-import { getFriendlyErrorMessage } from "../../utils/formatters";
 import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
-import Badge from "../../components/Badge";
-import { getThumbnailUrl } from "../../config/cloudinary";
 import ArrowRightCircleIcon from "@heroicons/react/24/solid/ArrowRightCircleIcon";
 import ArrowLeftCircleIcon from "@heroicons/react/24/solid/ArrowLeftCircleIcon";
-import ArrowDownCircleIcon from "@heroicons/react/24/solid/ArrowDownCircleIcon";
 import ArrowUpCircleIcon from "@heroicons/react/24/solid/ArrowUpCircleIcon";
-import { motion, AnimatePresence } from "framer-motion";
-import useMediaQuery from "../../hooks/useMediaQuery";
-
-// Hoisted static motion configuration (rendering-hoist-jsx)
-const emptyStateMotion = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-};
+import Loader from "@/components/common/Loader";
+import Badge from "@/components/artwork/Badge";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { getThumbnailUrl } from "@/utils/cloudinary";
+import useMediaQuery from "@/hooks/useMediaQuery";
+import SectionHeader from "@/components/common/SectionHeader";
+import ScrollableListPanel from "@/components/common/ScrollableListPanel";
+import LoadMoreTrigger from "@/components/common/LoadMoreTrigger";
+import LoadingButton from "@/components/common/LoadingButton";
 
 const SortableArtwork = memo(function SortableArtwork({
   id,
@@ -272,6 +267,11 @@ const SortableArtwork = memo(function SortableArtwork({
   );
 });
 
+/**
+ * FeaturedArtworksManagement Page
+ * Admin view for selecting and reordering featured artworks.
+ * Supports drag-and-drop reordering via @dnd-kit. Uses sonner toast for feedback (S4).
+ */
 const FeaturedArtworksManagement = () => {
   const [available, setAvailable] = useState([]);
   const [featured, setFeatured] = useState([]);
@@ -280,20 +280,16 @@ const FeaturedArtworksManagement = () => {
   const [hasMoreAvailable, setHasMoreAvailable] = useState(true);
   const [hasMoreFeatured, setHasMoreFeatured] = useState(true);
   const limit = 10;
-  const [showSuccess, setShowSuccess] = useState(false);
   const [previousAvailable, setPreviousAvailable] = useState([]);
   const [previousFeatured, setPreviousFeatured] = useState([]);
   const [originalFeatured, setOriginalFeatured] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
-  const successTimeout = useRef();
 
   // Independent queries for available and featured artworks
   const {
     data: availableData,
     isLoading: isLoadingAvailable,
     isFetching: isFetchingAvailable,
-    error: errorAvailable,
-    refetch: refetchAvailable,
   } = trpc.artwork.getAvailableArtworksAdmin.useQuery(
     { limit, offset: availableOffset },
     {
@@ -307,8 +303,6 @@ const FeaturedArtworksManagement = () => {
     data: featuredData,
     isLoading: isLoadingFeatured,
     isFetching: isFetchingFeatured,
-    error: errorFeatured,
-    refetch: refetchFeatured,
   } = trpc.artwork.getFeaturedArtworksAdmin.useQuery(
     { limit, offset: featuredOffset },
     {
@@ -327,35 +321,19 @@ const FeaturedArtworksManagement = () => {
       );
     },
     onSuccess: async () => {
-      // Invalidate queries after successful update
       await Promise.all([
         utils.artwork.getAvailableArtworksAdmin.invalidate(),
         utils.artwork.getFeaturedArtworksAdmin.invalidate(),
       ]);
-
-      // Update original state to match current state
       setOriginalFeatured([...featured]);
-
-      // Reset saving state
       setIsSaving(false);
-
-      // Show success message
-      setShowSuccess(true);
-      if (successTimeout.current) clearTimeout(successTimeout.current);
-      successTimeout.current = setTimeout(() => setShowSuccess(false), 3000);
-
-      // Scroll to top to show success message
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.success("Featured artworks updated!");
     },
     onError: (error) => {
-      // Revert optimistic update on error
       setAvailable(previousAvailable);
       setFeatured(previousFeatured);
-
-      // Reset saving state
       setIsSaving(false);
-
-      // Error is handled by mutation error state
+      toast.error(getFriendlyErrorMessage(error));
     },
   });
 
@@ -471,20 +449,6 @@ const FeaturedArtworksManagement = () => {
         <Loader size="medium" />
       </div>
     );
-  if (errorAvailable || errorFeatured) {
-    // Scroll to top to show error message
-    React.useEffect(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, []);
-
-    return (
-      <Alert
-        type="error"
-        message={getFriendlyErrorMessage(errorAvailable || errorFeatured)}
-        className="mb-4"
-      />
-    );
-  }
 
   // Success, error, and unsaved changes messages at the top
   const hasUnsavedChanges =
@@ -492,23 +456,13 @@ const FeaturedArtworksManagement = () => {
 
   return (
     <>
-      {showSuccess && (
-        <Alert
-          type="success"
-          message="Featured artworks updated!"
-          className="mb-4"
-        />
-      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 font-sans">
         <div className="h-full flex flex-col">
-          <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">
-            Available Artworks
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Click on an artwork to add it to the featured list. Use the Load
-            More button to browse all available artworks.
-          </p>
-          <div className="space-y-3 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 border border-gray-200 rounded-xl p-4">
+          <SectionHeader
+            title="Available Artworks"
+            description="Click on an artwork to add it to the featured list. Use the Load More button to browse all available artworks."
+          />
+          <ScrollableListPanel>
             {isLoadingAvailable && available.length === 0 ? (
               <div className="flex justify-center items-center min-h-[10rem]">
                 <Loader size="medium" />
@@ -516,12 +470,9 @@ const FeaturedArtworksManagement = () => {
             ) : (
               <AnimatePresence>
                 {available.length === 0 && (
-                  <motion.div
-                    {...emptyStateMotion}
-                    className="text-center text-gray-400 py-8"
-                  >
+                  <div className="text-center text-gray-400 py-8">
                     No available artworks.
-                  </motion.div>
+                  </div>
                 )}
                 {available.map((artwork, idx) => (
                   <SortableArtwork
@@ -536,47 +487,27 @@ const FeaturedArtworksManagement = () => {
                 ))}
               </AnimatePresence>
             )}
-            {isFetchingAvailable && available.length > 0 && (
-              <div className="flex justify-center py-2">
-                <Loader size="small" />
-              </div>
-            )}
-            {hasMoreAvailable && !isFetchingAvailable && (
-              <div className="flex justify-center mt-4">
-                <span
-                  onClick={handleLoadMoreAvailable}
-                  className="inline-flex items-center gap-2 text-indigo-600 font-semibold cursor-pointer hover:text-indigo-800 hover:underline hover:-translate-y-0.5 transition"
-                  style={{ fontSize: "1rem" }}
-                >
-                  <ArrowDownCircleIcon className="w-5 h-5 text-indigo-400" />
-                  Load More
-                </span>
-              </div>
-            )}
+            <LoadMoreTrigger
+              onClick={handleLoadMoreAvailable}
+              isLoading={isFetchingAvailable && available.length > 0}
+              label={hasMoreAvailable && !isFetchingAvailable ? "Load More" : undefined}
+            />
             {!hasMoreAvailable && available.length > 0 && (
               <div className="text-center text-xs text-gray-400 py-2">
                 All available artworks loaded
               </div>
             )}
-          </div>
+          </ScrollableListPanel>
           <div className="mt-4 md:mt-auto flex justify-end pt-4 md:pt-6 invisible">
-            <button
-              className="px-6 py-2 rounded-lg"
-              style={{ visibility: "hidden" }}
-            >
-              Spacer
-            </button>
+            <div className="px-6 py-2 rounded-lg" style={{ visibility: "hidden" }}>Spacer</div>
           </div>
         </div>
         <div className="h-full flex flex-col">
-          <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">
-            Featured Artworks
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Drag to reorder. Click to unfeature. Use the Load More button to see
-            more featured artworks.
-          </p>
-          <div className="space-y-3 min-h-[20rem] max-h-[60vh] overflow-y-auto bg-gray-50/50 border border-gray-200 rounded-xl p-4">
+          <SectionHeader
+            title="Featured Artworks"
+            description="Drag to reorder. Click to unfeature. Use the Load More button to see more featured artworks."
+          />
+          <ScrollableListPanel>
             {isLoadingFeatured && featured.length === 0 ? (
               <div className="flex justify-center items-center min-h-[10rem]">
                 <Loader size="medium" />
@@ -595,12 +526,9 @@ const FeaturedArtworksManagement = () => {
                 >
                   <AnimatePresence>
                     {featured.length === 0 && (
-                      <motion.div
-                        {...emptyStateMotion}
-                        className="text-center text-gray-400 py-8"
-                      >
+                      <div className="text-center text-gray-400 py-8">
                         No featured artworks.
-                      </motion.div>
+                      </div>
                     )}
                     {featured.map((artwork, idx) => (
                       <SortableArtwork
@@ -617,48 +545,27 @@ const FeaturedArtworksManagement = () => {
                 </SortableContext>
               </DndContext>
             )}
-            {isFetchingFeatured && featured.length > 0 && (
-              <div className="flex justify-center py-2">
-                <Loader size="small" />
-              </div>
-            )}
-            {hasMoreFeatured && !isFetchingFeatured && (
-              <div className="flex justify-center mt-4">
-                <span
-                  onClick={handleLoadMoreFeatured}
-                  className="inline-flex items-center gap-2 text-indigo-600 font-semibold cursor-pointer hover:text-indigo-800 hover:underline hover:-translate-y-0.5 transition"
-                  style={{ fontSize: "1rem" }}
-                >
-                  <ArrowDownCircleIcon className="w-5 h-5 text-indigo-400" />
-                  Load More
-                </span>
-              </div>
-            )}
+            <LoadMoreTrigger
+              onClick={handleLoadMoreFeatured}
+              isLoading={isFetchingFeatured && featured.length > 0}
+              label={hasMoreFeatured && !isFetchingFeatured ? "Load More" : undefined}
+            />
             {!hasMoreFeatured && featured.length > 0 && (
               <div className="text-center text-xs text-gray-400 py-2">
                 All featured artworks loaded
               </div>
             )}
-          </div>
+          </ScrollableListPanel>
           <div className="mt-4 md:mt-auto flex justify-end pt-4 md:pt-6">
-            <button
+            <LoadingButton
               onClick={handleSaveChanges}
-              className={`w-full md:w-auto px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-200 flex items-center justify-center gap-2${
-                isSaving || !hasUnsavedChanges
-                  ? " opacity-60 pointer-events-none cursor-not-allowed"
-                  : ""
-              }`}
-              disabled={isSaving || !hasUnsavedChanges}
+              loading={isSaving}
+              loadingLabel="Saving..."
+              disabled={!hasUnsavedChanges}
+              className="w-full md:w-auto"
             >
-              {isSaving ? (
-                <span className="flex items-center gap-2">
-                  <Loader size="xsmall" color="indigo-600" />
-                  Saving...
-                </span>
-              ) : (
-                "Save Changes"
-              )}
-            </button>
+              Save Changes
+            </LoadingButton>
           </div>
         </div>
       </div>

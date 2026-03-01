@@ -1,20 +1,15 @@
-import ImageModal from "../components/ImageModal";
-import { motion } from "framer-motion";
-import useGallery from "../hooks/useGallery";
-import GalleryHeader from "../components/gallery/GalleryHeader";
-import GalleryFilters from "../components/gallery/GalleryFilters";
-import GalleryGrid from "../components/gallery/GalleryGrid";
-import Alert from "../components/Alert";
-import { getFriendlyErrorMessage } from "../utils/formatters";
-import ScrollToTopButton from "../components/ScrollToTopButton";
 import { useCallback, useMemo } from "react";
-
-// Hoisted static motion configuration (rendering-hoist-jsx)
-const galleryContainerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
+import { motion } from "framer-motion";
+import useGallery from "@/hooks/useGallery";
+import GalleryHeader from "@/components/gallery/GalleryHeader";
+import GalleryFilters from "@/features/gallery-filters";
+import GalleryGrid from "@/components/gallery/GalleryGrid";
+import ImageModal from "@/components/artwork/ImageModal";
+import Alert from "@/components/common/Alert";
+import ScrollToTopButton from "@/components/layout/ScrollToTopButton";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import PageBackground from "@/components/common/PageBackground";
+import { containerMotion } from "@/lib/motionConfigs";
 
 export default function Gallery() {
   const {
@@ -109,17 +104,9 @@ export default function Gallery() {
 
   return (
     <div className="relative min-h-screen bg-white/50">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
-        </div>
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
-        </div>
-      </div>
+      <PageBackground />
       <motion.div
-        {...galleryContainerMotion}
+        {...containerMotion}
         className="text-center"
       >
         <div className="relative container mx-auto px-4 sm:px-8 py-12">
@@ -130,7 +117,6 @@ export default function Gallery() {
             clearSearch={clearSearch}
             isSearching={isSearching}
           />
-          {/* <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 p-6 sm:p-8"> */}
           {/* Filters and Sort Section */}
           <GalleryFilters
             filters={filters}
@@ -177,7 +163,6 @@ export default function Gallery() {
             filters={filters}
           />
         </div>
-        {/* </div> */}
       </motion.div>
       {/* Image Modal */}
       {selectedImage && (

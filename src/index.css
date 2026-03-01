@@ -28,8 +28,15 @@
 }
 
 @layer base {
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
   html {
-    scroll-behavior: smooth;
     font-family: 'Cormorant Garamond', serif;
   }
 
@@ -50,43 +57,60 @@
   ::selection {
     @apply bg-indigo-500/20;
   }
-}
 
-@layer components {
-  .card {
-    @apply bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02];
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
   }
 
-  .btn-primary {
-    @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium text-white transition-all duration-300 ease-out bg-indigo-600 rounded-lg hover:bg-indigo-700;
-  }
-
-  .btn-primary::before {
-    @apply absolute flex items-center justify-center w-full h-full text-white duration-300 -translate-x-full bg-indigo-700 ease-out content-[''];
-  }
-
-  .btn-primary:hover::before {
-    @apply translate-x-0;
-  }
-
-  .btn-primary span {
-    @apply relative w-full text-center transition-colors duration-300 ease-in-out;
-  }
-
-  .input-field {
-    @apply w-full px-4 py-3 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300;
-  }
-
-  .link-underline {
-    @apply relative text-indigo-600 hover:text-indigo-700;
-  }
-
-  .link-underline::after {
-    @apply content-[''] bg-indigo-600 h-[2px] w-0 left-0 -bottom-1 rounded-full absolute duration-300;
-  }
-
-  .link-underline:hover::after {
-    @apply w-full;
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
@@ -98,58 +122,6 @@
   .text-shadow-lg {
     text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
   }
-
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-indigo-400;
-  }
-
-  .bg-gradient-blur {
-    @apply bg-gradient-to-b from-white/80 to-white/40 backdrop-blur-lg;
-  }
-
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0% {
-      transform: translateY(0px);
-    }
-
-    50% {
-      transform: translateY(-20px);
-    }
-
-    100% {
-      transform: translateY(0px);
-    }
-  }
-
-  .animate-scroll {
-    animation: scroll 40s linear infinite;
-  }
-
-  @keyframes scroll {
-    0% {
-      transform: translateX(0);
-    }
-
-    100% {
-      transform: translateX(-50%);
-    }
-  }
-
-  .hover-lift {
-    @apply transition-transform duration-300 hover:-translate-y-1;
-  }
-
-  .hover-scale {
-    @apply transition-transform duration-300 hover:scale-105;
-  }
-
-  .hover-rotate {
-    @apply transition-transform duration-300 hover:rotate-3;
-  }
 }
 
 /* Custom utility classes */
@@ -159,29 +131,6 @@
 
 .font-body {
   font-family: 'Cormorant Garamond', serif;
-}
-
-/* Add some artistic flourishes */
-.artistic-underline {
-  position: relative;
-}
-
-.artistic-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -0.25rem;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, currentColor 20%, currentColor 80%, transparent);
-  opacity: 0.5;
-}
-
-.artistic-heading {
-  font-family: 'Playfair Display', serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
 }
 
 @media (max-width: 640px) {

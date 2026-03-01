@@ -3,15 +3,17 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Route } from "react-router-dom";
 import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "./contexts/AuthContext";
-import { trpc, trpcClient } from "./utils/trpc";
-import { STALE_TIME_MS } from "./utils/queryOptions";
-import PageLoader from "./components/ui/PageLoader";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { trpc, trpcClient } from "@/lib/trpc";
+import { STALE_TIME_MS } from "@/lib/queryOptions";
+import PageLoader from "@/components/common/PageLoader";
 
-// Performance monitoring
+// Performance monitoring — logs Core Web Vitals to console in development.
+// To send to an analytics service in production, replace this with a fetch/beacon call.
 const reportWebVitals = (metric) => {
-  // In production, you could send to an analytics service
-  // In development, metrics are silently collected
+  if (import.meta.env.DEV) {
+    console.debug(`[Web Vitals] ${metric.name}:`, metric);
+  }
 };
 
 // Lazy load the main App component
@@ -47,7 +49,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <BrowserRouter>
-            {/* <Route path="/verify-email" element={<VerifyEmail />} /> Removed, now handled in App.jsx */}
             <Suspense fallback={<PageLoader />}>
               <App />
             </Suspense>

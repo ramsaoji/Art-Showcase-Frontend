@@ -6,14 +6,19 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { trpc, trpcClient } from "../utils/trpc";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 const AuthContext = createContext();
 
+/** Returns the current AuthContext value. Must be used inside AuthProvider. */
 export function useAuth() {
   return useContext(AuthContext);
 }
 
+/**
+ * Provides authentication state (user, role, token) and actions (login, logout)
+ * to the entire component tree.
+ */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem("token"));

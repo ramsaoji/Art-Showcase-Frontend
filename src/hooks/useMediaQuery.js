@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
 
+/**
+ * Returns true when the given CSS media query matches, reactively updating on change.
+ * Safe for SSR (returns false when window is undefined).
+ * @param {string} query - A CSS media query string, e.g. "(max-width: 768px)".
+ * @returns {boolean}
+ */
 export default function useMediaQuery(query) {
   // Lazy state initialization to avoid calling window.matchMedia during SSR (rerender-lazy-state-init)
   const [matches, setMatches] = useState(() => {

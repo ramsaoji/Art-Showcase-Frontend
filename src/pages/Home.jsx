@@ -1,23 +1,24 @@
 import { useCallback, useState, lazy, Suspense, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import ArrowRightIcon from "@heroicons/react/20/solid/ArrowRightIcon";
-import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
-import { trpc } from "../utils/trpc";
-import ImageModal from "../components/ImageModal";
-import ArtworkCard from "../components/ArtworkCard";
-import HeroCarousel from "../components/HeroCarousel";
-import Alert from "../components/Alert";
-import Loader from "../components/ui/Loader";
+import { trpc } from "@/lib/trpc";
+import EmptyState from "@/components/common/EmptyState";
+import ImageModal from "@/components/artwork/ImageModal";
+import ArtworkCard from "@/components/artwork/ArtworkCard";
+import HeroCarousel from "@/components/sections/HeroCarousel";
+import Alert from "@/components/common/Alert";
+import Loader from "@/components/common/Loader";
 import {
   trackArtworkInteraction,
   trackUserAction,
-} from "../services/analytics";
-import { getFriendlyErrorMessage } from "../utils/formatters";
-import ScrollToTopButton from "../components/ScrollToTopButton";
+} from "@/services/analytics";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import ScrollToTopButton from "@/components/layout/ScrollToTopButton";
 
 // Lazy load the Statistics component
-const Statistics = lazy(() => import("../components/Statistics"));
+const Statistics = lazy(() => import("@/components/sections/Statistics"));
 
 // Hoist static animation variants outside component (rendering-hoist-jsx)
 const container = {
@@ -38,9 +39,6 @@ const headerAnimate = { opacity: 1, y: 0 };
 const headerTransition = { duration: 0.5 };
 const titleTransition = { duration: 0.5, delay: 0.1 };
 const descriptionTransition = { duration: 0.5, delay: 0.2 };
-const emptyStateInitial = { opacity: 0, scale: 0.95 };
-const emptyStateAnimate = { opacity: 1, scale: 1 };
-const emptyStateTransition = { duration: 0.5 };
 const viewAllTransition = { duration: 0.5, delay: 0.3 };
 
 // Hoist static animation keyframes
@@ -272,20 +270,11 @@ export default function Home() {
               />
             </div>
           ) : featuredArtworks.length === 0 ? (
-            <motion.div
-              className="text-center py-16 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-xl"
-              initial={emptyStateInitial}
-              animate={emptyStateAnimate}
-              transition={emptyStateTransition}
-            >
-              <PhotoIcon className="mx-auto h-16 w-16 text-gray-400" />
-              <h3 className="mt-4 font-artistic text-xl font-semibold text-gray-900">
-                No featured artworks
-              </h3>
-              <p className="mt-2 font-body text-gray-500">
-                Check back later for our featured collection.
-              </p>
-            </motion.div>
+            <EmptyState
+              title="No featured artworks"
+              description="Check back later for our featured collection."
+              className="bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-xl py-16"
+            />
           ) : (
             <>
               <motion.div
@@ -322,14 +311,12 @@ export default function Home() {
                 transition={viewAllTransition}
                 className="mt-16 text-center"
               >
-                <Link
-                  to="/gallery?featured=featured"
-                  onClick={handleViewAllClick}
-                  className="inline-flex items-center px-8 py-3 border-2 border-indigo-600/20 rounded-full bg-white/80 backdrop-blur-sm font-artistic text-lg text-indigo-600 hover:bg-indigo-50/80 transition-colors duration-300"
-                >
-                  View All Featured Works
-                  <ArrowRightIcon className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                </Link>
+                <Button asChild variant="outline" className="rounded-full px-8 py-3 h-auto border-2 border-indigo-600/20 bg-white/80 backdrop-blur-sm font-artistic text-lg text-indigo-600 hover:bg-indigo-50/80">
+                  <Link to="/gallery?featured=featured" onClick={handleViewAllClick}>
+                    View All Featured Works
+                    <ArrowRightIcon className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
               </motion.div>
             </>
           )}

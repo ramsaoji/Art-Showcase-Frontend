@@ -1,41 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { trpc, uploadToCloudinary } from "../utils/trpc";
-import ArtworkForm from "../components/ArtworkForm";
-import Loader from "../components/ui/Loader";
-import { useAuth } from "../contexts/AuthContext";
-import Alert from "../components/Alert";
-import { getFriendlyErrorMessage } from "../utils/formatters";
-import { useCallback } from "react";
-import { motion } from "framer-motion";
+import { trpc } from "@/lib/trpc";
+import ArtworkForm from "@/features/artwork-form";
+import Loader from "@/components/common/Loader";
+import { useAuth } from "@/contexts/AuthContext";
+import Alert from "@/components/common/Alert";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import PageBackground from "@/components/common/PageBackground";
+import PageHeader from "@/components/common/PageHeader";
+import { Button } from "@/components/ui/button";
+import FormCard from "@/components/common/FormCard";
 
-// Hoisted static motion configurations (rendering-hoist-jsx)
-const containerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
-
-const headerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay: 0.1 },
-};
-
-const formContainerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay: 0.2 },
-};
-
+/**
+ * EditArtwork page — loads an existing artwork by ID and allows the owner or
+ * super admin to update its details. Delegates form rendering to the artwork-form feature.
+ */
 export default function EditArtwork() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { isSuperAdmin, user } = useAuth();
   const [error, setError] = useState(null);
-  const [artwork, setArtwork] = useState(null);
-
-
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
@@ -160,13 +144,8 @@ export default function EditArtwork() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <p className="text-xl font-semibold mb-2">Artwork not found</p>
-          <button
-            onClick={() => navigate("/gallery")}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Back to Gallery
-          </button>
+          <p className="text-xl font-semibold mb-4 font-artistic text-gray-900">Artwork not found</p>
+          <Button onClick={() => navigate("/gallery")}>Back to Gallery</Button>
         </div>
       </div>
     );
@@ -178,41 +157,18 @@ export default function EditArtwork() {
       ? artists.find((a) => a.id === artworkData.userId)
       : null;
 
-
-
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 sm:py-16 bg-white/50">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
-        </div>
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
-        </div>
-        <div className="absolute left-0 bottom-0">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-tr from-amber-100/20 to-pink-100/20 blur-3xl" />
-        </div>
-      </div>
+      <PageBackground variant="extended" />
 
-      <motion.div
-        {...containerMotion}
-        className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"
-      >
-        <motion.div {...headerMotion} className="text-center mb-12">
-          <h2 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
-            Edit Artwork
-          </h2>
-          <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
-            Update your artwork details below. Make changes to your masterpiece
-            and save to keep your gallery up to date.
-          </p>
-        </motion.div>
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Edit Artwork"
+          subtitle="Update your artwork details below. Make changes to your masterpiece and save to keep your gallery up to date."
+          as="h2"
+        />
 
-        <motion.div
-          {...formContainerMotion}
-          className="bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100"
-        >
+        <FormCard maxWidth="4xl" noPadding>
           <div className="p-6 sm:p-8">
             <ArtworkForm
               initialData={artworkData}
@@ -224,8 +180,8 @@ export default function EditArtwork() {
               selectedArtist={selectedArtist}
             />
           </div>
-        </motion.div>
-      </motion.div>
+        </FormCard>
+      </div>
     </div>
   );
 }

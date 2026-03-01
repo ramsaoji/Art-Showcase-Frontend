@@ -1,1 +1,1 @@
-export { default } from "./ArtistApprovals";
+export { default } from "./AdminManagement";

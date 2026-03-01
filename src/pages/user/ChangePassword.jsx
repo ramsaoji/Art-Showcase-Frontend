@@ -1,94 +1,57 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { trpc } from "../../utils/trpc";
-import { motion } from "framer-motion";
-import Alert from "../../components/Alert";
-import Loader from "../../components/ui/Loader";
-import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
-import EyeSlashIcon from "@heroicons/react/24/outline/EyeSlashIcon";
-import { getFriendlyErrorMessage } from "../../utils/formatters";
-import { useCallback } from "react";
+import { toast } from "sonner";
 
-// Hoisted static motion configurations (rendering-hoist-jsx)
-const containerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
+import { trpc } from "@/lib/trpc";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
+import PageBackground from "@/components/common/PageBackground";
+import PageHeader from "@/components/common/PageHeader";
+import FormCard from "@/components/common/FormCard";
+import LoadingButton from "@/components/common/LoadingButton";
 
-const formContainerMotion = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay: 0.1 },
-};
+// Feature: auth — schema + field config + renderer
+import { changePasswordSchema } from "@/features/auth/schema/authValidation";
+import { changePasswordFieldsConfig } from "@/features/auth/config/changePasswordFields.config";
+import AuthFormFields from "@/features/auth/components/AuthFormFields";
 
-const schema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(1, "New password is required")
-      .min(8, "New password must be at least 8 characters"),
-    confirmNewPassword: z.string().min(1, "Please confirm your new password"),
-  })
-  .refine((data) => data.newPassword !== data.currentPassword, {
-    message: "New password cannot be the same as the current one.",
-    path: ["newPassword"],
-  })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "Passwords must match",
-    path: ["confirmNewPassword"],
-  });
+// shadcn components
+import { Form } from "@/components/ui/form";
 
+/**
+ * ChangePassword Page
+ * Allows authenticated users to change their password securely.
+ */
 export default function ChangePassword() {
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Memoized handlers (rerender-functional-setstate)
-  const handleCurrentPasswordToggle = useCallback(() => {
-    setShowCurrentPassword((p) => !p);
-  }, []);
-
-  const handleNewPasswordToggle = useCallback(() => {
-    setShowNewPassword((p) => !p);
-  }, []);
-
-  const handleConfirmPasswordToggle = useCallback(() => {
-    setShowConfirmPassword((p) => !p);
-  }, []);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setError: setFormError,
-    reset,
-  } = useForm({
-    resolver: zodResolver(schema),
+  const form = useForm({
+    resolver: zodResolver(changePasswordSchema),
     defaultValues: {
       currentPassword: "",
       newPassword: "",
       confirmNewPassword: "",
     },
-    // mode: "onTouched",
   });
+
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+    setError,
+    reset,
+  } = form;
 
   const changePasswordMutation = trpc.user.changePassword.useMutation({
     onSuccess: () => {
       reset();
+      toast.success("Password updated successfully!");
     },
     onError: (err) => {
-      // Handle Zod validation errors from the server
+      // Parse Zod validation array from the server if applicable
       if (err.data?.code === "BAD_REQUEST") {
         try {
-          const errors = JSON.parse(err.message);
-          if (Array.isArray(errors)) {
-            errors.forEach((e) => {
+          const parsedErrors = JSON.parse(err.message);
+          if (Array.isArray(parsedErrors)) {
+            parsedErrors.forEach((e) => {
               if (e.path && e.path.length > 0) {
-                setFormError(e.path[0], {
+                setError(e.path[0], {
                   type: "server",
                   message: e.message,
                 });
@@ -97,24 +60,21 @@ export default function ChangePassword() {
             return;
           }
         } catch (e) {
-          // Failed to parse error message
+          // Fallback if parsing fails
         }
       }
 
-      // Handle other specific errors
+      // Handle explicitly specified error cases
       if (err.message.toLowerCase().includes("invalid current password")) {
-        setFormError("currentPassword", {
+        setError("currentPassword", {
           type: "manual",
           message: getFriendlyErrorMessage(err),
         });
         return;
       }
 
-      // For all other errors, show a generic message
-      setFormError("root.serverError", {
-        type: "manual",
-        message: getFriendlyErrorMessage(err),
-      });
+      // Fallback for all other errors
+      toast.error(getFriendlyErrorMessage(err));
     },
   });
 
@@ -122,185 +82,33 @@ export default function ChangePassword() {
     changePasswordMutation.mutate(data);
   };
 
-  const getFieldErrorClass = (fieldName) => {
-    return errors[fieldName]
-      ? "border-red-500 ring-red-500 focus:ring-red-500 focus:border-red-500"
-      : "border-gray-200 focus:ring-indigo-500 focus:border-transparent";
-  };
-
   return (
     <div className="relative min-h-screen px-4 sm:px-6 lg:px-8 py-12 bg-white/50">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-96 left-1/2 transform -translate-x-1/2">
-          <div className="w-[800px] h-[800px] rounded-full bg-gradient-to-r from-indigo-100/30 to-purple-100/30 blur-3xl" />
-        </div>
-        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="w-96 h-96 rounded-full bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl" />
-        </div>
-      </div>
+      <PageBackground />
+
       <div className="relative">
-        <motion.div
-          {...containerMotion}
-          className="text-center mb-12"
-        >
-          <h1 className="text-5xl lg:text-6xl font-bold mb-4 font-artistic text-center tracking-wide text-gray-900">
-            Change Password
-          </h1>
-          <p className="text-lg sm:text-xl font-sans text-gray-600 leading-relaxed">
-            Keep your account secure
-          </p>
-        </motion.div>
+        <PageHeader title="Change Password" subtitle="Keep your account secure" />
 
-        <motion.div
-          {...formContainerMotion}
-          className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-100 p-8 sm:p-10"
-        >
-          <div className="space-y-6">
-            {(changePasswordMutation.isSuccess || errors.root?.serverError) && (
-              <div className="min-h-[48px]">
-                {changePasswordMutation.isSuccess && (
-                  <Alert
-                    type="success"
-                    message="Password updated successfully!"
-                  />
-                )}
-                {errors.root?.serverError && (
-                  <Alert
-                    type="error"
-                    message={errors.root.serverError.message}
-                  />
-                )}
-              </div>
-            )}
+        <FormCard>
+          <Form {...form}>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+              {/* Config-driven fields — add/remove/reorder via changePasswordFieldsConfig */}
+              <AuthFormFields config={changePasswordFieldsConfig} />
 
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="space-y-6"
-              noValidate
-            >
-              <div className="space-y-4">
-                {/* Current Password */}
-                <div>
-                  <label className="block text-sm font-sans font-medium text-gray-700 mb-2">
-                    Current Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showCurrentPassword ? "text" : "password"}
-                      {...register("currentPassword")}
-                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${getFieldErrorClass(
-                        "currentPassword"
-                      )}`}
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCurrentPasswordToggle}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
-                    >
-                      {showCurrentPassword ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.currentPassword && (
-                    <p className="text-red-500 text-sm font-sans mt-1">
-                      {errors.currentPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* New Password */}
-                <div>
-                  <label className="block text-sm font-sans font-medium text-gray-700 mb-2">
-                    New Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? "text" : "password"}
-                      {...register("newPassword")}
-                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${getFieldErrorClass(
-                        "newPassword"
-                      )}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleNewPasswordToggle}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
-                    >
-                      {showNewPassword ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.newPassword && (
-                    <p className="text-red-500 text-sm font-sans mt-1">
-                      {errors.newPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Confirm New Password */}
-                <div>
-                  <label className="block text-sm font-sans font-medium text-gray-700 mb-2">
-                    Confirm New Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      {...register("confirmNewPassword")}
-                      className={`w-full px-4 py-3 rounded-xl border font-sans text-gray-900 placeholder-gray-400 focus:ring-2 focus:outline-none transition duration-200 ${getFieldErrorClass(
-                        "confirmNewPassword"
-                      )}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleConfirmPasswordToggle}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeSlashIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.confirmNewPassword && (
-                    <p className="text-red-500 text-sm font-sans mt-1">
-                      {errors.confirmNewPassword.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-center pt-4">
-                <button
+              {/* Submit Button */}
+              <div className="pt-4">
+                <LoadingButton
                   type="submit"
-                  className={`w-full inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-semibold rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700  transition-all duration-300 font-sans${
-                    isSubmitting
-                      ? " opacity-60 pointer-events-none cursor-not-allowed"
-                      : ""
-                  }`}
-                  disabled={false}
+                  loading={isSubmitting}
+                  loadingLabel="Updating..."
+                  className="w-full"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <Loader size="xsmall" color="indigo-600" />
-                      Updating...
-                    </span>
-                  ) : (
-                    "Update Password"
-                  )}
-                </button>
+                  Update Password
+                </LoadingButton>
               </div>
             </form>
-          </div>
-        </motion.div>
+          </Form>
+        </FormCard>
       </div>
     </div>
   );
