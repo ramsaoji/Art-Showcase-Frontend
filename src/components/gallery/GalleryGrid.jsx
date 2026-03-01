@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import InfiniteScroll from "react-infinite-scroll-component";
 import ArtworkCard from "@/components/artwork/ArtworkCard";
+import MasonryArtworkCard from "@/components/artwork/MasonryArtworkCard";
+import Masonry from "react-masonry-css";
 import Loader from "@/components/common/Loader";
 import EmptyState from "@/components/common/EmptyState";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +35,7 @@ export default function GalleryGrid({
   handleResetAllFilters,
   searchQuery,
   filters,
+  layoutType = 'masonry',
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
   // Filter artworks based on user role and filters
@@ -146,16 +149,37 @@ export default function GalleryGrid({
           scrollableTarget="main-scroll-container"
           style={{ overflow: "visible" }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
-            {filteredArtworks.map((image) => (
-              <ArtworkCard
-                key={image.id}
-                artwork={image}
-                onDelete={handleDelete}
-                onQuickView={handleImageClick}
-              />
-            ))}
-          </div>
+          {layoutType === 'masonry' ? (
+            <Masonry
+              breakpointCols={{
+                default: 4,
+                1024: 3,
+                640: 2
+              }}
+              className="flex w-auto -ml-4 sm:-ml-6"
+              columnClassName="pl-4 sm:pl-6 bg-clip-padding"
+            >
+              {filteredArtworks.map((image) => (
+                <div key={image.id} className="mb-4 sm:mb-6">
+                  <MasonryArtworkCard
+                    artwork={image}
+                    onQuickView={handleImageClick}
+                  />
+                </div>
+              ))}
+            </Masonry>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
+              {filteredArtworks.map((image) => (
+                <ArtworkCard
+                  key={image.id}
+                  artwork={image}
+                  onDelete={handleDelete}
+                  onQuickView={handleImageClick}
+                />
+              ))}
+            </div>
+          )}
         </InfiniteScroll>
       )}
 

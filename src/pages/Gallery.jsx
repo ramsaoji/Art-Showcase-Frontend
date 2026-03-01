@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import useGallery from "@/hooks/useGallery";
 import GalleryHeader from "@/components/gallery/GalleryHeader";
@@ -61,6 +61,9 @@ export default function Gallery() {
     handleManualRefetch,
     loadMore,
   } = useGallery();
+
+  // Layout view type: 'grid' or 'masonry'
+  const [layoutType, setLayoutType] = useState('masonry');
 
   // Memoized selectedArtworkIndex (js-cache-function-results)
   const selectedArtworkIndex = useMemo(() => {
@@ -146,6 +149,8 @@ export default function Gallery() {
             materialSearch={materialSearch}
             styleSearch={styleSearch}
             markDropdownOpened={markDropdownOpened}
+            layoutType={layoutType}
+            setLayoutType={setLayoutType}
           />
 
           {/* Gallery Grid with Artworks */}
@@ -161,6 +166,7 @@ export default function Gallery() {
             handleResetAllFilters={handleResetAllFilters}
             searchQuery={searchQuery}
             filters={filters}
+            layoutType={layoutType}
           />
         </div>
       </motion.div>

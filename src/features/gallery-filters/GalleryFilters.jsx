@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import FunnelIcon from "@heroicons/react/24/outline/FunnelIcon";
+import { LayoutGrid, AppWindow } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import useScrollLock from "@/hooks/useScrollLock";
 import {
@@ -50,6 +51,8 @@ import {
  * @param {string} [props.materialSearch=""] - Controlled material search query.
  * @param {string} [props.styleSearch=""] - Controlled style search query.
  * @param {Function} props.markDropdownOpened - Signals that a dropdown has been opened (for lazy load).
+ * @param {string} props.layoutType - Current layout type ('grid' or 'masonry').
+ * @param {Function} props.setLayoutType - Setter for layout type.
  */
 export default function GalleryFilters({
   filters,
@@ -78,6 +81,8 @@ export default function GalleryFilters({
   materialSearch = "",
   styleSearch = "",
   markDropdownOpened,
+  layoutType,
+  setLayoutType,
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
   useScrollLock(isMobileFiltersOpen);
@@ -183,6 +188,37 @@ export default function GalleryFilters({
           </DialogHeader>
 
           <div className="flex-1 py-6 pr-1 overflow-y-auto px-4">
+            {/* View Layout Switch */}
+            <div className="mb-8">
+              <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">View Layout</h3>
+              <div className="flex bg-gray-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setLayoutType('grid')}
+                  className={`flex-1 flex items-center justify-center py-2 text-sm font-sans font-medium rounded-lg transition-colors ${
+                    layoutType === 'grid'
+                      ? "bg-white text-indigo-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-900"
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLayoutType('masonry')}
+                  className={`flex-1 flex items-center justify-center py-2 text-sm font-sans font-medium rounded-lg transition-colors ${
+                    layoutType === 'masonry'
+                      ? "bg-white text-indigo-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-900"
+                  }`}
+                >
+                  <AppWindow className="w-4 h-4 mr-2" />
+                  Masonry
+                </button>
+              </div>
+            </div>
+
             {/* Sort Options */}
             <div className="mb-8">
               <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">Sort by</h3>
@@ -577,34 +613,64 @@ export default function GalleryFilters({
 
         <div className="flex-1" />
 
-        {/* Sort Dropdown (right aligned) */}
-        <div className="relative ml-auto" ref={sortDropdownRef}>
-          <button
-            type="button"
-            onClick={() => toggleDropdown("sort")}
-            className="inline-flex items-center px-4 py-2.5 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Sort by:{" "}
-            {sortBy.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
-            <ChevronIcon />
-          </button>
-          {openDropdown === "sort" && (
-            <div className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5">
-              <div className="py-2 space-y-1">
-                {SORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => { handleSortChange(option.value); setOpenDropdown(null); }}
-                    className={`block px-4 py-2 text-sm w-full text-left font-sans hover:bg-gray-50 hover:text-indigo-600 ${
-                      sortBy === option.value ? "font-medium text-indigo-600" : "text-gray-700"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+        {/* Layout Toggle and Sort Dropdown (right aligned) */}
+        <div className="flex items-center gap-3 ml-auto">
+          {/* Layout Toggle */}
+          <div className="flex items-center p-1 bg-white border border-gray-200 rounded-full shadow-sm h-10">
+            <button
+              type="button"
+              onClick={() => setLayoutType('grid')}
+              className={`p-1.5 h-full rounded-full transition-colors flex items-center justify-center aspect-square ${
+                layoutType === 'grid'
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutType('masonry')}
+              className={`p-1.5 h-full rounded-full transition-colors flex items-center justify-center aspect-square ${
+                layoutType === 'masonry'
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Masonry View"
+            >
+              <AppWindow className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="relative h-10" ref={sortDropdownRef}>
+            <button
+              type="button"
+              onClick={() => toggleDropdown("sort")}
+              className="inline-flex items-center h-full px-4 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Sort by:{" "}
+              {sortBy.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+              <ChevronIcon />
+            </button>
+            {openDropdown === "sort" && (
+              <div className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                <div className="py-2 space-y-1">
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => { handleSortChange(option.value); setOpenDropdown(null); }}
+                      className={`block px-4 py-2 text-sm w-full text-left font-sans hover:bg-gray-50 hover:text-indigo-600 ${
+                        sortBy === option.value ? "font-medium text-indigo-600" : "text-gray-700"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
