@@ -28,7 +28,7 @@ const buttonVariants = {
  * @param {Function} [onDelete] - Callback invoked after a successful deletion.
  * @param {Object} artwork - Full artwork object from the API.
  */
-export default function ArtworkActions({ artworkId, onDelete, artwork }) {
+export default function ArtworkActions({ artworkId, onDelete, artwork, className = "", buttonClassName = "" }) {
   const { isSuperAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -130,13 +130,13 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
 
   return (
     <>
-      <div className="flex items-center justify-end sm:justify-start flex-wrap gap-2">
+      <div className={`flex items-center justify-end sm:justify-start flex-wrap gap-2 ${className}`}>
         {/* Edit button: super admin or artist owner */}
         {(isSuperAdmin || isOwner) && (
           <motion.button
             onClick={handleEdit}
             {...buttonVariants}
-            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300"
+            className={`inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50/80 hover:border-indigo-200 shadow-sm transition-all duration-300 ${buttonClassName}`}
             title="Edit artwork"
           >
             <PencilSquareIcon className="h-4 w-4 mr-1.5" />
@@ -151,7 +151,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
             disabled={isStatusUpdating}
           >
             <SelectTrigger
-              className="min-w-[100px] h-auto px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 [&>svg]:text-yellow-700 [&>svg]:shrink-0 [&>svg]:ml-1"
+              className={`min-w-[100px] h-auto px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-yellow-100 text-yellow-700 hover:bg-yellow-50/80 hover:border-yellow-200 shadow-sm transition-all duration-300 [&>svg]:text-yellow-700 [&>svg]:shrink-0 [&>svg]:ml-1 ${buttonClassName}`}
               title="Change artwork status"
             >
               <SelectValue />
@@ -169,7 +169,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork }) {
             onClick={handleDeleteClick}
             {...buttonVariants}
             disabled={isDeleting}
-            className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-sans font-medium rounded-xl bg-white/80 backdrop-blur-sm border-2 border-red-100 text-red-600 hover:bg-red-50/80 hover:border-red-200 shadow-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${buttonClassName}`}
             title="Delete artwork"
           >
             <TrashIcon className="h-4 w-4 mr-1.5" />

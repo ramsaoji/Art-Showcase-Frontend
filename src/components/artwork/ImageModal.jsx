@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import StarIcon from "@heroicons/react/24/outline/StarIcon";
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import ShareIcon from "@heroicons/react/24/outline/ShareIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import Badge from "@/components/artwork/Badge";
 import StatusBadge from "@/components/artwork/StatusBadge";
@@ -15,10 +17,12 @@ import PurchaseFooter from "@/components/artwork/PurchaseFooter";
 import Loader from "@/components/common/Loader";
 import SocialMediaModal from "@/components/sections/SocialMediaModal";
 import PurchaseRequestModal from "@/features/purchase-request";
+import ArtworkActions from "@/components/artwork/ArtworkActions";
+import Alert from "@/components/common/Alert";
 import { formatPrice, formatLocalDateTime, resolveArtworkPricing } from "@/utils/formatters";
 import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 import { getPreviewUrl, getFullSizeUrl } from "@/utils/cloudinary";
-import { trackArtworkInteraction } from "@/services/analytics";
+import { trackArtworkInteraction, trackShare } from "@/services/analytics";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import useScrollLock from "@/hooks/useScrollLock";
 import useSocialMediaModal from "@/hooks/useSocialMediaModal";
@@ -63,6 +67,7 @@ export default function ImageModal({
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [fullScreenImageOpen, setFullScreenImageOpen] = useState(false);
   const [showZoomHint, setShowZoomHint] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
 
   // Shared social media modal hook — replaces duplicated state + handlers
   const { socialMediaModal, openInstagramModal, openYouTubeModal, closeSocialMediaModal } =
@@ -192,6 +197,28 @@ export default function ImageModal({
   const handleImageModalClose = () => {
     if (!showPurchaseModal) handleClose();
   };
+
+  // Share handler — mirrors ArtworkDetail exactly, links to /artwork/:id
+  const handleShare = useCallback(async () => {
+    const shareUrl = `${window.location.origin}/artwork/${image?.id}`;
+    try {
+      await navigator.share({
+        title: image?.title,
+        text: `Check out "${image?.title}" by ${image?.artistName}`,
+        url: shareUrl,
+      });
+      trackShare(image.id, "native_share");
+    } catch {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShowShareToast(true);
+        setTimeout(() => setShowShareToast(false), 2000);
+        trackShare(image.id, "clipboard");
+      } catch {
+        // clipboard failed silently
+      }
+    }
+  }, [image?.id, image?.title, image?.artistName]);
 
   // Determine if the current user is the owner (artist) of this artwork
   const isOwner = user && image?.userId && user.id === image.userId;
@@ -343,17 +370,30 @@ export default function ImageModal({
 
                 {/* Details Section */}
                 <div className="relative h-3/5 w-full flex-shrink-0 flex-[2_2_0%] bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl flex flex-col md:h-1/3 xl:h-full xl:border-l xl:border-t-0 border-t border-white/20">
-                  {/* Close button */}
-                  <button
-                    onClick={handleImageModalClose}
-                    className="absolute right-4 top-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100/80 backdrop-blur-md text-gray-500 transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-300 border border-gray-200/50"
-                    aria-label="Close modal"
-                  >
-                    <XMarkIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </button>
+                  {/* Header row: close button + share button */}
+                  <div className="flex items-center justify-between px-4 py-2 sm:px-6 sm:py-2 flex-shrink-0">
+                    {/* Share button */}
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="flex items-center justify-center rounded-full text-gray-400 hover:text-indigo-500 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 h-8 w-8 sm:h-9 sm:w-9 bg-white transition-all duration-200 hover:scale-105"
+                      title="Share artwork"
+                    >
+                      <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+
+                    {/* Close button */}
+                    <button
+                      onClick={handleImageModalClose}
+                      className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100/80 backdrop-blur-md text-gray-500 transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-300 border border-gray-200/50"
+                      aria-label="Close modal"
+                    >
+                      <XMarkIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  </div>
 
                   {/* Scrollable content */}
-                  <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+                  <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-4 sm:px-6 sm:pt-4 sm:pb-6">
                     <motion.h2
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -501,12 +541,24 @@ export default function ImageModal({
                     </motion.div>
                   </div>
 
-                  {/* Purchase Request Footer — shared component */}
+                  {/* Purchase Request Footer — public users only */}
                   {!user && (
                     <PurchaseFooter
                       sold={image?.sold}
                       onRequest={() => setShowPurchaseModal(true)}
                     />
+                  )}
+
+                  {/* ArtworkActions — admin / artist owner */}
+                  {(isSuperAdmin || (isArtist && isOwner)) && (
+                    <div className="px-4 pb-4 sm:px-6 sm:pb-5 border-t border-gray-100/80 pt-3 flex-shrink-0 bg-gradient-to-r from-white/90 to-gray-50/90">
+                      <ArtworkActions
+                        artworkId={image?.id}
+                        artwork={image}
+                        className="w-full justify-between"
+                        buttonClassName="flex-1"
+                      />
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -531,6 +583,17 @@ export default function ImageModal({
           url={socialMediaModal.url}
           title={socialMediaModal.title}
         />
+      )}
+
+      {/* Share toast — "Link copied to clipboard!" */}
+      {showShareToast && createPortal(
+        <Alert
+          type="success"
+          message="Link copied to clipboard!"
+          className="fixed bottom-4 left-1/2 transform -translate-x-1/2 shadow-lg z-[200]"
+          animate={true}
+        />,
+        document.body
       )}
 
       {/* Full-Screen Image Overlay */}
