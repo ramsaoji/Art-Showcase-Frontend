@@ -263,11 +263,10 @@ export default function HeroCarousel() {
               >
                 <Link
                   to="/gallery"
-                  className="inline-flex items-center px-8 py-4 sm:py-4 bg-black/40 backdrop-blur-md rounded-2xl text-white font-sans text-lg sm:text-lg font-semibold shadow-2xl shadow-black/20 transition-all duration-300 hover:bg-black/60 hover:shadow-2xl hover:shadow-black/30 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 border border-white/20 hover:border-white/40 relative overflow-hidden group"
+                  className="inline-flex items-center gap-2 px-8 py-4 sm:py-4 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-xl text-white font-sans text-lg sm:text-lg font-semibold border border-white/25 shadow-lg shadow-black/30 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/40 group"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="relative z-10">Explore Gallery</span>
-                  <ArrowRightIcon className="ml-2 sm:ml-3 h-5 w-5 sm:h-5 sm:w-5 relative z-10" />
+                  <span>Explore Gallery</span>
+                  <ArrowRightIcon className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
                 </Link>
               </motion.div>
             </motion.div>
@@ -453,40 +452,40 @@ export default function HeroCarousel() {
                           {/* Primary */}
                           <Link
                             to={`/artwork/${currentSlide.artworkId}`}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-black/65 hover:bg-black/85 backdrop-blur-md rounded-xl text-white font-sans text-xs font-semibold border border-white/25 shadow-lg shadow-black/30 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/40 group"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-xl text-white font-sans text-xs font-semibold border border-white/25 shadow-lg shadow-black/30 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/40 group"
                           >
                             <span>View Artwork</span>
                             <ArrowRightIcon className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
                           </Link>
-                          {/* Secondary ghost */}
+                          {/* Secondary */}
                           <Link
                             to="/gallery"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-white/75 hover:text-white font-sans text-xs font-medium border border-white/20 hover:border-white/35 shadow-md transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/30 group"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-xl text-white font-sans text-xs font-semibold border border-white/25 shadow-lg shadow-black/30 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/40 group"
                           >
                             <span>Gallery</span>
-                            <ArrowRightIcon className="h-3 w-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
+                            <ArrowRightIcon className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
                           </Link>
                         </div>
 
                         {/* ── sm+: unified segmented pill ── */}
-                        <div className="hidden sm:inline-flex items-stretch bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl shadow-black/25 overflow-hidden">
+                        <div className="hidden sm:inline-flex items-stretch bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/25 rounded-xl shadow-lg shadow-black/30 overflow-hidden transition-all duration-200 active:scale-95 group">
                           {/* Primary half */}
                           <Link
                             to={`/artwork/${currentSlide.artworkId}`}
-                            className="relative inline-flex items-center px-4 py-2 md:px-5 md:py-2 xl:px-6 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group"
+                            className="relative inline-flex items-center px-4 py-2 md:px-5 md:py-2 xl:px-6 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group/btn"
                           >
                             <span>View Artwork</span>
-                            <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                            <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5" />
                           </Link>
                           {/* Vertical divider */}
-                          <div className="w-px self-stretch bg-white/20 shrink-0" />
+                          <div className="w-px self-stretch bg-white/25 shrink-0 transition-colors duration-200" />
                           {/* Secondary half */}
                           <Link
                             to="/gallery"
-                            className="relative inline-flex items-center px-3.5 py-2 md:px-4 md:py-2 xl:px-5 xl:py-2.5 text-white/65 hover:text-white font-sans text-sm font-medium transition-all duration-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group"
+                            className="relative inline-flex items-center px-3.5 py-2 md:px-4 md:py-2 xl:px-5 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group/btn"
                           >
                             <span>Explore Gallery</span>
-                            <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 opacity-55 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300" />
+                            <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5" />
                           </Link>
                         </div>
                       </motion.div>
@@ -572,11 +571,10 @@ export default function HeroCarousel() {
                       >
                         <Link
                           to="/gallery"
-                          className="inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-2.5 bg-black/40 backdrop-blur-md rounded-2xl text-white font-sans text-sm sm:text-base font-semibold shadow-2xl shadow-black/20 transition-all duration-300 hover:bg-black/60 hover:shadow-2xl hover:shadow-black/30 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 border border-white/20 hover:border-white/40 relative overflow-hidden group"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-2.5 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-xl text-white font-sans text-xs sm:text-base font-semibold border border-white/25 shadow-lg shadow-black/30 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/40 group"
                         >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          <span className="relative z-10">Explore Gallery</span>
-                          <ArrowRightIcon className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5 relative z-10" />
+                          <span>Explore Gallery</span>
+                          <ArrowRightIcon className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-200 group-hover:translate-x-0.5" />
                         </Link>
                       </motion.div>
                     </AnimatePresence>

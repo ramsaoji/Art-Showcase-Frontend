@@ -107,15 +107,36 @@ export default function GalleryGrid({
 
       {isCardsLoading && filteredArtworks.length === 0 ? (
         // Initial load: skeleton only (no loading text to avoid duplicate)
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4" />
+        layoutType === 'masonry' ? (
+          <Masonry
+            breakpointCols={{
+              default: 4,
+              1024: 3,
+              640: 2
+            }}
+            className="flex w-auto -ml-4 sm:-ml-6"
+            columnClassName="pl-4 sm:pl-6 bg-clip-padding"
+          >
+            {[
+              "aspect-[3/4]", "aspect-[4/5]", "aspect-[1/1]", "aspect-[2/3]",
+              "aspect-[4/3]", "aspect-[3/4]", "aspect-[2/3]", "aspect-[4/5]"
+            ].map((aspectClass, index) => (
+              <div key={`masonry-skel-${index}`} className="mb-4 sm:mb-6 animate-pulse">
+                <div className={`bg-gray-200 rounded-2xl w-full ${aspectClass}`} />
               </div>
             ))}
+          </Masonry>
+        ) : (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={`grid-skel-${index}`} className="animate-pulse">
+                  <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4" />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <InfiniteScroll
           dataLength={filteredArtworks.length}
