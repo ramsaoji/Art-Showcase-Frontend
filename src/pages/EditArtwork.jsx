@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 import ArtworkForm from "@/features/artwork-form";
 import Loader from "@/components/common/Loader";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,13 +63,17 @@ export default function EditArtwork() {
   const updateArtworkMutation = trpc.artwork.updateArtworkWithImage.useMutation(
     {
       onSuccess: () => {
+        toast.success("Artwork updated successfully");
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
+        utils.artwork.getArtworksForHeroCarousel.invalidate();
         utils.artwork.getArtworkById.invalidate({ id: artworkData.id });
         navigate("/gallery");
       },
       onError: (err) => {
-        setError(getFriendlyErrorMessage(err));
+        const msg = getFriendlyErrorMessage(err);
+        setError(msg);
+        toast.error(msg);
       },
     }
   );

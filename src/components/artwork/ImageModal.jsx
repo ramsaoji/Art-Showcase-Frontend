@@ -50,12 +50,20 @@ const modalVariants = {
 export default function ImageModal({
   isOpen,
   onClose,
-  image,
+  image: propImage,
   onPrevious,
   onNext,
   hasPrevious,
   hasNext,
 }) {
+  const [localImage, setLocalImage] = useState(propImage);
+
+  useEffect(() => {
+    setLocalImage(propImage);
+  }, [propImage]);
+
+  const image = localImage;
+
   // Multi-image carousel state
   const images =
     Array.isArray(image?.images) && image.images.length > 0 ? image.images : [];
@@ -555,6 +563,8 @@ export default function ImageModal({
                       <ArtworkActions
                         artworkId={image?.id}
                         artwork={image}
+                        onDelete={handleImageModalClose}
+                        onUpdate={(updatedData) => setLocalImage(prev => ({ ...prev, ...updatedData }))}
                         className="w-full justify-between"
                         buttonClassName="flex-1"
                       />

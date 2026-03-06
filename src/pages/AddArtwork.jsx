@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ArtworkForm from "@/features/artwork-form";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
@@ -34,8 +35,10 @@ export default function AddArtwork() {
   const createArtworkMutation = trpc.artwork.createArtworkWithImage.useMutation(
     {
       onSuccess: () => {
+        toast.success("Artwork added successfully");
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
+        utils.artwork.getArtworksForHeroCarousel.invalidate();
         utils.user.listUsers.invalidate();
         if (artistId) {
           utils.artwork.getArtistUsageStats.invalidate({ artistId });
@@ -44,7 +47,9 @@ export default function AddArtwork() {
         navigate("/gallery");
       },
       onError: (err) => {
-        setError(getFriendlyErrorMessage(err));
+        const msg = getFriendlyErrorMessage(err);
+        setError(msg);
+        toast.error(msg);
       },
     }
   );

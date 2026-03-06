@@ -257,7 +257,11 @@ const CarouselManagement = () => {
       );
     },
     onSuccess: async () => {
-      await utils.artwork.getCarouselImages.invalidate();
+      await Promise.all([
+        utils.artwork.getCarouselImages.invalidate(),
+        utils.artwork.getArtworksForHeroCarousel.invalidate(),
+        utils.artwork.getAllArtworks.invalidate(),
+      ]);
       setOriginalItems([...items]);
       setIsSaving(false);
       setOffset(0);

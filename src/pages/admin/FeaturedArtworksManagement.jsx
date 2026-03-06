@@ -324,6 +324,8 @@ const FeaturedArtworksManagement = () => {
       await Promise.all([
         utils.artwork.getAvailableArtworksAdmin.invalidate(),
         utils.artwork.getFeaturedArtworksAdmin.invalidate(),
+        utils.artwork.getFeaturedArtworks.invalidate(),
+        utils.artwork.getAllArtworks.invalidate(),
       ]);
       setOriginalFeatured([...featured]);
       setIsSaving(false);

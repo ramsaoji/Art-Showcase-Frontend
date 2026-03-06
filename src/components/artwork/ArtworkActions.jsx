@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
@@ -28,7 +29,7 @@ const buttonVariants = {
  * @param {Function} [onDelete] - Callback invoked after a successful deletion.
  * @param {Object} artwork - Full artwork object from the API.
  */
-export default function ArtworkActions({ artworkId, onDelete, artwork, className = "", buttonClassName = "" }) {
+export default function ArtworkActions({ artworkId, onDelete, onUpdate, artwork, className = "", buttonClassName = "" }) {
   const { isSuperAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -52,6 +53,7 @@ export default function ArtworkActions({ artworkId, onDelete, artwork, className
   // Delete mutation
   const deleteArtworkMutation = trpc.artwork.deleteArtwork.useMutation({
     onSuccess: (data) => {
+      toast.success("Artwork deleted successfully");
       if (onDelete) onDelete(artworkId);
       utils.artwork.getAllArtworks.invalidate();
       utils.artwork.getFeaturedArtworks.invalidate();
@@ -59,19 +61,27 @@ export default function ArtworkActions({ artworkId, onDelete, artwork, className
       setError(null);
     },
     onError: (error) => {
-      setError(getFriendlyErrorMessage(error));
+      const msg = getFriendlyErrorMessage(error);
+      toast.error(msg);
+      setError(msg);
     },
   });
 
   // Status update mutation
   const updateArtworkMutation = trpc.artwork.updateArtwork.useMutation({
-    onSuccess: () => {
+    onSuccess: (updatedArtwork) => {
+      toast.success("Artwork status updated successfully");
+      if (onUpdate && updatedArtwork) {
+        onUpdate(updatedArtwork);
+      }
       utils.artwork.getAllArtworks.invalidate();
       utils.artwork.getFeaturedArtworks.invalidate();
       setIsStatusUpdating(false);
     },
     onError: (error) => {
-      setError(getFriendlyErrorMessage(error));
+      const msg = getFriendlyErrorMessage(error);
+      toast.error(msg);
+      setError(msg);
       setIsStatusUpdating(false);
     },
   });

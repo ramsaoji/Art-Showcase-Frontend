@@ -59,7 +59,11 @@ export default function ArtistQuotaLimits() {
       refetch();
       utils.user.listUsers.invalidate();
     },
-    onError: (err) => setError(getFriendlyErrorMessage(err)),
+    onError: (err) => {
+      const msg = getFriendlyErrorMessage(err);
+      setError(msg);
+      toast.error(msg);
+    },
   });
 
   const openLimitsDialog = useCallback(
