@@ -169,6 +169,14 @@ export function useArtworkSubmit({
       delete payload.aiDescriptionDailyLimit;
       delete payload.imageUploadLimit;
 
+      // Coerce discount fields: empty string → null (backend expects null, not "")
+      payload.discountPercent =
+        payload.discountPercent !== "" && payload.discountPercent !== null && payload.discountPercent !== undefined
+          ? Number(payload.discountPercent)
+          : null;
+      payload.discountStartAt = payload.discountStartAt ? new Date(payload.discountStartAt) : null;
+      payload.discountEndAt = payload.discountEndAt ? new Date(payload.discountEndAt) : null;
+
       // ─── Submit ────────────────────────────────────────────────────────────
       try {
         await onSubmit(payload);

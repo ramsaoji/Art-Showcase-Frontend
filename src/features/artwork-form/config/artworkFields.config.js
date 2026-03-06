@@ -52,6 +52,32 @@ export const artworkFieldsConfig = [
     colSpan: 2,
   },
 
+  // ─── Discount Pricing ──────────────────────────────────────────────────────
+  {
+    name: "discountPercent",
+    label: "Discount (%)",
+    required: false,
+    type: "input",
+    inputType: "number",
+    placeholder: "e.g. 20 for 20% off — leave empty for no discount",
+    inputProps: { min: "1", max: "99", step: "1" },
+    colSpan: 2,
+  },
+  {
+    name: "discountStartAt",
+    label: "Discount Starts",
+    required: false,
+    type: "datetime-local",
+    colSpan: 1,
+  },
+  {
+    name: "discountEndAt",
+    label: "Discount Ends",
+    required: false,
+    type: "datetime-local",
+    colSpan: 1,
+  },
+
   // ─── Description (with AI button — handled specially in renderer) ──────────
   {
     name: "description",

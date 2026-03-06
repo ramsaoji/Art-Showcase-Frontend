@@ -349,6 +349,7 @@ export default function ArtworkForm({
       instagramReelLink: "", youtubeVideoLink: "", artistId: "",
       status: "ACTIVE", ...(isSuperAdmin && { expiresAt: defaultExpiresAt }),
       width: "", height: "", dimensions: "", images: [],
+      discountPercent: "", discountStartAt: "", discountEndAt: "",
     });
     clearErrors();
     setDimensionInputs({ width: "", height: "" });

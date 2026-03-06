@@ -15,7 +15,8 @@ import PurchaseFooter from "@/components/artwork/PurchaseFooter";
 import Loader from "@/components/common/Loader";
 import SocialMediaModal from "@/components/sections/SocialMediaModal";
 import PurchaseRequestModal from "@/features/purchase-request";
-import { formatPrice, formatLocalDateTime } from "@/utils/formatters";
+import { formatPrice, formatLocalDateTime, resolveArtworkPricing } from "@/utils/formatters";
+import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 import { getPreviewUrl, getFullSizeUrl } from "@/utils/cloudinary";
 import { trackArtworkInteraction } from "@/services/analytics";
 import useMediaQuery from "@/hooks/useMediaQuery";
@@ -367,9 +368,17 @@ export default function ImageModal({
                       transition={{ delay: 0.1 }}
                       className="mb-6 sm:mb-8"
                     >
-                      <p className="font-artistic text-xl sm:text-2xl lg:text-2xl xl:text-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent font-bold tracking-wide">
-                        {image?.price ? formatPrice(image.price) : ""}
-                      </p>
+                      {image?.price && (() => {
+                        const { originalPrice, discountedPrice, discountPercent } = resolveArtworkPricing(image);
+                        return (
+                          <DiscountPriceBadge
+                            originalPrice={originalPrice}
+                            discountedPrice={discountedPrice}
+                            discountPercent={discountPercent}
+                            size="lg"
+                          />
+                        );
+                      })()}
                     </motion.div>
 
                     <motion.div
@@ -470,6 +479,23 @@ export default function ImageModal({
                             <h3 className="text-xs font-sans font-semibold text-red-700 mb-2 uppercase tracking-wider">Expires</h3>
                             <p className="text-sm font-sans text-red-700 font-medium">{formatLocalDateTime(image.expiresAt)}</p>
                           </div>
+                        )}
+
+                        {(isSuperAdmin || (isArtist && isOwner)) && image?.discountPercent > 0 && (
+                          <>
+                            {image?.discountStartAt && (
+                              <div className="bg-emerald-50/80 rounded-xl p-3 sm:p-4 border border-emerald-200/50">
+                                <h3 className="text-xs font-sans font-semibold text-emerald-700 mb-2 uppercase tracking-wider">Disc Starts</h3>
+                                <p className="text-sm font-sans text-emerald-700 font-medium">{formatLocalDateTime(image.discountStartAt)}</p>
+                              </div>
+                            )}
+                            {image?.discountEndAt && (
+                              <div className="bg-red-50/80 rounded-xl p-3 sm:p-4 border border-red-200/50">
+                                <h3 className="text-xs font-sans font-semibold text-red-700 mb-2 uppercase tracking-wider">Disc Ends</h3>
+                                <p className="text-sm font-sans text-red-700 font-medium">{formatLocalDateTime(image.discountEndAt)}</p>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </motion.div>

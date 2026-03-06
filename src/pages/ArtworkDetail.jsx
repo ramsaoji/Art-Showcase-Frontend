@@ -10,7 +10,12 @@ import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import { motion } from "framer-motion";
-import { formatPrice, formatLocalDateTime, getFriendlyErrorMessage } from "@/utils/formatters";
+import {
+  formatPrice,
+  formatLocalDateTime,
+  resolveArtworkPricing,
+} from "@/utils/formatters";
+import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 import Alert from "@/components/common/Alert";
 import Badge from "@/components/artwork/Badge";
 import StatusBadge from "@/components/artwork/StatusBadge";
@@ -492,9 +497,19 @@ export default function ArtworkDetail() {
                   {...priceMotion}
                   className="mb-6 sm:mb-8"
                 >
-                  <p className="font-artistic text-xl sm:text-2xl xl:text-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent font-bold tracking-wide">
-                    {formatPrice(artwork.price)}
-                  </p>
+                  {(() => {
+                    const { originalPrice, discountedPrice, discountPercent } =
+                      resolveArtworkPricing(artwork);
+                    return (
+                      <DiscountPriceBadge
+                        originalPrice={originalPrice}
+                        discountedPrice={discountedPrice}
+                        discountPercent={discountPercent}
+                        size="lg"
+                        variant="gradient"
+                      />
+                    );
+                  })()}
                 </motion.div>
               )}
 
@@ -630,6 +645,32 @@ export default function ArtworkDetail() {
                           </p>
                         </div>
                       )}
+
+                    {/* Discount Start/End — visible to super admin or owner when discount is set */}
+                    {(isSuperAdmin || (isArtist && isOwner)) && artwork?.discountPercent > 0 && (
+                      <>
+                        {artwork?.discountStartAt && (
+                          <div className="bg-emerald-50/80 rounded-xl p-3 sm:p-4 border border-emerald-200/50">
+                            <h3 className="text-xs font-sans font-semibold text-emerald-700 mb-2 uppercase tracking-wider">
+                              Disc Starts
+                            </h3>
+                            <p className="text-sm font-sans text-emerald-700 font-medium">
+                              {formatLocalDateTime(artwork.discountStartAt)}
+                            </p>
+                          </div>
+                        )}
+                        {artwork?.discountEndAt && (
+                          <div className="bg-red-50/80 rounded-xl p-3 sm:p-4 border border-red-200/50">
+                            <h3 className="text-xs font-sans font-semibold text-red-700 mb-2 uppercase tracking-wider">
+                              Disc Ends
+                            </h3>
+                            <p className="text-sm font-sans text-red-700 font-medium">
+                              {formatLocalDateTime(artwork.discountEndAt)}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </motion.div>
               </div>

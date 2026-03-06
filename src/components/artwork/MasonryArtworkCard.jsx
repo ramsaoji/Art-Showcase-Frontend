@@ -4,7 +4,8 @@ import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import StarIcon from "@heroicons/react/24/outline/StarIcon";
 import useOptimizedImage from "@/hooks/useOptimizedImage";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatPrice } from "@/utils/formatters";
+import { resolveArtworkPricing } from "@/utils/formatters";
+import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
@@ -39,6 +40,8 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
     [artwork]
   );
 
+  const { originalPrice, discountedPrice, discountPercent } = resolveArtworkPricing(safeArtwork);
+
   useEffect(() => {
     if (priority) {
       setIsVisible(true);
@@ -68,15 +71,13 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
     },
     [currentImage.url]
   );
-  
+
   useEffect(() => {
     if (imageState.isError) setImageError(true);
   }, [imageState.isError]);
 
-  // Determine if the current user is the owner (artist) of this artwork
   const isOwner = user && artwork?.userId && user.id === artwork.userId;
 
-  // Status badge visibility logic
   const canSeeStatusBadge =
     isSuperAdmin ||
     (isArtist && isOwner) ||
@@ -103,6 +104,12 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
             Sold
           </div>
         )}
+        {discountPercent > 0 && !safeArtwork.sold && (
+          <div className="bg-black/30 backdrop-blur-md border border-white/20 text-white text-[10px] sm:text-xs font-medium font-sans px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-sm flex items-center shrink-0">
+            <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-rose-400 mr-1 sm:mr-1.5 shrink-0"></span>
+            {discountPercent}% OFF
+          </div>
+        )}
         {artwork?.status && canSeeStatusBadge && (
           <div className="bg-black/30 backdrop-blur-md border border-white/20 text-white text-[10px] sm:text-xs font-medium font-sans px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-sm flex items-center whitespace-nowrap shrink-0">
             <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mr-1 sm:mr-1.5 ${
@@ -110,59 +117,90 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
               artwork.status === 'INACTIVE' ? 'bg-amber-400' :
               'bg-rose-400'
             }`}></span>
-            {artwork.status === "EXPIRED" 
+            {artwork.status === "EXPIRED"
               ? (artwork.expiredBy === "admin" ? "Exp (admin)" : artwork.expiredBy === "auto" ? "Exp (auto)" : "Expired")
               : artwork.status.charAt(0) + artwork.status.slice(1).toLowerCase()}
           </div>
         )}
       </div>
 
+      {/* Image area */}
       {images.length === 0 || imageError ? (
-        <div className="flex items-center justify-center aspect-[3/4] w-full">
-           <PhotoIcon className="h-12 w-12 text-gray-400" />
+        <div className="flex items-center justify-center w-full bg-gray-300" style={{ aspectRatio: '4/3' }}>
+          <PhotoIcon className="h-12 w-12 text-gray-400" />
         </div>
       ) : (
-        <>
-          {!imageState.highQualityLoaded && (
-            <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+        /*
+         * Strategy: let the image drive the card height naturally (masonry).
+         * - `w-full h-auto` means portrait images render tall, landscape short.
+         * - `minHeight` on the img prevents very wide images from collapsing
+         *   to just a sliver, while never capping taller images — so masonry
+         *   column variation is fully preserved.
+         * - The loading skeleton uses `absolute inset-0` so it fills whatever
+         *   space the img occupies (it gets the same min-height via CSS).
+         */
+        <div className="relative w-full overflow-hidden">
+          {!isVisible ? (
+            /* Before intersection: block placeholder holds space in flow */
+            <div className="w-full bg-gray-200 animate-pulse" style={{ minHeight: '180px' }} />
+          ) : (
+            <>
+              <img
+                src={imageState.fullSizeUrl || currentImage.url || "placeholder.png"}
+                alt={safeArtwork.title}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                loading={priority ? "eager" : "lazy"}
+                style={{ minHeight: '180px' }}
+                className="w-full h-auto object-cover block transform transition-transform duration-500 group-hover:scale-[1.03]"
+              />
+              {/* Loading pulse overlays the img while high-quality version is loading */}
+              {!imageState.highQualityLoaded && (
+                <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+              )}
+            </>
           )}
-          {isVisible && (
-            <img
-              src={imageState.fullSizeUrl || currentImage.url || "placeholder.png"}
-              alt={safeArtwork.title}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              loading={priority ? "eager" : "lazy"}
-              className="w-full h-auto object-cover transform transition-transform duration-500 group-hover:scale-[1.03]"
-            />
-          )}
-        </>
+        </div>
       )}
 
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center p-2 sm:p-4 pointer-events-none overflow-hidden">
-        <div className="translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex flex-col items-center justify-center w-full h-full max-h-full">
-          <div className="flex flex-col items-center justify-center shrink min-h-0 w-full overflow-hidden">
-            <h3 className="text-white font-bold text-lg sm:text-xl truncate px-2 font-artistic drop-shadow-md text-center mb-0.5 sm:mb-1 w-full shrink-0">
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none flex flex-col">
+
+        {/* Top blur fade — covers badge area, no dark tint so badges stay readable */}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/20 to-transparent pointer-events-none z-10" />
+
+        {/* Bottom blur fade */}
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10" />
+
+        {/* Full overlay dark tint */}
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+
+        {/* Content — bottom-anchored so title/artist/price always stay
+            visible regardless of card height. pt-10 ensures content
+            never rides up into the badge row on tall cards. */}
+        <div className="relative z-20 flex flex-col items-center justify-end w-full h-full px-3 sm:px-4 pt-10 sm:pt-12 pb-4 sm:pb-5 overflow-hidden">
+          <div className="translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex flex-col items-center w-full">
+
+            <h3 className="text-white font-bold text-lg sm:text-xl font-artistic drop-shadow-md text-center mb-0.5 sm:mb-1 w-full line-clamp-2 leading-tight">
               {safeArtwork.title}
             </h3>
-            
-            <p className="text-gray-200 font-medium text-xs sm:text-sm font-sans mb-1.5 sm:mb-2 truncate drop-shadow-sm text-center w-full shrink-0">
+
+            <p className="text-gray-200 font-medium text-xs sm:text-sm font-sans mb-1 sm:mb-1.5 truncate drop-shadow-sm text-center w-full">
               {safeArtwork.artist}
             </p>
-            
-            {safeArtwork.price > 0 && (
-              <div className="mb-0 sm:mb-2 shrink-0 bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] sm:text-xs font-bold font-sans px-3 py-1 sm:px-4 sm:py-1 rounded-full shadow-sm">
-                {formatPrice(safeArtwork.price)}
+
+            {originalPrice > 0 && (
+              <div>
+                <DiscountPriceBadge
+                  originalPrice={originalPrice}
+                  discountedPrice={discountedPrice}
+                  discountPercent={discountPercent}
+                  size="sm"
+                  variant="light"
+                  className="justify-center"
+                  hideBadge={true}
+                />
               </div>
-            )}
-            
-            {safeArtwork.description && (
-               <div className="hidden sm:flex mt-1 sm:mt-2 w-full justify-center shrink min-h-0 overflow-hidden">
-                 <p className="text-gray-300 text-[10px] sm:text-xs line-clamp-2 font-sans drop-shadow-sm text-center max-w-[95%]">
-                   {safeArtwork.description}
-                 </p>
-               </div>
             )}
           </div>
         </div>

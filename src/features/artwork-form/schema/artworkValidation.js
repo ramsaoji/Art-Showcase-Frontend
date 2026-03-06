@@ -42,7 +42,20 @@ export function createValidationSchema(isSuperAdmin, initialData) {
     status: z.string().optional().default("ACTIVE"),
     featured: z.boolean().optional().default(false),
     sold: z.boolean().optional().default(false),
+    discountPercent: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? null : Number(val)),
+      z.number({ invalid_type_error: "Discount must be a number" })
+        .min(1, "Discount must be at least 1%")
+        .max(99, "Discount cannot exceed 99%")
+        .nullable()
+        .optional()
+    ),
+    discountStartAt: z.any().optional().nullable(),
+    discountEndAt: z.any().optional().nullable(),
   });
+
+  // ─── Conditional extensions MUST happen before superRefine ────
+  // Zod schema.extend() is not available on ZodEffects (returned by superRefine).
 
   // In create mode, require artistId when admin is adding on behalf of an artist
   if (isSuperAdmin && !initialData) {
@@ -58,5 +71,18 @@ export function createValidationSchema(isSuperAdmin, initialData) {
     });
   }
 
-  return schema;
+  // ─── Post-schema data validations ─────────────────────────────
+  return schema.superRefine((data, ctx) => {
+    if (data.discountStartAt && data.discountEndAt) {
+      const start = new Date(data.discountStartAt);
+      const end = new Date(data.discountEndAt);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["discountEndAt"],
+          message: "Discount end date must be after the start date",
+        });
+      }
+    }
+  });
 }

@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import StarIcon from "@heroicons/react/24/outline/StarIcon";
-import { formatPrice, formatLocalDateTime } from "@/utils/formatters";
+import { formatPrice, formatLocalDateTime, getFriendlyErrorMessage, resolveArtworkPricing } from "@/utils/formatters";
+import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 import useOptimizedImage from "@/hooks/useOptimizedImage";
 import useCarousel from "@/hooks/useCarousel";
 import useSocialMediaModal from "@/hooks/useSocialMediaModal";
@@ -289,7 +290,7 @@ const ArtworkCard = memo(function ArtworkCard({
         }`}
       >
         <div className="relative h-full flex flex-col">
-          <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
             <div className="flex-1 min-w-0">
               <Link to={`/artwork/${safeArtwork.id}`} className="block group/title">
                 <h3
@@ -299,7 +300,7 @@ const ArtworkCard = memo(function ArtworkCard({
                   {safeArtwork.title}
                 </h3>
               </Link>
-              <div className="mt-2 flex items-center text-base font-sans flex-wrap gap-1">
+              <div className="mt-1 sm:mt-2 flex items-center text-base font-sans flex-wrap gap-1">
                 <div className="relative group">
                   <span className="font-artistic text-lg bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 bg-clip-text text-transparent group-hover:from-indigo-700 group-hover:via-indigo-800 group-hover:to-indigo-900 transition-all duration-300 break-words">
                     {safeArtwork.artistName ||
@@ -318,10 +319,21 @@ const ArtworkCard = memo(function ArtworkCard({
                 <span className="text-gray-600 flex-shrink-0 font-sans">{safeArtwork.year}</span>
               </div>
             </div>
-            <div className="flex-shrink-0">
-              <p className="font-artistic text-2xl font-bold bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 bg-clip-text text-transparent tracking-wide text-right">
-                {formatPrice(safeArtwork.price)}
-              </p>
+            <div className="flex-shrink-0 text-right max-w-[45%]">
+              {(() => {
+                const { originalPrice, discountedPrice, discountPercent } =
+                  resolveArtworkPricing(safeArtwork);
+                return (
+                  <DiscountPriceBadge
+                    originalPrice={originalPrice}
+                    discountedPrice={discountedPrice}
+                    discountPercent={discountPercent}
+                    size="md"
+                    variant="gradient"
+                    className="justify-end"
+                  />
+                );
+              })()}
             </div>
           </div>
 
@@ -390,6 +402,21 @@ const ArtworkCard = memo(function ArtworkCard({
               <ArtworkMetaTag className="bg-red-50/80 text-red-700 border-red-200/50">
                 Expires: {formatLocalDateTime(safeArtwork.expiresAt)}
               </ArtworkMetaTag>
+            )}
+            
+            {(isSuperAdmin || (isArtist && isOwner)) && safeArtwork.discountPercent > 0 && (
+              <>
+                {safeArtwork.discountStartAt && (
+                  <ArtworkMetaTag className="bg-emerald-50/80 text-emerald-700 border-emerald-200/50">
+                    Disc Starts: {formatLocalDateTime(safeArtwork.discountStartAt)}
+                  </ArtworkMetaTag>
+                )}
+                {safeArtwork.discountEndAt && (
+                  <ArtworkMetaTag className="bg-red-50/80 text-red-700 border-red-200/50">
+                    Disc Ends: {formatLocalDateTime(safeArtwork.discountEndAt)}
+                  </ArtworkMetaTag>
+                )}
+              </>
             )}
           </div>
         </div>

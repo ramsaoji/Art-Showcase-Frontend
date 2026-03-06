@@ -61,6 +61,13 @@ export function useArtworkPersist({ userId, isSuperAdmin, initialData }) {
           : "",
         status: initialData.status || "ACTIVE",
         images: initialData.images || [],
+        discountPercent: initialData.discountPercent ?? "",
+        discountStartAt: initialData.discountStartAt
+          ? toDatetimeLocalValue(new Date(initialData.discountStartAt))
+          : "",
+        discountEndAt: initialData.discountEndAt
+          ? toDatetimeLocalValue(new Date(initialData.discountEndAt))
+          : "",
       };
     }
 
@@ -103,6 +110,9 @@ export function useArtworkPersist({ userId, isSuperAdmin, initialData }) {
       status: "ACTIVE",
       ...(isSuperAdmin && { expiresAt: getDefaultExpiresAt() }),
       images: [],
+      discountPercent: "",
+      discountStartAt: "",
+      discountEndAt: "",
     };
   };
 

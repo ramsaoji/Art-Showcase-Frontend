@@ -105,6 +105,9 @@ export default function EditArtwork() {
         expiresAt: formData.expiresAt
           ? new Date(formData.expiresAt)
           : undefined,
+        discountPercent: formData.discountPercent ? Number(formData.discountPercent) : null,
+        discountStartAt: formData.discountStartAt ? new Date(formData.discountStartAt) : null,
+        discountEndAt: formData.discountEndAt ? new Date(formData.discountEndAt) : null,
       };
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (err) {

@@ -227,3 +227,48 @@ export function getFriendlyErrorMessage(err) {
   // Fallback
   return message || "An unexpected error occurred. Please try again later.";
 }
+
+/**
+ * Returns the active discount percentage for an artwork at the current moment.
+ * Mirrors the backend resolveDiscountPercent — used as a local fallback.
+ *
+ * @param {Object} artwork - Artwork with optional discountPercent / discountStartAt / discountEndAt
+ * @returns {number} Active discount percent (0 if none active)
+ */
+export function getActiveDiscountPercent(artwork) {
+  const pct = artwork?.discountPercent;
+  if (!pct || pct <= 0 || pct >= 100) return 0;
+
+  const now = new Date();
+  const started = !artwork.discountStartAt || now >= new Date(artwork.discountStartAt);
+  const notExpired = !artwork.discountEndAt || now <= new Date(artwork.discountEndAt);
+
+  return started && notExpired ? pct : 0;
+}
+
+/**
+ * Returns a pricing breakdown for an artwork:
+ *  { originalPrice, discountedPrice, discountPercent }
+ *
+ * Prefers server-computed `effectiveDiscountPercent` / `effectivePrice` when available
+ * (set by backend enrichment), and falls back to local calculation otherwise.
+ *
+ * @param {Object} artwork - Artwork object
+ * @returns {{ originalPrice: number, discountedPrice: number, discountPercent: number }}
+ */
+export function resolveArtworkPricing(artwork) {
+  const discountPercent =
+    typeof artwork?.effectiveDiscountPercent === "number"
+      ? artwork.effectiveDiscountPercent
+      : getActiveDiscountPercent(artwork);
+
+  const originalPrice = artwork?.price ?? 0;
+  const discountedPrice =
+    typeof artwork?.effectivePrice === "number" && discountPercent > 0
+      ? artwork.effectivePrice
+      : discountPercent > 0
+      ? Math.round(originalPrice * (1 - discountPercent / 100))
+      : originalPrice;
+
+  return { originalPrice, discountedPrice, discountPercent };
+}
