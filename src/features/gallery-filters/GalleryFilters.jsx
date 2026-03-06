@@ -14,6 +14,7 @@ import SearchableFilterSection from "./components/SearchableFilterSection";
 import {
   SORT_OPTIONS,
   FEATURED_OPTIONS,
+  DISCOUNT_OPTIONS,
   STATUS_OPTIONS,
   AVAILABILITY_OPTIONS,
   maskEmailInLabel,
@@ -97,23 +98,25 @@ export default function GalleryFilters({
   const styleDropdownRef = useRef(null);
   const sortDropdownRef = useRef(null);
 
-  // Temp state for Filters dropdown — only commit on "Apply" to avoid an API call per checkbox
   const [tempFiltersFeatured, setTempFiltersFeatured] = useState([]);
+  const [tempFiltersDiscount, setTempFiltersDiscount] = useState([]);
   const [tempFiltersStatus, setTempFiltersStatus] = useState([]);
   const [tempFiltersAvailability, setTempFiltersAvailability] = useState([]);
 
   const syncTempFiltersFromProps = useCallback(() => {
     setTempFiltersFeatured(Array.isArray(filters.featured) ? [...filters.featured] : []);
+    setTempFiltersDiscount(Array.isArray(filters.discount) ? [...filters.discount] : []);
     setTempFiltersStatus(Array.isArray(filters.status) ? [...filters.status] : []);
     setTempFiltersAvailability(Array.isArray(filters.availability) ? [...filters.availability] : []);
-  }, [filters.featured, filters.status, filters.availability]);
+  }, [filters.featured, filters.discount, filters.status, filters.availability]);
 
   const applyFiltersPopup = useCallback(() => {
     handleFilterChange("featured", tempFiltersFeatured);
+    handleFilterChange("discount", tempFiltersDiscount);
     handleFilterChange("status", tempFiltersStatus);
     handleFilterChange("availability", tempFiltersAvailability);
     setOpenDropdown(null);
-  }, [handleFilterChange, tempFiltersFeatured, tempFiltersStatus, tempFiltersAvailability]);
+  }, [handleFilterChange, tempFiltersFeatured, tempFiltersDiscount, tempFiltersStatus, tempFiltersAvailability]);
 
   // Close any open dropdown when clicking outside its ref
   useEffect(() => {
@@ -245,6 +248,28 @@ export default function GalleryFilters({
                     <button
                       key={option.value}
                       onClick={() => handleFilterChange("featured", toggleFilterValue(filters.featured, option.value))}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm flex items-center ${
+                        active ? "bg-indigo-50 text-indigo-900 font-medium" : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <CheckboxIcon active={active} />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Discount Filter */}
+            <div className="mb-8">
+              <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">Discount Status</h3>
+              <div className="space-y-3">
+                {DISCOUNT_OPTIONS.filter((o) => o.value !== "all").map((option) => {
+                  const active = isFilterSelected(filters.discount, option.value);
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => handleFilterChange("discount", toggleFilterValue(filters.discount, option.value))}
                       className={`w-full text-left px-4 py-2.5 rounded-xl font-sans text-sm flex items-center ${
                         active ? "bg-indigo-50 text-indigo-900 font-medium" : "text-gray-600 hover:bg-gray-50"
                       }`}
@@ -398,9 +423,9 @@ export default function GalleryFilters({
           >
             <FunnelIcon className="h-5 w-5 mr-2" />
             Filters
-            {(filters.featured?.length > 0 || filters.status?.length > 0 || filters.availability?.length > 0) && (
+            {(filters.featured?.length > 0 || filters.discount?.length > 0 || filters.status?.length > 0 || filters.availability?.length > 0) && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
-                {["featured", "status", "availability"].filter((k) => filters[k]?.length > 0).length}
+                {["featured", "discount", "status", "availability"].filter((k) => filters[k]?.length > 0).length}
               </span>
             )}
             <ChevronIcon />
@@ -417,6 +442,27 @@ export default function GalleryFilters({
                       <button
                         key={option.value}
                         onClick={() => setTempFiltersFeatured(toggleFilterValue(tempFiltersFeatured, option.value))}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans flex items-center ${
+                          active ? "bg-indigo-50 text-indigo-900 font-medium" : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <CheckboxIcon active={active} small />
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Discount Filter Section */}
+              <div className="mb-4">
+                <h3 className="text-sm font-sans font-semibold text-gray-900 my-2">Discount Status</h3>
+                <div className="space-y-1">
+                  {DISCOUNT_OPTIONS.filter((o) => o.value !== "all").map((option) => {
+                    const active = isFilterSelected(tempFiltersDiscount, option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => setTempFiltersDiscount(toggleFilterValue(tempFiltersDiscount, option.value))}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans flex items-center ${
                           active ? "bg-indigo-50 text-indigo-900 font-medium" : "text-gray-600 hover:bg-gray-50"
                         }`}
@@ -477,7 +523,7 @@ export default function GalleryFilters({
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    onClick={() => { setTempFiltersFeatured([]); setTempFiltersStatus([]); setTempFiltersAvailability([]); handleFilterChange("featured", []); handleFilterChange("status", []); handleFilterChange("availability", []); setOpenDropdown(null); }}
+                    onClick={() => { setTempFiltersFeatured([]); setTempFiltersDiscount([]); setTempFiltersStatus([]); setTempFiltersAvailability([]); handleFilterChange("featured", []); handleFilterChange("discount", []); handleFilterChange("status", []); handleFilterChange("availability", []); setOpenDropdown(null); }}
                     className="px-4 py-2 rounded-lg text-sm font-sans font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
                   >
                     Reset
@@ -679,6 +725,7 @@ export default function GalleryFilters({
         (filters.style && filters.style.length > 0) ||
         (filters.availability && filters.availability.length > 0) ||
         (filters.featured && filters.featured.length > 0) ||
+        (filters.discount && filters.discount.length > 0) ||
         (filters.status && filters.status.length > 0)) && (
         <ActiveFilterBadges
           filters={filters}
@@ -727,6 +774,26 @@ function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterC
               <span className="font-semibold truncate block">{displayText}</span>
             )}
             <button onClick={() => handleFilterChange("featured", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
+          </span>
+        );
+      })()}
+      {filters.discount && filters.discount.length > 0 && (() => {
+        const n = filters.discount.length;
+        const fullList = filters.discount
+          .map((v) => DISCOUNT_OPTIONS.find((o) => o.value === v)?.label || v)
+          .join(", ");
+        const displayText = n === 1 ? DISCOUNT_OPTIONS.find((o) => o.value === filters.discount[0])?.label : `${n} selected`;
+        return (
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+            <span className="mr-1 shrink-0">Discount:</span>
+            {n > 1 ? (
+              <Tooltip content={fullList} showOnlyWhenTruncated={false} contentClassName="">
+                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1 truncate block">{displayText}</span>
+              </Tooltip>
+            ) : (
+              <span className="font-semibold truncate block">{displayText}</span>
+            )}
+            <button onClick={() => handleFilterChange("discount", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
           </span>
         );
       })()}

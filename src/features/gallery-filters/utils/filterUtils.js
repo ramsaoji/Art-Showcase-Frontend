@@ -8,6 +8,8 @@ export const SORT_OPTIONS = [
   { value: "oldest", label: "Oldest First" },
   { value: "price-high", label: "Price: High to Low" },
   { value: "price-low", label: "Price: Low to High" },
+  { value: "discount-high", label: "Discount: High to Low" },
+  { value: "discount-low", label: "Discount: Low to High" },
   { value: "year-new", label: "Year: Newest to Oldest" },
   { value: "year-old", label: "Year: Oldest to Newest" },
   { value: "artist-az", label: "Artist: A to Z" },
@@ -18,6 +20,12 @@ export const FEATURED_OPTIONS = [
   { value: "all", label: "All Artworks" },
   { value: "featured", label: "Featured Only" },
   { value: "non-featured", label: "Non-Featured" },
+];
+
+export const DISCOUNT_OPTIONS = [
+  { value: "all", label: "All Artworks" },
+  { value: "discounted", label: "Discounted" },
+  { value: "non-discounted", label: "Non-Discounted" },
 ];
 
 export const STATUS_OPTIONS = [

@@ -40,6 +40,7 @@ export default function useGallery() {
       featured: getParam("featured"),
       status: getParam("status"),
       style: getParam("style"),
+      discount: getParam("discount"),
     };
   });
 
@@ -118,6 +119,7 @@ export default function useGallery() {
       artist: filters.artist.sort().join(","),
       availability: filters.availability.sort().join(","),
       featured: filters.featured.sort().join(","),
+      discount: filters.discount.sort().join(","),
       sortBy,
     };
     return JSON.stringify(key);
@@ -133,6 +135,7 @@ export default function useGallery() {
       featured: filters.featured,
       status: filters.status,
       style: filters.style,
+      discount: filters.discount,
       sortBy,
       page: currentPage,
       limit: ITEMS_PER_PAGE,
@@ -145,6 +148,7 @@ export default function useGallery() {
       filters.featured,
       filters.status,
       filters.style,
+      filters.discount,
       sortBy,
       currentPage,
     ]
@@ -234,6 +238,7 @@ export default function useGallery() {
         setArrayParam("artist", filters.artist);
         setArrayParam("availability", filters.availability);
         setArrayParam("featured", filters.featured);
+        setArrayParam("discount", filters.discount);
         
         if (sortBy && sortBy !== "newest") params.set("sortBy", sortBy);
 
@@ -358,6 +363,7 @@ export default function useGallery() {
       featured: [],
       status: [],
       style: [], // Reset style as well
+      discount: [],
     });
   }, [debouncedSearch]);
 
@@ -737,6 +743,17 @@ export default function useGallery() {
       });
     }
 
+    if (filters.discount && filters.discount.length > 0) {
+      active.push({
+        type: "discount",
+        label: `Discount: ${filters.discount.includes("discounted")
+          ? "Yes"
+          : "No"}`,
+        value: filters.discount,
+        onRemove: () => handleFilterChange("discount", []),
+      });
+    }
+
     if (filters.status && filters.status.length > 0) {
       active.push({
         type: "status",
@@ -751,6 +768,8 @@ export default function useGallery() {
         oldest: "Oldest First",
         "price-high": "Price: High to Low",
         "price-low": "Price: Low to High",
+        "discount-high": "Discount: High to Low",
+        "discount-low": "Discount: Low to High",
         "year-new": "Year: Newest First",
         "year-old": "Year: Oldest First",
         "artist-az": "Artist: A-Z",
@@ -773,6 +792,7 @@ export default function useGallery() {
     filters.availability,
     filters.featured,
     filters.status,
+    filters.discount,
     sortBy,
     clearSearch,
     handleFilterChange,
