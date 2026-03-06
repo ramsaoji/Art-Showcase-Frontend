@@ -24,6 +24,7 @@ import ArtistSelect from "@/components/artwork/ArtistSelect";
 import Loader from "@/components/common/Loader";
 import { artworkFieldsConfig } from "../config/artworkFields.config";
 import SparklesIcon from "@heroicons/react/24/outline/SparklesIcon";
+import { formatPrice } from "@/utils/formatters";
 
 
 /**
@@ -150,6 +151,29 @@ export default function ArtworkFormFields({
               AI usage: {aiLimit - aiRemaining}/{aiLimit} today
             </span>
           ) : null}
+        </div>
+      );
+    }
+
+    // Discount field label: adds real-time after-discount price
+    if (fieldConfig.name === "discountPercent") {
+      const currentPrice = Number(watchedValues.price) || 0;
+      const discountVal = Number(watchedValues.discountPercent) || 0;
+      const afterDiscountPrice = discountVal > 0 
+        ? Math.max(0, Math.round(currentPrice * (1 - discountVal / 100))) 
+        : null;
+
+      return (
+        <div className="flex flex-row items-center gap-1 w-full">
+          <FormLabel>
+            {fieldConfig.label}
+            {fieldConfig.required && <span className="text-red-500 ml-1">*</span>}
+          </FormLabel>
+          {afterDiscountPrice !== null && (
+            <span className="text-xs text-emerald-700 font-medium font-sans bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+              After discount: {formatPrice(afterDiscountPrice)}
+            </span>
+          )}
         </div>
       );
     }
