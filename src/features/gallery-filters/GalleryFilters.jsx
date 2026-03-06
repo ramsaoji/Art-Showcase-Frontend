@@ -164,11 +164,38 @@ export default function GalleryFilters({
 
   return (
     <div className="mb-12">
-      {/* Mobile Filter Button */}
-      <div className="md:hidden mb-4">
+      {/* Mobile Actions: Filter Button & View Toggle */}
+      <div className="md:hidden flex items-center gap-3 mb-4">
+        {/* Layout Toggle */}
+        <div className="flex items-center p-1 bg-white border border-gray-200 rounded-full shadow-sm h-[48px]">
+          <button
+            type="button"
+            onClick={() => setLayoutType('grid')}
+            className={`p-2 h-full rounded-full transition-colors flex items-center justify-center aspect-square ${
+              layoutType === 'grid'
+                ? "bg-indigo-100 text-indigo-700"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            }`}
+            title="Grid View"
+          >
+            <LayoutGrid className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setLayoutType('masonry')}
+            className={`p-2 h-full rounded-full transition-colors flex items-center justify-center aspect-square ${
+              layoutType === 'masonry'
+                ? "bg-indigo-100 text-indigo-700"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            }`}
+            title="Masonry View"
+          >
+            <AppWindow className="w-5 h-5" />
+          </button>
+        </div>
         <button
           onClick={() => setIsMobileFiltersOpen(true)}
-          className="w-full flex items-center justify-center px-4 py-3 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-700 transition-colors"
+          className="flex-1 flex items-center justify-center px-4 py-3 rounded-full bg-indigo-600 text-white font-sans text-base font-medium hover:bg-indigo-700 transition-colors"
         >
           <FunnelIcon className="h-5 w-5 mr-2" />
           Filters & Sort
@@ -188,37 +215,6 @@ export default function GalleryFilters({
           </DialogHeader>
 
           <div className="flex-1 py-6 pr-1 overflow-y-auto px-4">
-            {/* View Layout Switch */}
-            <div className="mb-8">
-              <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">View Layout</h3>
-              <div className="flex bg-gray-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setLayoutType('grid')}
-                  className={`flex-1 flex items-center justify-center py-2 text-sm font-sans font-medium rounded-lg transition-colors ${
-                    layoutType === 'grid'
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-gray-500 hover:text-gray-900"
-                  }`}
-                >
-                  <LayoutGrid className="w-4 h-4 mr-2" />
-                  Grid
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLayoutType('masonry')}
-                  className={`flex-1 flex items-center justify-center py-2 text-sm font-sans font-medium rounded-lg transition-colors ${
-                    layoutType === 'masonry'
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-gray-500 hover:text-gray-900"
-                  }`}
-                >
-                  <AppWindow className="w-4 h-4 mr-2" />
-                  Masonry
-                </button>
-              </div>
-            </div>
-
             {/* Sort Options */}
             <div className="mb-8">
               <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">Sort by</h3>
@@ -372,7 +368,10 @@ export default function GalleryFilters({
           <div className="pt-4 px-4 pb-4 border-t border-gray-200 flex items-center justify-between gap-4">
             <button
               type="button"
-              onClick={handleResetAllFilters}
+              onClick={() => {
+                handleResetAllFilters();
+                setIsMobileFiltersOpen(false);
+              }}
               className="px-6 py-3 rounded-full text-sm font-sans font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
             >
               Reset
@@ -718,16 +717,16 @@ function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterC
           .join(", ");
         const displayText = n === 1 ? FEATURED_OPTIONS.find((o) => o.value === filters.featured[0])?.label : `${n} selected`;
         return (
-          <span className="inline-flex items-center gap-x-1 px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
-            <span className="mr-0.5 shrink-0">Featured:</span>
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+            <span className="mr-1 shrink-0">Featured:</span>
             {n > 1 ? (
               <Tooltip content={fullList} showOnlyWhenTruncated={false} contentClassName="">
-                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1">{displayText}</span>
+                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1 truncate block">{displayText}</span>
               </Tooltip>
             ) : (
-              <span className="font-semibold">{displayText}</span>
+              <span className="font-semibold truncate block">{displayText}</span>
             )}
-            <button onClick={() => handleFilterChange("featured", [])} className="ml-1 shrink-0 hover:text-indigo-900">×</button>
+            <button onClick={() => handleFilterChange("featured", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
           </span>
         );
       })()}
@@ -744,16 +743,16 @@ function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterC
         const labelList = filters.artist.map((id) => getLabel(id)).join(", ");
         const displayText = n === 1 ? labelList : `${n} selected`;
         return (
-          <span className="inline-flex items-center gap-x-1 px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
-            <span className="mr-0.5 shrink-0">Artist:</span>
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+            <span className="mr-1 shrink-0">Artist:</span>
             {n > 1 ? (
               <Tooltip content={labelList} showOnlyWhenTruncated={false} contentClassName="">
-                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1">{displayText}</span>
+                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1 truncate block">{displayText}</span>
               </Tooltip>
             ) : (
-              <span className="font-semibold">{displayText}</span>
+              <span className="font-semibold truncate block">{displayText}</span>
             )}
-            <button onClick={() => handleFilterChange("artist", [])} className="ml-1 shrink-0 hover:text-indigo-900">×</button>
+            <button onClick={() => handleFilterChange("artist", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
           </span>
         );
       })()}
@@ -767,16 +766,16 @@ function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterC
           .join(", ");
         const displayText = n === 1 ? fullList : `${n} selected`;
         return (
-          <span className="inline-flex items-center gap-x-1 px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
-            <span className="mr-0.5 shrink-0">Material:</span>
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+            <span className="mr-1 shrink-0">Material:</span>
             {n > 1 ? (
               <Tooltip content={fullList} showOnlyWhenTruncated={false} contentClassName="">
-                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1">{displayText}</span>
+                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1 truncate block">{displayText}</span>
               </Tooltip>
             ) : (
-              <span className="font-semibold">{displayText}</span>
+              <span className="font-semibold truncate block">{displayText}</span>
             )}
-            <button onClick={() => handleFilterChange("material", [])} className="ml-1 shrink-0 hover:text-indigo-900">×</button>
+            <button onClick={() => handleFilterChange("material", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
           </span>
         );
       })()}
@@ -790,42 +789,42 @@ function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterC
           .join(", ");
         const displayText = n === 1 ? fullList : `${n} selected`;
         return (
-          <span className="inline-flex items-center gap-x-1 px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700">
-            <span className="mr-0.5 shrink-0">Style:</span>
+          <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+            <span className="mr-1 shrink-0">Style:</span>
             {n > 1 ? (
               <Tooltip content={fullList} showOnlyWhenTruncated={false} contentClassName="">
-                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1">{displayText}</span>
+                <span className="font-semibold cursor-help underline decoration-dotted underline-offset-1 truncate block">{displayText}</span>
               </Tooltip>
             ) : (
-              <span className="font-semibold">{displayText}</span>
+              <span className="font-semibold truncate block">{displayText}</span>
             )}
-            <button onClick={() => handleFilterChange("style", [])} className="ml-1 shrink-0 hover:text-indigo-900">×</button>
+            <button onClick={() => handleFilterChange("style", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
           </span>
         );
       })()}
       {filters.availability && filters.availability.length > 0 && (
-        <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5 px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
-          <span className="mr-0.5 shrink-0">Availability:</span>
-          <span className="font-semibold break-words">
+        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+          <span className="mr-1 shrink-0">Availability:</span>
+          <span className="font-semibold truncate block">
             {filters.availability.map((a) => a === "available" ? "Available" : "Sold").join(", ")}
           </span>
-          <button onClick={() => handleFilterChange("availability", [])} className="ml-1 shrink-0 hover:text-indigo-900">×</button>
+          <button onClick={() => handleFilterChange("availability", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
         </span>
       )}
       {filters.status && filters.status.length > 0 && (
-        <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-0.5 px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
-          <span className="mr-0.5 shrink-0">Status:</span>
-          <span className="font-semibold break-words">
+        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-sans font-medium tracking-wide bg-indigo-50 text-indigo-700 max-w-full">
+          <span className="mr-1 shrink-0">Status:</span>
+          <span className="font-semibold truncate block">
             {filters.status.map((s) =>
               s === "ACTIVE" ? "Active" : s === "INACTIVE" ? "Inactive" : s === "EXPIRED" ? "Expired" : s
             ).join(", ")}
           </span>
-          <button onClick={() => handleFilterChange("status", [])} className="ml-1 shrink-0 hover:text-indigo-900">×</button>
+          <button onClick={() => handleFilterChange("status", [])} className="ml-2 shrink-0 hover:text-indigo-900 flex items-center justify-center">×</button>
         </span>
       )}
       <button
         onClick={handleResetAllFilters}
-        className="self-center text-sm font-sans font-medium tracking-wide text-gray-500 hover:text-indigo-600 transition-colors py-1"
+        className="self-center shrink-0 text-sm font-sans font-medium tracking-wide text-gray-600 hover:text-gray-900 transition-colors py-1.5 px-4 bg-white border border-gray-200 shadow-sm rounded-full hover:bg-gray-50 flex items-center justify-center"
       >
         Clear All
       </button>

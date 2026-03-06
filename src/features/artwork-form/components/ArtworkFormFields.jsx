@@ -109,7 +109,7 @@ export default function ArtworkFormFields({
         control={control}
         name={name}
         render={({ field }) => (
-          <FormItem className={`col-span-${fieldConfig.colSpan ?? 2}`}>
+          <FormItem className={fieldConfig.colSpan === 1 ? "col-span-1 sm:col-span-1" : "col-span-1 sm:col-span-2"}>
             {renderLabel(fieldConfig, field)}
             <FormControl>{renderInput(fieldConfig, field)}</FormControl>
             {/* AI button row — only for description field */}
@@ -285,7 +285,7 @@ export default function ArtworkFormFields({
       control={control}
       name={fieldConfig.name}
       render={({ field }) => (
-        <FormItem className="col-span-2">
+        <FormItem className="col-span-1 sm:col-span-2">
           <FormLabel>
             {fieldConfig.label}{" "}
             {fieldConfig.required && <span className="text-red-500">*</span>}
@@ -310,7 +310,7 @@ export default function ArtworkFormFields({
   // ─── Dimensions group (width × height sub-fields with preview) ────────────
   const renderDimensionsGroup = () => {
     return (
-      <div key="dimensions-group" className="col-span-2">
+      <div key="dimensions-group" className="col-span-1 sm:col-span-2">
         {/* Plain <Label> — NOT <FormLabel> — because this is a group header,
             not bound to a single field. <FormLabel> requires <FormField> context. */}
         <Label className="block text-sm font-sans font-medium text-gray-700">
@@ -383,7 +383,7 @@ export default function ArtworkFormFields({
 
   // ─── Featured + Sold toggles group ────────────────────────────────────────
   const renderTogglesGroup = () => (
-    <div key="toggles-group" className="col-span-2 flex flex-wrap gap-6 my-2">
+    <div key="toggles-group" className="col-span-1 sm:col-span-2 flex flex-wrap gap-6 my-2">
       {["featured", "sold"].map((name) => (
         <FormField
           key={name}
