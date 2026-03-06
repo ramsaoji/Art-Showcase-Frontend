@@ -395,9 +395,10 @@ export default function HeroCarousel() {
               </div>
 
               {/* Enhanced Hero Content for artwork */}
-              <div className="absolute inset-0 bg-black/40 xl:bg-transparent xl:static xl:min-w-0 z-30 flex items-center justify-center text-center xl:text-left px-4 sm:px-6 pointer-events-none h-full">
-                <div className="relative w-full flex flex-col items-center xl:items-start justify-center h-full">
-                  <div className="p-8 sm:p-10 w-full">
+              <div className="absolute inset-0 bg-black/40 xl:bg-transparent xl:static xl:min-w-0 z-30 flex flex-col items-center justify-between text-center xl:text-left px-4 sm:px-6 pointer-events-none h-full">
+                {/* Mobile: absolutely centred like the nav arrows; sm+: takes flex-1 space */}
+                <div className="absolute top-1/2 -translate-y-1/2 w-full sm:static sm:transform-none flex-1 flex flex-col items-center xl:items-start justify-center sm:w-full">
+                  <div className="flex flex-col items-center xl:items-start w-full p-6 sm:p-8 xl:p-10">
                     <AnimatePresence mode="wait">
                       <motion.h1
                         key={`title-${currentSlideIndex}`}
@@ -447,26 +448,68 @@ export default function HeroCarousel() {
                         }}
                         className="pointer-events-auto"
                       >
-                        <Link
-                          to={`/artwork/${currentSlide.artworkId}`}
-                          className="inline-flex items-center px-4 py-2 md:px-6 md:py-3 xl:px-8 xl:py-4 bg-black/40 backdrop-blur-md rounded-2xl text-white font-sans text-base md:text-lg xl:text-lg font-semibold shadow-2xl shadow-black/20 transition-all duration-300 hover:bg-black/60 hover:shadow-2xl hover:shadow-black/30 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 border border-white/20 hover:border-white/40 relative overflow-hidden group"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          <span className="relative z-10">View Artwork</span>
-                          <ArrowRightIcon className="ml-2 md:ml-3 h-4 w-4 md:h-5 md:w-5 relative z-10" />
-                        </Link>
+                        {/* ── Mobile: two independent floating micro-pills ── */}
+                        <div className="flex items-center gap-2 sm:hidden">
+                          {/* Primary */}
+                          <Link
+                            to={`/artwork/${currentSlide.artworkId}`}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-black/65 hover:bg-black/85 backdrop-blur-md rounded-xl text-white font-sans text-xs font-semibold border border-white/25 shadow-lg shadow-black/30 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/40 group"
+                          >
+                            <span>View Artwork</span>
+                            <ArrowRightIcon className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+                          </Link>
+                          {/* Secondary ghost */}
+                          <Link
+                            to="/gallery"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-white/75 hover:text-white font-sans text-xs font-medium border border-white/20 hover:border-white/35 shadow-md transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/30 group"
+                          >
+                            <span>Gallery</span>
+                            <ArrowRightIcon className="h-3 w-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
+                          </Link>
+                        </div>
+
+                        {/* ── sm+: unified segmented pill ── */}
+                        <div className="hidden sm:inline-flex items-stretch bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl shadow-black/25 overflow-hidden">
+                          {/* Primary half */}
+                          <Link
+                            to={`/artwork/${currentSlide.artworkId}`}
+                            className="relative inline-flex items-center px-4 py-2 md:px-5 md:py-2 xl:px-6 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group"
+                          >
+                            <span>View Artwork</span>
+                            <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                          </Link>
+                          {/* Vertical divider */}
+                          <div className="w-px self-stretch bg-white/20 shrink-0" />
+                          {/* Secondary half */}
+                          <Link
+                            to="/gallery"
+                            className="relative inline-flex items-center px-3.5 py-2 md:px-4 md:py-2 xl:px-5 xl:py-2.5 text-white/65 hover:text-white font-sans text-sm font-medium transition-all duration-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group"
+                          >
+                            <span>Explore Gallery</span>
+                            <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 opacity-55 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300" />
+                          </Link>
+                        </div>
                       </motion.div>
                     </AnimatePresence>
+                    {/* Dots — inline below button on sm+ (desktop) only */}
+                    <div className="hidden sm:flex mt-8 justify-center xl:justify-start pointer-events-auto">
+                      <CarouselIndicators
+                        slides={slides}
+                        currentSlideIndex={currentSlideIndex}
+                        setCurrentSlideIndex={setCurrentSlideIndex}
+                        resetTimer={resetTimer}
+                      />
+                    </div>
                   </div>
-                  {/* Navigation dots for artwork slides */}
-                  <div className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 xl:static xl:transform-none xl:pl-10 xl:pb-10">
-                    <CarouselIndicators
-                      slides={slides}
-                      currentSlideIndex={currentSlideIndex}
-                      setCurrentSlideIndex={setCurrentSlideIndex}
-                      resetTimer={resetTimer}
-                    />
-                  </div>
+                </div>
+                {/* Dots — mobile only, absolutely pinned to bottom (content is also absolute) */}
+                <div className="sm:hidden absolute bottom-0 left-0 right-0 pb-20 flex justify-center pointer-events-auto">
+                  <CarouselIndicators
+                    slides={slides}
+                    currentSlideIndex={currentSlideIndex}
+                    setCurrentSlideIndex={setCurrentSlideIndex}
+                    resetTimer={resetTimer}
+                  />
                 </div>
               </div>
             </motion.div>
@@ -474,10 +517,11 @@ export default function HeroCarousel() {
             currentSlide.type === "welcome" && (
               <div
                 key={`welcome-content-${currentSlideIndex}`}
-                className="absolute inset-0 z-30 flex items-center justify-center text-center px-4 sm:px-6 pointer-events-none"
+                className="absolute inset-0 z-30 flex flex-col items-center justify-between text-center px-6 sm:px-6 pointer-events-none"
               >
-                <div className="relative max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-full">
-                  <div className="p-8 sm:p-10 w-full">
+                <div className="relative max-w-7xl mx-auto w-full flex flex-col items-center justify-between h-full">
+                  {/* Mobile: true vertical centre; sm+: flex-1 centres within justify-between column */}
+                  <div className="absolute top-1/2 -translate-y-1/2 w-full sm:static sm:transform-none flex-1 flex flex-col items-center justify-center px-10 sm:p-8 xl:p-10">
                     <AnimatePresence mode="wait">
                       <motion.h1
                         key={`title-${currentSlideIndex}`}
@@ -528,7 +572,7 @@ export default function HeroCarousel() {
                       >
                         <Link
                           to="/gallery"
-                          className="inline-flex items-center px-4 py-2 md:px-6 md:py-3 xl:px-8 xl:py-4 bg-black/40 backdrop-blur-md rounded-2xl text-white font-sans text-base md:text-lg xl:text-lg font-semibold shadow-2xl shadow-black/20 transition-all duration-300 hover:bg-black/60 hover:shadow-2xl hover:shadow-black/30 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 border border-white/20 hover:border-white/40 relative overflow-hidden group"
+                          className="inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-2.5 bg-black/40 backdrop-blur-md rounded-2xl text-white font-sans text-sm sm:text-base font-semibold shadow-2xl shadow-black/20 transition-all duration-300 hover:bg-black/60 hover:shadow-2xl hover:shadow-black/30 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 border border-white/20 hover:border-white/40 relative overflow-hidden group"
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           <span className="relative z-10">Explore Gallery</span>
@@ -537,7 +581,8 @@ export default function HeroCarousel() {
                       </motion.div>
                     </AnimatePresence>
                   </div>
-                  <div className="absolute bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2">
+                  {/* Navigation dots — mobile: absolutely pinned to bottom; sm+: in-flow */}
+                  <div className="absolute bottom-0 left-0 right-0 pb-20 sm:static sm:pb-28 flex justify-center">
                     <CarouselIndicators
                       slides={slides}
                       currentSlideIndex={currentSlideIndex}
@@ -551,6 +596,7 @@ export default function HeroCarousel() {
           )}
         </AnimatePresence>
       </div>
+
 
       {/* Enhanced Down Arrow Scroll Indicator - only show when content is ready */}
       {currentSlide && (
