@@ -35,7 +35,7 @@ import { formatPrice } from "@/utils/formatters";
  * Special field types handled inline:
  *   - "artist-select"    → <ArtistSelect> component
  *   - "dimensions-group" → Two sub-fields (width × height) with preview
- *   - "toggles-group"   → Featured + Sold <Switch> row
+ *   - "toggles-group"   → Featured + Sold <Checkbox> row
  *   - "select" with hasExpiryConditional → Status select with expiry-aware disabled options
  *
  * @param {object} props

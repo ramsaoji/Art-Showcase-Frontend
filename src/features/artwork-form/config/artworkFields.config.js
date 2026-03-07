@@ -9,7 +9,7 @@
  *   "input"          — shadcn <Input>
  *   "textarea"       — shadcn <Textarea>
  *   "select"         — shadcn <Select> with options from `selectOptions`
- *   "switch"         — shadcn <Switch> for boolean toggles
+ *   "switch"         — shadcn <Checkbox> for boolean toggles (internal config string only)
  *   "datetime-local" — shadcn DateTimePicker (<Calendar> inside <Popover>) + time inputs
  *   "artist-select"  — custom <ArtistSelect> component (injected via prop)
  *
