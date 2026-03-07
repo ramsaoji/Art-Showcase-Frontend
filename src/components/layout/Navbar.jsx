@@ -8,10 +8,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
-  { name: "Home", href: "/", icon: "🏠" },
-  { name: "Gallery", href: "/gallery", icon: "🖼️" },
-  { name: "About", href: "/about", icon: "ℹ️" },
-  { name: "Contact", href: "/contact", icon: "✉️" },
+  { name: "Home", href: "/" },
+  { name: "Gallery", href: "/gallery" },
+  { name: "About", href: "/about" },
+  { name: "Contact", href: "/contact" },
 ];
 
 function classNames(...classes) {
@@ -376,6 +376,20 @@ export default function Navbar() {
 
                               <Menu.Item>
                                 {({ active }) => (
+                                  <Link
+                                    to="/activity-history"
+                                    className={classNames(
+                                      active ? "bg-gray-50" : "",
+                                      "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-sans font-medium"
+                                    )}
+                                  >
+                                    Activity History
+                                  </Link>
+                                )}
+                              </Menu.Item>
+
+                              <Menu.Item>
+                                {({ active }) => (
                                   <button
                                     onClick={handleLogout}
                                     className={classNames(
@@ -526,6 +540,16 @@ export default function Navbar() {
                       className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
                     >
                       Change Password
+                    </a>
+                    <a
+                      href="/activity-history"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleMobileNav("/activity-history");
+                      }}
+                      className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-sans"
+                    >
+                      Activity History
                     </a>
                     <button
                       onClick={handleLogout}

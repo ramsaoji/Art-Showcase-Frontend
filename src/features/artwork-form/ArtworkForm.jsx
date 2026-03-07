@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { Info } from "lucide-react";
+import { Info, AlertCircle } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import Loader from "@/components/common/Loader";
 import ProgressBar from "@/components/common/ProgressBar";
@@ -313,7 +313,11 @@ export default function ArtworkForm({
       }
       if (!imageData) { setAiError("Please upload at least one image first."); return; }
 
-      const data = await generateAIDescriptionMutation.mutateAsync({ imageData });
+      const data = await generateAIDescriptionMutation.mutateAsync({
+        imageData,
+        artworkId: initialData?.id ?? undefined,
+        artworkTitle: watch("title") || initialData?.title || undefined,
+      });
       if (data?.description) setValue("description", data.description, { shouldValidate: true });
       utils.misc.getRemainingQuota.invalidate();
     } catch (err) {
@@ -512,8 +516,13 @@ export default function ArtworkForm({
 
           {/* Monthly limit reached message */}
           {isArtistAtMonthlyLimit && (
-            <span className="text-xs text-red-500 font-sans break-words sm:max-w-[30vw] mt-1 block">
-              🚫 You have reached your monthly upload limit. You cannot upload more artwork this month.
+            <span className="mt-1 block text-xs text-red-500 font-sans break-words sm:max-w-[30vw]">
+              <span className="inline-flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" aria-hidden="true" />
+                <span>
+                  You have reached your monthly upload limit. You cannot upload more artwork this month.
+                </span>
+              </span>
             </span>
           )}
         </div>

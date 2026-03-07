@@ -157,8 +157,8 @@ export default function GalleryGrid({
           endMessage={
             filteredArtworks.length > 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500 font-sans text-base">
-                  🎨{" "}
+                <p className="text-gray-500 font-sans text-base inline-flex items-center justify-center gap-2">
+                  <PhotoIcon className="w-5 h-5 text-indigo-500" aria-hidden="true" />
                   {filteredArtworks.length === 1
                     ? "You've seen the only artwork!"
                     : `You've seen all ${filteredArtworks.length} artworks!`}

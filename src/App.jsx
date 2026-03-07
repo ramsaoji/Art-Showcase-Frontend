@@ -18,6 +18,7 @@ const ArtworkDetail = lazy(() => import("./pages/ArtworkDetail"));
 const Signup = lazy(() => import("./pages/Signup"));
 const AdminManagement = lazy(() => import("./pages/admin/AdminManagement"));
 const ChangePassword = lazy(() => import("./pages/user/ChangePassword"));
+const ActivityHistory = lazy(() => import("./pages/user/ActivityHistory"));
 
 // Analytics wrapper component
 function AnalyticsWrapper({ children }) {
@@ -142,6 +143,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <ChangePassword />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/activity-history"
+                  element={
+                    <ProtectedRoute>
+                      <ActivityHistory />
                     </ProtectedRoute>
                   }
                 />

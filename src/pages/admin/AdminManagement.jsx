@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import CarouselManagement from "./CarouselManagement";
 import FeaturedArtworksManagement from "./FeaturedArtworksManagement";
 import ArtistsManagement from "./ArtistsManagement";
+import ActivityLogs from "./ActivityLogs";
 import { motion, AnimatePresence } from "framer-motion";
 import PageBackground from "@/components/common/PageBackground";
 import PageHeader from "@/components/common/PageHeader";
@@ -10,8 +11,9 @@ import { containerMotion, tabContentMotion } from "@/lib/motionConfigs";
 
 const ADMIN_TABS = [
   { id: "artist-approvals", label: "Artists" },
-  { id: "carousel", label: "Carousel" },
-  { id: "featured", label: "Featured Artworks" },
+  { id: "carousel",         label: "Carousel" },
+  { id: "featured",         label: "Featured Artworks" },
+  { id: "activity-logs",    label: "Activity Logs" },
 ];
 
 const AdminManagement = () => {
@@ -53,6 +55,11 @@ const AdminManagement = () => {
             {activeTab === "featured" && (
               <motion.div key="featured" {...tabContentMotion}>
                 <FeaturedArtworksManagement />
+              </motion.div>
+            )}
+            {activeTab === "activity-logs" && (
+              <motion.div key="activity-logs" {...tabContentMotion}>
+                <ActivityLogs />
               </motion.div>
             )}
           </AnimatePresence>
