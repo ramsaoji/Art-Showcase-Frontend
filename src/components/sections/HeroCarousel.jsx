@@ -472,7 +472,7 @@ export default function HeroCarousel() {
                           {/* Primary half */}
                           <Link
                             to={`/artwork/${currentSlide.artworkId}`}
-                            className="relative inline-flex items-center px-4 py-2 md:px-5 md:py-2 xl:px-6 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group/btn"
+                            className="relative inline-flex items-center px-4 py-2 md:px-5 md:py-2 xl:px-6 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group/btn rounded-l-xl"
                           >
                             <span>View Artwork</span>
                             <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5" />
@@ -482,7 +482,7 @@ export default function HeroCarousel() {
                           {/* Secondary half */}
                           <Link
                             to="/gallery"
-                            className="relative inline-flex items-center px-3.5 py-2 md:px-4 md:py-2 xl:px-5 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group/btn"
+                            className="relative inline-flex items-center px-3.5 py-2 md:px-4 md:py-2 xl:px-5 xl:py-2.5 text-white font-sans text-sm font-semibold transition-all duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/40 group/btn rounded-r-xl"
                           >
                             <span>Explore Gallery</span>
                             <ArrowRightIcon className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:translate-x-0.5" />
