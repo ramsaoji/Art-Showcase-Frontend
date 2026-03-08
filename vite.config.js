@@ -15,8 +15,8 @@ export default defineConfig({
     exclude: ["web-vitals"],
   },
   build: {
-    // Raise warning threshold slightly — firebase is intentionally large
-    chunkSizeWarningLimit: 600,
+    // Raise warning threshold slightly — firebase and exceljs are intentionally large
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -64,6 +64,10 @@ export default defineConfig({
             id.includes("@trpc/react-query")
           )
             return "query-vendor";
+
+          // Excel export
+          if (id.includes("exceljs") || id.includes("file-saver"))
+            return "excel-vendor";
 
           // Let Rollup handle all other node_modules automatically
           // (do NOT add a catch-all here — it causes circular chunk warnings)
