@@ -188,7 +188,7 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
   const isAuthRoleRedundant = log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER";
   const isListAction = log.action === "ADMIN_CAROUSEL_UPDATED" || log.action === "ADMIN_FEATURED_UPDATED";
   const excludeStats = isListAction ? ["added", "removed", "reordered", "imagesCount", "artworksCount"] : [];
-  const rawTopLevelEntries = Object.entries(metadata).filter(
+  const topLevelEntries = Object.entries(metadata).filter(
     ([key]) =>
       key !== "changes" &&
       key !== "imageChanges" &&
@@ -202,14 +202,10 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
       !excludeStats.includes(key)
   );
 
-  const LONG_TEXT_FIELDS = ["description", "bio", "prompt", "about", "notes"];
-  const topLevelEntries = rawTopLevelEntries.filter(([key]) => !LONG_TEXT_FIELDS.includes(key));
-  const longTextEntries = rawTopLevelEntries.filter(([key]) => LONG_TEXT_FIELDS.includes(key));
-
   const changesObject   = metadata.changes && typeof metadata.changes === "object"
     ? metadata.changes
     : null;
-  const hasMetadata = rawTopLevelEntries.length > 0 || !!changesObject || !!metadata.imageChanges ||
+  const hasMetadata = topLevelEntries.length > 0 || !!changesObject || !!metadata.imageChanges ||
     Array.isArray(metadata.addedArtworks) || Array.isArray(metadata.removedArtworks) ||
     Array.isArray(metadata.reorderedArtworks) || Array.isArray(metadata.reorderedImages);
 
@@ -234,9 +230,9 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
 
       {/* Card Content Container */}
       <div className={`backdrop-blur-md border rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 ${expanded ? "bg-gray-50/80 border-gray-200" : "bg-white/80 border-gray-100 group-hover:border-indigo-100"}`}>
-        <div className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 pb-4">
+        <div className="p-4 sm:p-5 pb-4">
           {/* Main content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {/* Action badge */}
             <span
@@ -260,6 +256,33 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                 — <em>{log.targetLabel}</em>
               </span>
             )}
+
+            {/* Timestamp + chevron pushed to the right */}
+            <span className="ml-auto flex items-center gap-1.5 shrink-0">
+              <time
+                title={formatAbsoluteTime(log.createdAt)}
+                className="text-xs font-sans text-gray-400 whitespace-nowrap"
+              >
+                {formatRelativeTime(log.createdAt)}
+              </time>
+              {showIp && log.ipAddress && (
+                <span className="text-[10px] font-mono text-gray-400">
+                  {log.ipAddress.replace(/(\d+)\.(\d+)\.\d+\.\d+/, "$1.$2.xxx.xxx")}
+                </span>
+              )}
+              {hasMetadata && (
+                <span
+                  className="p-1 rounded-lg text-gray-300 group-hover:text-gray-500 transition-colors pointer-events-none"
+                  aria-hidden="true"
+                >
+                  {expanded ? (
+                    <ChevronUpIcon className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDownIcon className="w-3.5 h-3.5" />
+                  )}
+                </span>
+              )}
+            </span>
           </div>
 
           {/* Actor row (admin view) */}
@@ -302,8 +325,8 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                         Details
                       </p>
                       <p className="text-[11px] font-sans text-gray-400">
-                        {rawTopLevelEntries.length}{" "}
-                        {rawTopLevelEntries.length === 1 ? "field" : "fields"}
+                        {topLevelEntries.length}{" "}
+                        {topLevelEntries.length === 1 ? "field" : "fields"}
                       </p>
                     </div>
                     {(isSuperAdmin || showActor) && (
@@ -320,51 +343,53 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                     )}
                   </div>
 
-                  {topLevelEntries.length > 0 && (
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                      {topLevelEntries.map(([key, value]) => {
-                        const isArtists = key === "artists" && isArtistsMap(value);
-                        return (
-                          <div key={key} className={isArtists ? "sm:col-span-2" : "min-w-0"}>
-                            <dt className="text-[11px] font-sans font-medium text-gray-500 truncate">
-                              {humanizeMetadataKey(key)}
-                            </dt>
-                            <dd className="text-xs font-sans text-gray-800">
-                              {isArtists ? (
-                                <ArtistsMapDisplay value={value} />
-                              ) : (
-                                <span
-                                  className="block"
-                                  title={
-                                    typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-                                      ? String(value)
-                                      : undefined
-                                  }
-                                >
-                                  <ExpandableText text={summarizeMetadataValue(value)} />
-                                </span>
-                              )}
-                            </dd>
-                          </div>
-                        );
-                      })}
-                    </dl>
-                  )}
+                  {topLevelEntries.length > 0 && (() => {
+                    const threshold = 8;
+                    const isSplit = topLevelEntries.length > threshold;
+                    const mid = Math.ceil(topLevelEntries.length / 2);
+                    const columns = isSplit ? [topLevelEntries.slice(0, mid), topLevelEntries.slice(mid)] : [topLevelEntries];
 
-                  {longTextEntries.length > 0 && (
-                    <div className={topLevelEntries.length > 0 ? "mt-3 pt-3 border-t border-dashed border-gray-200 space-y-3" : "space-y-3"}>
-                      {longTextEntries.map(([key, value]) => (
-                        <div key={key}>
-                          <p className="text-[11px] font-sans font-medium text-gray-600 uppercase tracking-wide mb-1.5">
-                            {humanizeMetadataKey(key)}
-                          </p>
-                          <div className="text-xs font-sans text-gray-800 leading-relaxed bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
-                            <ExpandableText text={summarizeMetadataValue(value)} />
+                    return (
+                      <div className={`grid grid-cols-1 ${isSplit ? "md:grid-cols-2" : ""} gap-4`}>
+                        {columns.map((colEntries, idx) => (
+                          <div key={idx} className="rounded-lg border border-gray-100 bg-white/80 overflow-hidden self-start">
+                            <div className="grid grid-cols-3 gap-2 px-3 py-1.5 bg-gray-50/80 text-[11px] font-sans font-medium text-gray-500">
+                              <span className="col-span-1">Field</span>
+                              <span className="col-span-2">Details</span>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                              {colEntries.map(([key, value]) => {
+                                const isArtists = key === "artists" && isArtistsMap(value);
+                                return (
+                                  <div key={key} className="grid grid-cols-3 gap-2 px-3 py-1.5 text-xs font-sans text-gray-800">
+                                    <span className="font-medium text-gray-600 truncate col-span-1">
+                                      {humanizeMetadataKey(key)}
+                                    </span>
+                                    <span className="col-span-2 min-w-0">
+                                      {isArtists ? (
+                                        <ArtistsMapDisplay value={value} />
+                                      ) : (
+                                        <span
+                                          className="block"
+                                          title={
+                                            typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+                                              ? String(value)
+                                              : undefined
+                                          }
+                                        >
+                                          <ExpandableText text={summarizeMetadataValue(value)} />
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {changesObject && Object.keys(changesObject).length > 0 && (
                     <div className="mt-3 border-t border-dashed border-gray-200 pt-3">
@@ -530,32 +555,6 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
           </AnimatePresence>
         </div>
 
-        {/* Right side — timestamp + IP + expand indicator */}
-        <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
-          <time
-            title={formatAbsoluteTime(log.createdAt)}
-            className="text-xs font-sans text-gray-400 whitespace-nowrap"
-          >
-            {formatRelativeTime(log.createdAt)}
-          </time>
-          {showIp && log.ipAddress && (
-            <span className="text-[10px] font-mono text-gray-400">
-              {log.ipAddress.replace(/(\d+)\.(\d+)\.\d+\.\d+/, "$1.$2.xxx.xxx")}
-            </span>
-          )}
-          {hasMetadata && (
-            <span
-              className="mt-1 p-1 rounded-lg text-gray-300 group-hover:text-gray-500 transition-colors pointer-events-none"
-              aria-hidden="true"
-            >
-              {expanded ? (
-                <ChevronUpIcon className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronDownIcon className="w-3.5 h-3.5" />
-              )}
-            </span>
-          )}
-        </div>
       </div>
       </div>
     </motion.div>

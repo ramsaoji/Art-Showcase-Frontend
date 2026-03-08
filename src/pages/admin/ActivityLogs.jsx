@@ -48,7 +48,7 @@ const CATEGORY_ICONS = {
 
 function ExpandableText({ text, maxLength = 80 }) {
   const [expanded, setExpanded] = useState(false);
-  
+
   if (typeof text !== "string") {
     return <span>{text}</span>;
   }
@@ -72,7 +72,7 @@ function ExpandableText({ text, maxLength = 80 }) {
 }
 
 const STATUS_OPTIONS = ["SUCCESS", "FAILED", "PARTIAL"];
-const ROLE_OPTIONS   = ["ARTIST", "SUPER_ADMIN", "SYSTEM", "ANONYMOUS"];
+const ROLE_OPTIONS = ["ARTIST", "SUPER_ADMIN", "SYSTEM", "ANONYMOUS"];
 
 function humanizeMetadataKey(key) {
   if (!key) return "";
@@ -98,7 +98,7 @@ function summarizeMetadataValue(value) {
           day: "2-digit", month: "short", year: "numeric",
           hour: "2-digit", minute: "2-digit", hour12: true,
         });
-      } catch {}
+      } catch { }
     }
     return value;
   }
@@ -134,7 +134,7 @@ function formatChangeValue(value) {
           day: "2-digit", month: "short", year: "numeric",
           hour: "2-digit", minute: "2-digit", hour12: true,
         });
-      } catch {}
+      } catch { }
     }
     return value;
   }
@@ -146,7 +146,7 @@ function formatChangeValue(value) {
 function getChangePair(value) {
   if (!value || typeof value !== "object") return null;
   const before = value.before ?? value.from;
-  const after  = value.after ?? value.to;
+  const after = value.after ?? value.to;
   if (before === undefined && after === undefined) return null;
   return { before, after };
 }
@@ -169,7 +169,7 @@ function ArtistsMapDisplay({ value }) {
     <div className="flex flex-wrap gap-1.5 mt-0.5">
       {entries.map((a, i) => {
         const count = a.artworks ?? a.images ?? a.count ?? 0;
-        const unit  = "artworks" in a ? "artwork" : "images" in a ? "image" : "artwork";
+        const unit = "artworks" in a ? "artwork" : "images" in a ? "image" : "artwork";
         return (
           <span
             key={i}
@@ -187,15 +187,15 @@ function ArtistsMapDisplay({ value }) {
 }
 
 /** Stat card used in the top stats bar */
-function StatCard({ label, value, gradient }) {
+function StatCard({ label, value, gradient, small = false }) {
   return (
-    <div className="flex flex-col bg-white/90 border border-gray-100 rounded-2xl shadow-sm p-5 min-w-0 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+    <div className="flex flex-col items-center justify-center bg-white/90 border border-gray-100 rounded-2xl shadow-sm p-5 min-w-0 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
       <span
-        className={`text-2xl font-bold font-artistic bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
+        className={`${small ? "text-sm leading-tight text-center" : "text-xl sm:text-2xl"} font-bold font-artistic bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
       >
         {value ?? "—"}
       </span>
-      <span className="text-xs font-sans text-gray-500 mt-1 leading-tight">{label}</span>
+      <span className="text-xs font-sans text-gray-500 mt-1 leading-tight text-center">{label}</span>
     </div>
   );
 }
@@ -207,12 +207,12 @@ function StatCard({ label, value, gradient }) {
  */
 export default function AdminActivityLogs() {
   // ── Filters ──────────────────────────────────────────────────────────────
-  const [search, setSearch]     = useState("");
+  const [search, setSearch] = useState("");
   const [actorRole, setActorRole] = useState("");
-  const [action, setAction]     = useState("");
-  const [status, setStatus]     = useState("");
+  const [action, setAction] = useState("");
+  const [status, setStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo]     = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // ── Expanded row state ────────────────────────────────────────────────────
   const [expandedIds, setExpandedIds] = useState({});
@@ -220,12 +220,12 @@ export default function AdminActivityLogs() {
 
   const queryInput = {
     limit: 50,
-    ...(search    ? { search }    : {}),
+    ...(search ? { search } : {}),
     ...(actorRole ? { actorRole } : {}),
-    ...(action    ? { action }    : {}),
-    ...(status    ? { status }    : {}),
-    ...(dateFrom  ? { dateFrom }  : {}),
-    ...(dateTo    ? { dateTo }    : {}),
+    ...(action ? { action } : {}),
+    ...(status ? { status } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
   };
 
   // ── Infinite query ────────────────────────────────────────────────────────
@@ -298,20 +298,21 @@ export default function AdminActivityLogs() {
       {/* ── Stats bar ──────────────────────────────────────────── */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <StatCard label="Total events"      value={stats.totalLogs?.toLocaleString()}      gradient="from-indigo-600 to-purple-600" />
-          <StatCard label="Last 24 hours"     value={stats.logsLast24h?.toLocaleString()}    gradient="from-blue-600 to-cyan-600" />
-          <StatCard label="Failed events"     value={stats.failedLogs?.toLocaleString()}     gradient="from-red-500 to-rose-600" />
+          <StatCard label="Total events" value={stats.totalLogs?.toLocaleString()} gradient="from-indigo-600 to-purple-600" />
+          <StatCard label="Last 24 hours" value={stats.logsLast24h?.toLocaleString()} gradient="from-blue-600 to-cyan-600" />
+          <StatCard label="Failed events" value={stats.failedLogs?.toLocaleString()} gradient="from-red-500 to-rose-600" />
           <StatCard
             label="Top action"
             value={stats.topActions?.[0] ? getActionLabel(stats.topActions[0].action) : "—"}
             gradient="from-amber-500 to-orange-500"
+            small
           />
         </div>
       )}
 
       {/* ── Search + filter bar ─────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div className="flex-1 min-w-[220px] max-w-md">
+        <div className="flex-1 min-w-[220px] max-w-xl">
           <SearchBar
             inline
             value={search}
@@ -332,108 +333,108 @@ export default function AdminActivityLogs() {
             </button>
           )}
 
-          <span className="text-xs font-sans text-gray-400 whitespace-nowrap">
+          {/* <span className="text-xs font-sans text-gray-400 whitespace-nowrap">
             {isLoading
               ? "Loading…"
               : totalCount != null
               ? `${totalCount.toLocaleString()} total`
               : `${allLogs.length} loaded`}
             {hasActiveFilters && " (filtered)"}
-          </span>
+          </span> */}
         </div>
       </div>
 
       {/* ── Filters panel ───────────────────────────────────────── */}
-      <div className="mb-5 bg-white/90 border border-gray-200 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              <div>
-                <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Role</label>
-                <Select
-                  value={actorRole || "ALL"}
-                  onValueChange={(val) => setActorRole(val === "ALL" ? "" : val)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All roles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All roles</SelectItem>
-                    {ROLE_OPTIONS.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <div className="mb-5 bg-white/90 border border-gray-200 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div>
+          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Role</label>
+          <Select
+            value={actorRole || "ALL"}
+            onValueChange={(val) => setActorRole(val === "ALL" ? "" : val)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All roles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All roles</SelectItem>
+              {ROLE_OPTIONS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-              <div>
-                <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Action</label>
-                <Select
-                  value={action || "ALL"}
-                  onValueChange={(val) => setAction(val === "ALL" ? "" : val)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All actions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All actions</SelectItem>
-                    {ALL_ACTION_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <div>
+          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Action</label>
+          <Select
+            value={action || "ALL"}
+            onValueChange={(val) => setAction(val === "ALL" ? "" : val)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All actions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All actions</SelectItem>
+              {ALL_ACTION_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-              <div>
-                <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Status</label>
-                <Select
-                  value={status || "ALL"}
-                  onValueChange={(val) => setStatus(val === "ALL" ? "" : val)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All</SelectItem>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <div>
+          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Status</label>
+          <Select
+            value={status || "ALL"}
+            onValueChange={(val) => setStatus(val === "ALL" ? "" : val)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-              <div>
-                <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">From</label>
-                <DateTimePicker
-                  value={dateFrom || ""}
-                  onChange={(val) => setDateFrom(val || "")}
-                  placeholder="From date & time"
-                />
-              </div>
+        <div>
+          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">From</label>
+          <DateTimePicker
+            value={dateFrom || ""}
+            onChange={(val) => setDateFrom(val || "")}
+            placeholder="From date & time"
+          />
+        </div>
 
-              <div>
-                <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">To</label>
-                <DateTimePicker
-                  value={dateTo || ""}
-                  onChange={(val) => setDateTo(val || "")}
-                  placeholder="To date & time"
-                />
-              </div>
+        <div>
+          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">To</label>
+          <DateTimePicker
+            value={dateTo || ""}
+            onChange={(val) => setDateTo(val || "")}
+            placeholder="To date & time"
+          />
+        </div>
 
-              {hasActiveFilters && (
-                <div className="col-span-full flex justify-end">
-                  <button
-                    onClick={handleClearFilters}
-                    className="text-xs font-sans text-gray-500 hover:text-red-500 underline transition-colors"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
-              )}
-            </div>
+        {hasActiveFilters && (
+          <div className="col-span-full flex justify-end">
+            <button
+              onClick={handleClearFilters}
+              className="text-xs font-sans text-gray-500 hover:text-red-500 underline transition-colors"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ── Table ──────────────────────────────────────────────── */}
       {isLoading ? (
@@ -472,13 +473,13 @@ export default function AdminActivityLogs() {
               </thead>
               <tbody>
                 {allLogs.map((log, index) => {
-                  const catStyle     = getCategoryStyle(log.action);
-                  const statusStyle  = getStatusStyle(log.status);
-                  const roleStyle    = getRoleStyle(log.actorRole);
-                  const metaSummary  = getMetadataSummary(log.action, log.metadata);
-                  const category     = getActionCategory(log.action);
+                  const catStyle = getCategoryStyle(log.action);
+                  const statusStyle = getStatusStyle(log.status);
+                  const roleStyle = getRoleStyle(log.actorRole);
+                  const metaSummary = getMetadataSummary(log.action, log.metadata);
+                  const category = getActionCategory(log.action);
                   const CategoryIcon = CATEGORY_ICONS[category] || CATEGORY_ICONS.OTHER;
-                  const isExpanded   = expandedIds[log.id];
+                  const isExpanded = expandedIds[log.id];
                   const _meta = log.metadata || {};
                   const _isAuthRoleOnly = (log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER");
                   const _filteredKeys = Object.keys(_meta).filter((k) => !(_isAuthRoleOnly && k === "role"));
@@ -492,9 +493,8 @@ export default function AdminActivityLogs() {
                         </tr>
                       )}
                       <tr
-                        className={`group ${
-                          hasMetadata ? "cursor-pointer" : "cursor-default"
-                        }`}
+                        className={`group ${hasMetadata ? "cursor-pointer" : "cursor-default"
+                          }`}
                         onClick={hasMetadata ? () => toggleRow(log.id) : undefined}
                       >
                         {/* Timestamp */}
@@ -584,23 +584,19 @@ export default function AdminActivityLogs() {
                                 const isAuthRoleRedundant = log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER";
                                 const isListAction = log.action === "ADMIN_CAROUSEL_UPDATED" || log.action === "ADMIN_FEATURED_UPDATED";
                                 const excludeStats = isListAction ? ["added", "removed", "reordered", "imagesCount", "artworksCount"] : [];
-                                  const rawTopLevelEntries = Object.entries(metadata).filter(
-                                      ([key]) => key !== "changes" && key !== "imageChanges"
-                                        && key !== "addedArtworks" && key !== "removedArtworks"
-                                        && key !== "reorderedArtworks" && key !== "reorderedImages" && key !== "featuredSnapshot"
-                                        && key !== "carouselSnapshot"
-                                        && !(isAuthRoleRedundant && key === "role")
-                                        && !excludeStats.includes(key)
-                                    );
-                                  
-                                  const LONG_TEXT_FIELDS = ["description", "bio", "prompt", "about", "notes"];
-                                  const topLevelEntries = rawTopLevelEntries.filter(([key]) => !LONG_TEXT_FIELDS.includes(key));
-                                  const longTextEntries = rawTopLevelEntries.filter(([key]) => LONG_TEXT_FIELDS.includes(key));
+                                const topLevelEntries = Object.entries(metadata).filter(
+                                  ([key]) => key !== "changes" && key !== "imageChanges"
+                                    && key !== "addedArtworks" && key !== "removedArtworks"
+                                    && key !== "reorderedArtworks" && key !== "reorderedImages" && key !== "featuredSnapshot"
+                                    && key !== "carouselSnapshot"
+                                    && !(isAuthRoleRedundant && key === "role")
+                                    && !excludeStats.includes(key)
+                                );
 
-                                  const changesObject =
-                                    metadata.changes && typeof metadata.changes === "object"
-                                      ? metadata.changes
-                                      : null;
+                                const changesObject =
+                                  metadata.changes && typeof metadata.changes === "object"
+                                    ? metadata.changes
+                                    : null;
                                 return (
                                   <>
                                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -609,8 +605,8 @@ export default function AdminActivityLogs() {
                                           Details
                                         </p>
                                         <p className="text-[11px] font-sans text-gray-400">
-                                          {rawTopLevelEntries.length}{" "}
-                                          {rawTopLevelEntries.length === 1 ? "field" : "fields"}
+                                          {topLevelEntries.length}{" "}
+                                          {topLevelEntries.length === 1 ? "field" : "fields"}
                                         </p>
                                       </div>
                                       <button
@@ -625,51 +621,53 @@ export default function AdminActivityLogs() {
                                       </button>
                                     </div>
 
-                                    {topLevelEntries.length > 0 && (
-                                      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                                        {topLevelEntries.map(([key, value]) => {
-                                          const isArtists = key === "artists" && isArtistsMap(value);
-                                          return (
-                                            <div key={key} className={isArtists ? "sm:col-span-2" : "min-w-0"}>
-                                              <dt className="text-[11px] font-sans font-medium text-gray-500 truncate">
-                                                {humanizeMetadataKey(key)}
-                                              </dt>
-                                              <dd className="text-xs font-sans text-gray-800">
-                                                {isArtists ? (
-                                                  <ArtistsMapDisplay value={value} />
-                                                ) : (
-                                                  <span
-                                                    className="block"
-                                                    title={
-                                                      typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-                                                        ? String(value)
-                                                        : undefined
-                                                    }
-                                                  >
-                                                    <ExpandableText text={summarizeMetadataValue(value)} />
-                                                  </span>
-                                                )}
-                                              </dd>
-                                            </div>
-                                          );
-                                        })}
-                                      </dl>
-                                    )}
+                                    {topLevelEntries.length > 0 && (() => {
+                                      const threshold = 8;
+                                      const isSplit = topLevelEntries.length > threshold;
+                                      const mid = Math.ceil(topLevelEntries.length / 2);
+                                      const columns = isSplit ? [topLevelEntries.slice(0, mid), topLevelEntries.slice(mid)] : [topLevelEntries];
 
-                                    {longTextEntries.length > 0 && (
-                                      <div className={topLevelEntries.length > 0 ? "mt-3 pt-3 border-t border-dashed border-gray-200 space-y-3" : "space-y-3"}>
-                                        {longTextEntries.map(([key, value]) => (
-                                          <div key={key}>
-                                            <p className="text-[11px] font-sans font-medium text-gray-600 uppercase tracking-wide mb-1.5">
-                                              {humanizeMetadataKey(key)}
-                                            </p>
-                                            <div className="text-xs font-sans text-gray-800 leading-relaxed bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
-                                              <ExpandableText text={summarizeMetadataValue(value)} />
+                                      return (
+                                        <div className={`grid grid-cols-1 ${isSplit ? "md:grid-cols-2" : ""} gap-4`}>
+                                          {columns.map((colEntries, idx) => (
+                                            <div key={idx} className="rounded-lg border border-gray-100 bg-white/80 overflow-hidden self-start">
+                                              <div className="grid grid-cols-3 gap-2 px-3 py-1.5 bg-gray-50/80 text-[11px] font-sans font-medium text-gray-500">
+                                                <span className="col-span-1">Field</span>
+                                                <span className="col-span-2">Details</span>
+                                              </div>
+                                              <div className="divide-y divide-gray-100">
+                                                {colEntries.map(([key, value]) => {
+                                                  const isArtists = key === "artists" && isArtistsMap(value);
+                                                  return (
+                                                    <div key={key} className="grid grid-cols-3 gap-2 px-3 py-1.5 text-xs font-sans text-gray-800">
+                                                      <span className="font-medium text-gray-600 truncate col-span-1">
+                                                        {humanizeMetadataKey(key)}
+                                                      </span>
+                                                      <span className="col-span-2 min-w-0">
+                                                        {isArtists ? (
+                                                          <ArtistsMapDisplay value={value} />
+                                                        ) : (
+                                                          <span
+                                                            className="block"
+                                                            title={
+                                                              typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+                                                                ? String(value)
+                                                                : undefined
+                                                            }
+                                                          >
+                                                            <ExpandableText text={summarizeMetadataValue(value)} />
+                                                          </span>
+                                                        )}
+                                                      </span>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
                                             </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
 
                                     {/* ── Field changes (before → after) ── */}
                                     {changesObject && Object.keys(changesObject).length > 0 && (

@@ -9,6 +9,7 @@ import ActivityLogEntry from "@/features/activity-log/components/ActivityLogEntr
 import {
   ALL_ACTION_OPTIONS,
   exportLogsToExcel,
+  getActionLabel,
 } from "@/features/activity-log/utils/activityLogHelpers";
 import { containerMotion } from "@/lib/motionConfigs";
 import { ClockIcon } from "@heroicons/react/24/outline";
@@ -34,20 +35,20 @@ const STAT_CARD_CLASS =
  * Shows the artist's own activity log with filters and infinite scroll.
  */
 export default function ActivityHistory() {
-  const [search, setSearch]   = useState("");
-  const [action, setAction]   = useState("");
-  const [status, setStatus]   = useState("");
+  const [search, setSearch] = useState("");
+  const [action, setAction] = useState("");
+  const [status, setStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo]   = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Build query input
   const queryInput = {
     limit: 20,
-    ...(search   ? { search }   : {}),
-    ...(action   ? { action }   : {}),
-    ...(status   ? { status }   : {}),
+    ...(search ? { search } : {}),
+    ...(action ? { action } : {}),
+    ...(status ? { status } : {}),
     ...(dateFrom ? { dateFrom } : {}),
-    ...(dateTo   ? { dateTo }   : {}),
+    ...(dateTo ? { dateTo } : {}),
   };
 
   const {
@@ -68,6 +69,14 @@ export default function ActivityHistory() {
   });
 
   const allLogs = data?.pages.flatMap((p) => p.logs) ?? [];
+
+  const topAction = (() => {
+    if (!allLogs.length) return null;
+    const counts = {};
+    for (const log of allLogs) counts[log.action] = (counts[log.action] || 0) + 1;
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return top ? getActionLabel(top[0]) : null;
+  })();
   const totalCount = data?.pages[0]?.logs !== undefined
     ? allLogs.length + (data.pages[data.pages.length - 1]?.hasMore ? "+" : "")
     : 0;
@@ -102,7 +111,7 @@ export default function ActivityHistory() {
 
       <motion.div
         {...containerMotion}
-        className="relative container mx-auto px-4 sm:px-8 py-12 max-w-4xl"
+        className="relative container mx-auto px-4 sm:px-8 py-12"
       >
         <PageHeader
           title="Activity History"
@@ -111,30 +120,36 @@ export default function ActivityHistory() {
         />
 
         {/* ── Stats row ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div className={STAT_CARD_CLASS}>
-            <p className="text-2xl font-bold font-artistic bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <p className="text-xl sm:text-2xl font-bold font-artistic bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               {allLogs.length}{allLogs.length === 0 ? "" : "+"}
             </p>
             <p className="text-xs font-sans text-gray-500 mt-1 text-center">Events loaded</p>
           </div>
           <div className={STAT_CARD_CLASS}>
-            <p className="text-2xl font-bold font-artistic bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+            <p className="text-xl sm:text-2xl font-bold font-artistic bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
               {allLogs.filter((l) => l.status === "SUCCESS").length}
             </p>
             <p className="text-xs font-sans text-gray-500 mt-1 text-center">Successful</p>
           </div>
           <div className={STAT_CARD_CLASS}>
-            <p className="text-2xl font-bold font-artistic bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent">
+            <p className="text-xl sm:text-2xl font-bold font-artistic bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent">
               {allLogs.filter((l) => l.status === "FAILED").length}
             </p>
             <p className="text-xs font-sans text-gray-500 mt-1 text-center">Failed</p>
           </div>
+          <div className={STAT_CARD_CLASS}>
+            <p className="text-sm font-bold font-artistic bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent leading-tight text-center">
+              {topAction ?? "—"}
+            </p>
+            <p className="text-xs font-sans text-gray-500 mt-1 text-center">Top action</p>
+          </div>
         </div>
 
         {/* ── Search + filter bar (match admin logs) ────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex-1 min-w-[220px] max-w-md">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div className="flex-1 min-w-[220px] max-w-xl">
             <SearchBar
               inline
               value={search}
@@ -154,91 +169,91 @@ export default function ActivityHistory() {
                 Export Excel
               </button>
             )}
-            <span className="text-xs font-sans text-gray-400 whitespace-nowrap">
+            {/* <span className="text-xs font-sans text-gray-400 whitespace-nowrap">
               {isLoading
                 ? "Loading…"
                 : `${allLogs.length}${allLogs.length === 0 ? "" : "+"} events`}
               {hasActiveFilters && " (filtered)"}
-            </span>
+            </span> */}
           </div>
         </div>
 
         {/* ── Filters panel ─────────────────────────────────────── */}
-        <div className="mb-6 bg-white/90 border border-gray-100 rounded-2xl shadow-sm p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {/* Action filter */}
-                <div>
-                  <label className="block text-xs font-sans font-medium text-gray-600 mb-1">Action</label>
-                  <Select
-                    value={action || "ALL"}
-                    onValueChange={(val) => setAction(val === "ALL" ? "" : val)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="All actions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All actions</SelectItem>
-                      {ALL_ACTION_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <div className="mb-6 bg-white/90 border border-gray-100 rounded-2xl shadow-sm p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Action filter */}
+          <div>
+            <label className="block text-xs font-sans font-medium text-gray-600 mb-1">Action</label>
+            <Select
+              value={action || "ALL"}
+              onValueChange={(val) => setAction(val === "ALL" ? "" : val)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All actions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All actions</SelectItem>
+                {ALL_ACTION_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                {/* Status filter */}
-                <div>
-                  <label className="block text-xs font-sans font-medium text-gray-600 mb-1">Status</label>
-                  <Select
-                    value={status || "ALL"}
-                    onValueChange={(val) => setStatus(val === "ALL" ? "" : val)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All statuses</SelectItem>
-                      {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Status filter */}
+          <div>
+            <label className="block text-xs font-sans font-medium text-gray-600 mb-1">Status</label>
+            <Select
+              value={status || "ALL"}
+              onValueChange={(val) => setStatus(val === "ALL" ? "" : val)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                {/* Date from */}
-                <div>
-                  <label className="block text-xs font-sans font-medium text-gray-600 mb-1">From</label>
-                  <DateTimePicker
-                    value={dateFrom || ""}
-                    onChange={(val) => setDateFrom(val || "")}
-                    placeholder="From date & time"
-                  />
-                </div>
+          {/* Date from */}
+          <div>
+            <label className="block text-xs font-sans font-medium text-gray-600 mb-1">From</label>
+            <DateTimePicker
+              value={dateFrom || ""}
+              onChange={(val) => setDateFrom(val || "")}
+              placeholder="From date & time"
+            />
+          </div>
 
-                {/* Date to */}
-                <div>
-                  <label className="block text-xs font-sans font-medium text-gray-600 mb-1">To</label>
-                  <DateTimePicker
-                    value={dateTo || ""}
-                    onChange={(val) => setDateTo(val || "")}
-                    placeholder="To date & time"
-                  />
-                </div>
+          {/* Date to */}
+          <div>
+            <label className="block text-xs font-sans font-medium text-gray-600 mb-1">To</label>
+            <DateTimePicker
+              value={dateTo || ""}
+              onChange={(val) => setDateTo(val || "")}
+              placeholder="To date & time"
+            />
+          </div>
 
-                {/* Clear */}
-                {hasActiveFilters && (
-                  <div className="col-span-full flex justify-end">
-                    <button
-                      onClick={handleClearFilters}
-                      className="text-xs font-sans text-gray-500 hover:text-red-500 underline transition-colors"
-                    >
-                      Clear all filters
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Clear */}
+          {hasActiveFilters && (
+            <div className="col-span-full flex justify-end">
+              <button
+                onClick={handleClearFilters}
+                className="text-xs font-sans text-gray-500 hover:text-red-500 underline transition-colors"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ── Log list ──────────────────────────────────────────── */}
         {isLoading ? (

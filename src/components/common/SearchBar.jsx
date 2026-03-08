@@ -25,7 +25,7 @@ export default function SearchBar({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className={`w-full sm:w-80 ${className}`}
+        className={`w-full sm:w-96 lg:w-[460px] ${className}`}
       />
     );
   }
@@ -37,7 +37,7 @@ export default function SearchBar({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full sm:w-80"
+        className="w-full sm:w-96 lg:w-[460px]"
       />
     </div>
   );
