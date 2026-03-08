@@ -3,6 +3,8 @@
  * Central display logic for activity log entries.
  * Used by both artist ActivityHistory and admin ActivityLogs pages.
  */
+import * as ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 // ─── Category groupings ────────────────────────────────────────────────────
 export const ACTION_CATEGORIES = {
@@ -154,7 +156,7 @@ export function getMetadataSummary(action, metadata) {
           if (ic.added)    imgParts.push(`+${ic.added} added`);
           if (ic.deleted)  imgParts.push(`−${ic.deleted} removed`);
           if (ic.updated)  imgParts.push(`${ic.updated} replaced`);
-          if (ic.reordered) imgParts.push("reordered");
+          if (ic.reordered) imgParts.push(typeof ic.reordered === 'number' && ic.reordered > 0 ? `${ic.reordered} reordered` : "reordered");
           if (imgParts.length > 0) parts.push(`Images: ${imgParts.join(", ")}`);
         }
         return parts.length > 0 ? parts.join(" · ") : null;
@@ -339,27 +341,117 @@ export function formatAbsoluteTime(dateStr) {
   });
 }
 
-// ─── CSV export ────────────────────────────────────────────────────────────
-export function exportLogsToCSV(logs) {
-  const headers = ["Timestamp","Actor","Role","Action","Target","Status","IP Address","Details"];
-  const rows = logs.map((l) => [
-    formatAbsoluteTime(l.createdAt),
-    l.actorName ?? "—",
-    l.actorRole ?? "—",
-    getActionLabel(l.action),
-    l.targetLabel ?? l.targetType ?? "—",
-    l.status,
-    maskIp(l.ipAddress),
-    l.metadata ? JSON.stringify(l.metadata).replace(/"/g, "'") : "—",
-  ]);
-  const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `activity-logs-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+// ─── Excel export ────────────────────────────────────────────────────────────
+export async function exportLogsToExcel(logs, role = "admin") {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Art Showcase App";
+  workbook.calcProperties.fullCalcOnLoad = true;
+  
+  const sheet = workbook.addWorksheet("Audit Logs", {
+    views: [{ state: 'frozen', ySplit: 1 }] // Freeze header row
+  });
+
+  const columns = [
+    { header: "Date & Time", key: "date", width: 22 },
+    { header: "Actor Name", key: "actor", width: 20 },
+    { header: "Actor Role", key: "role", width: 15 },
+    { header: "Category", key: "category", width: 14 },
+    { header: "Action", key: "action", width: 28 },
+    { header: "Target", key: "target", width: 30 },
+    { header: "Status", key: "status", width: 12 },
+    { header: "Summary", key: "summary", width: 45 },
+    { header: "Error Message", key: "error", width: 25 },
+  ];
+
+  if (role !== "artist") {
+    columns.push({ header: "IP Address", key: "ip", width: 16 });
+  }
+  columns.push({ header: "Raw Metadata", key: "raw", width: 50 });
+
+  sheet.columns = columns;
+
+  // Style Header Row
+  const headerRow = sheet.getRow(1);
+  headerRow.height = 28;
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12, name: "Calibri" };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4F46E5" } // Indigo 600
+    };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+    // Add subtle grid borders
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF3730A3' } },
+      bottom: { style: 'thin', color: { argb: 'FF3730A3' } },
+      left: { style: 'thin', color: { argb: 'FF3730A3' } },
+      right: { style: 'thin', color: { argb: 'FF3730A3' } }
+    };
+  });
+
+  // Populate data
+  logs.forEach((l) => {
+    const rowData = {
+      date: formatAbsoluteTime(l.createdAt),
+      actor: l.actorName ?? "—",
+      role: l.actorRole ?? "—",
+      category: getActionCategory(l.action),
+      action: getActionLabel(l.action),
+      target: l.targetLabel ?? l.targetType ?? "—",
+      status: l.status,
+      summary: getMetadataSummary(l.action, l.metadata) || "—",
+      error: l.errorMsg ?? "—",
+      raw: l.metadata ? JSON.stringify(l.metadata, null, 2) : "—"
+    };
+
+    if (role !== "artist") {
+      rowData.ip = maskIp(l.ipAddress);
+    }
+
+    const row = sheet.addRow(rowData);
+
+    // Keep row heights compact and standard (approx 1 line)
+    row.height = 20;
+    
+    // Formatting cell alignment (wrapText: false prevents rows from getting massively tall with JSON data)
+    row.alignment = { vertical: 'middle', wrapText: false };
+    
+    // Specifically format status
+    const statusCell = row.getCell("status");
+    statusCell.font = { bold: true };
+    statusCell.alignment = { horizontal: "center", vertical: "middle" };
+    if (l.status === "SUCCESS") statusCell.font.color = { argb: "FF059669" };
+    else if (l.status === "FAILED") statusCell.font.color = { argb: "FFDC2626" };
+    else if (l.status === "PARTIAL") statusCell.font.color = { argb: "FFD97706" };
+
+    row.getCell("date").alignment = { horizontal: "center", vertical: "middle" };
+    row.getCell("role").alignment = { horizontal: "center", vertical: "middle" };
+    row.getCell("category").alignment = { horizontal: "center", vertical: "middle" };
+    
+    if (role !== "artist") {
+      row.getCell("ip").alignment = { horizontal: "center", vertical: "middle" };
+    }
+  });
+
+  // Create standard grid lines format
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1) { // Skip header
+      row.eachCell((cell) => {
+        cell.border = {
+          bottom: { style: 'hair', color: { argb: 'FFE5E7EB' } },
+          right: { style: 'hair', color: { argb: 'FFE5E7EB' } }
+        };
+      });
+    }
+  });
+
+  // Generate binary and trigger download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  
+  const formattedDate = new Date().toISOString().slice(0, 10);
+  saveAs(blob, `art-showcase-${role}-audit-logs-${formattedDate}.xlsx`);
 }
 
 // ─── All action options for filter dropdown ────────────────────────────────

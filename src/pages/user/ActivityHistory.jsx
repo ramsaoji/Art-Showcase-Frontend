@@ -8,10 +8,11 @@ import EmptyState from "@/components/common/EmptyState";
 import ActivityLogEntry from "@/features/activity-log/components/ActivityLogEntry";
 import {
   ALL_ACTION_OPTIONS,
-  getActionLabel,
+  exportLogsToExcel,
 } from "@/features/activity-log/utils/activityLogHelpers";
 import { containerMotion } from "@/lib/motionConfigs";
-import { ClockIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { ClockIcon } from "@heroicons/react/24/outline";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import SearchBar from "@/components/common/SearchBar";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
@@ -38,7 +39,6 @@ export default function ActivityHistory() {
   const [status, setStatus]   = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo]   = useState("");
-  const [showFilters, setShowFilters] = useState(false);
 
   // Build query input
   const queryInput = {
@@ -80,6 +80,20 @@ export default function ActivityHistory() {
     setDateTo("");
   }, []);
 
+  const trpcUtils = trpc.useUtils();
+  const handleExportExcel = useCallback(async () => {
+    // Re-fetch all matching logs without pagination if we want a complete export
+    if (totalCount && totalCount > allLogs.length) {
+      const result = await trpcUtils.activityLog.getMyActivityLogs.fetch({
+        ...queryInput,
+        limit: 10000, // Large limit to catch all for export
+      });
+      await exportLogsToExcel(result.logs, "artist");
+    } else {
+      await exportLogsToExcel(allLogs, "artist");
+    }
+  }, [allLogs, queryInput, totalCount, trpcUtils]);
+
   const hasActiveFilters = search || action || status || dateFrom || dateTo;
 
   return (
@@ -119,35 +133,27 @@ export default function ActivityHistory() {
         </div>
 
         {/* ── Search + filter bar (match admin logs) ────────────── */}
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex-1 min-w-[220px] max-w-md">
             <SearchBar
               inline
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search your activity…"
+              placeholder="Search activity, target, status…"
               className="w-full bg-white/90 border border-gray-200 shadow-sm"
             />
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={`flex items-center gap-1.5 text-sm font-sans font-medium px-3 py-2 rounded-xl border transition-colors ${
-                hasActiveFilters
-                  ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              <FunnelIcon className="w-4 h-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="w-4 h-4 flex items-center justify-center text-[10px] bg-indigo-600 text-white rounded-full font-bold">
-                  ·
-                </span>
-              )}
-            </button>
-
+            {allLogs.length > 0 && (
+              <button
+                onClick={handleExportExcel}
+                className="group flex items-center gap-1.5 text-sm font-sans font-medium px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+              >
+                <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                Export Excel
+              </button>
+            )}
             <span className="text-xs font-sans text-gray-400 whitespace-nowrap">
               {isLoading
                 ? "Loading…"
@@ -158,17 +164,7 @@ export default function ActivityHistory() {
         </div>
 
         {/* ── Filters panel ─────────────────────────────────────── */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              key="filters"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden mb-6"
-            >
-              <div className="bg-white/90 border border-gray-100 rounded-2xl shadow-sm p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="mb-6 bg-white/90 border border-gray-100 rounded-2xl shadow-sm p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {/* Action filter */}
                 <div>
                   <label className="block text-xs font-sans font-medium text-gray-600 mb-1">Action</label>
@@ -243,9 +239,6 @@ export default function ActivityHistory() {
                   </div>
                 )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── Log list ──────────────────────────────────────────── */}
         {isLoading ? (

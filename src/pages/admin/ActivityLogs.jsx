@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import {
   ALL_ACTION_OPTIONS,
-  exportLogsToCSV,
+  exportLogsToExcel,
   getActionCategory,
   maskIp,
   getActionLabel,
@@ -46,6 +46,31 @@ const CATEGORY_ICONS = {
   OTHER: ClipboardDocumentListIcon,
 };
 
+function ExpandableText({ text, maxLength = 80 }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  if (typeof text !== "string") {
+    return <span>{text}</span>;
+  }
+
+  if (text.length <= maxLength) {
+    return <span className="whitespace-pre-wrap break-words">{text}</span>;
+  }
+
+  return (
+    <span className="whitespace-pre-wrap break-words">
+      {expanded ? text : `${text.slice(0, maxLength)}…`}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+        className="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline ml-1 font-medium bg-white/50 px-1 rounded inline-flex align-middle"
+      >
+        {expanded ? "read less" : "read more"}
+      </button>
+    </span>
+  );
+}
+
 const STATUS_OPTIONS = ["SUCCESS", "FAILED", "PARTIAL"];
 const ROLE_OPTIONS   = ["ARTIST", "SUPER_ADMIN", "SYSTEM", "ANONYMOUS"];
 
@@ -75,7 +100,7 @@ function summarizeMetadataValue(value) {
         });
       } catch {}
     }
-    return value.length > 80 ? `${value.slice(0, 77)}…` : value;
+    return value;
   }
 
   if (type === "number") return String(value);
@@ -111,7 +136,7 @@ function formatChangeValue(value) {
         });
       } catch {}
     }
-    return value.length > 60 ? `${value.slice(0, 57)}…` : value;
+    return value;
   }
   if (typeof value === "number") return String(value);
   if (typeof value === "object" && value.updated) return "(updated)";
@@ -188,11 +213,10 @@ export default function AdminActivityLogs() {
   const [status, setStatus]     = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo]     = useState("");
-  const [showFilters, setShowFilters] = useState(false);
 
   // ── Expanded row state ────────────────────────────────────────────────────
-  const [expandedId, setExpandedId] = useState(null);
-  const [rawJsonForId, setRawJsonForId] = useState(null);
+  const [expandedIds, setExpandedIds] = useState({});
+  const [rawJsonForIds, setRawJsonForIds] = useState({});
 
   const queryInput = {
     limit: 50,
@@ -246,12 +270,22 @@ export default function AdminActivityLogs() {
     setDateTo("");
   }, []);
 
-  const handleExportCSV = useCallback(() => {
-    exportLogsToCSV(allLogs);
-  }, [allLogs]);
+  const trpcUtils = trpc.useUtils();
+  const handleExportExcel = useCallback(async () => {
+    // Re-fetch all matching logs without pagination if we want a complete export
+    if (totalCount && totalCount > allLogs.length) {
+      const result = await trpcUtils.activityLog.getAdminActivityLogs.fetch({
+        ...queryInput,
+        limit: 10000, // Large limit to catch all for export
+      });
+      await exportLogsToExcel(result.logs, "admin");
+    } else {
+      await exportLogsToExcel(allLogs, "admin");
+    }
+  }, [allLogs, queryInput, totalCount, trpcUtils]);
 
   const toggleRow = useCallback((id) => {
-    setExpandedId((prev) => (prev === id ? null : id));
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   return (
@@ -282,36 +316,19 @@ export default function AdminActivityLogs() {
             inline
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search actor, target…"
+            placeholder="Search actor, target, action, status…"
             className="w-full"
           />
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`flex items-center gap-1.5 text-sm font-sans font-medium px-3 py-2 rounded-xl border transition-colors ${
-              hasActiveFilters
-                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-            }`}
-          >
-            <FunnelIcon className="w-4 h-4" />
-            Filters
-            {hasActiveFilters && (
-              <span className="w-4 h-4 flex items-center justify-center text-[10px] bg-indigo-600 text-white rounded-full font-bold">
-                ·
-              </span>
-            )}
-          </button>
-
           {allLogs.length > 0 && (
             <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 text-sm font-sans font-medium px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
+              onClick={handleExportExcel}
+              className="group flex items-center gap-1.5 text-sm font-sans font-medium px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
             >
-              <ArrowDownTrayIcon className="w-4 h-4" />
-              Export CSV
+              <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+              Export Excel
             </button>
           )}
 
@@ -327,17 +344,7 @@ export default function AdminActivityLogs() {
       </div>
 
       {/* ── Filters panel ───────────────────────────────────────── */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            key="filters"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="mb-5 bg-gray-50/80 border border-gray-100 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="mb-5 bg-white/90 border border-gray-200 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <div>
                 <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Role</label>
                 <Select
@@ -427,9 +434,6 @@ export default function AdminActivityLogs() {
                 </div>
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Table ──────────────────────────────────────────────── */}
       {isLoading ? (
@@ -449,7 +453,7 @@ export default function AdminActivityLogs() {
       ) : (
         <>
           <div className="w-full overflow-x-auto rounded-xl custom-scrollbar pb-10">
-            <table className="min-w-[820px] w-full text-left font-sans border-separate border-spacing-y-2.5">
+            <table className="min-w-[820px] w-full text-left font-sans border-separate border-spacing-0">
               <thead>
                 <tr>
                   {[
@@ -467,14 +471,14 @@ export default function AdminActivityLogs() {
                 </tr>
               </thead>
               <tbody>
-                {allLogs.map((log) => {
+                {allLogs.map((log, index) => {
                   const catStyle     = getCategoryStyle(log.action);
                   const statusStyle  = getStatusStyle(log.status);
                   const roleStyle    = getRoleStyle(log.actorRole);
                   const metaSummary  = getMetadataSummary(log.action, log.metadata);
                   const category     = getActionCategory(log.action);
                   const CategoryIcon = CATEGORY_ICONS[category] || CATEGORY_ICONS.OTHER;
-                  const isExpanded   = expandedId === log.id;
+                  const isExpanded   = expandedIds[log.id];
                   const _meta = log.metadata || {};
                   const _isAuthRoleOnly = (log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER");
                   const _filteredKeys = Object.keys(_meta).filter((k) => !(_isAuthRoleOnly && k === "role"));
@@ -482,6 +486,11 @@ export default function AdminActivityLogs() {
 
                   return (
                     <Fragment key={log.id}>
+                      {index > 0 && (
+                        <tr className="h-2.5">
+                          <td colSpan={6} className="p-0 border-0 bg-transparent"></td>
+                        </tr>
+                      )}
                       <tr
                         className={`group ${
                           hasMetadata ? "cursor-pointer" : "cursor-default"
@@ -489,8 +498,7 @@ export default function AdminActivityLogs() {
                         onClick={hasMetadata ? () => toggleRow(log.id) : undefined}
                       >
                         {/* Timestamp */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle rounded-l-2xl border-y border-l border-gray-100 bg-white group-hover:bg-gray-50 transition-colors ${isExpanded ? "rounded-bl-none border-b-transparent relative" : "shadow-sm"}`}>
-                          {isExpanded && <div className="absolute left-0 bottom-0 h-px w-full bg-gradient-to-r from-transparent to-gray-100" />}
+                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle rounded-l-2xl border-y border-l border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 rounded-bl-none border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
                           <div>
                             <p className="text-xs font-sans text-gray-700 font-medium">
                               {formatRelativeTime(log.createdAt)}
@@ -502,7 +510,7 @@ export default function AdminActivityLogs() {
                         </td>
 
                         {/* Actor */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle max-w-[160px] border-y border-gray-100 bg-white group-hover:bg-gray-50 transition-colors ${isExpanded ? "border-b-transparent" : "shadow-sm"}`}>
+                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle max-w-[160px] border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
                           <p className="text-xs font-sans text-gray-800 font-medium truncate" title={log.actorName}>
                             {log.actorName ?? "—"}
                           </p>
@@ -514,7 +522,7 @@ export default function AdminActivityLogs() {
                         </td>
 
                         {/* Action */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle border-y border-gray-100 bg-white group-hover:bg-gray-50 transition-colors ${isExpanded ? "border-b-transparent" : "shadow-sm"}`}>
+                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${catStyle.bg} ${catStyle.text} ${catStyle.border}`}>
                             <CategoryIcon className={`w-4 h-4 ${catStyle.text}`} aria-hidden="true" />
                             {getActionLabel(log.action)}
@@ -522,7 +530,7 @@ export default function AdminActivityLogs() {
                         </td>
 
                         {/* Target */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 align-middle max-w-[160px] border-y border-gray-100 bg-white group-hover:bg-gray-50 transition-colors ${isExpanded ? "border-b-transparent" : "shadow-sm"}`}>
+                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 align-middle max-w-[160px] border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
                           {log.targetLabel ? (
                             <p className="text-xs font-sans text-gray-700 truncate" title={log.targetLabel}>
                               {log.targetLabel}
@@ -538,7 +546,7 @@ export default function AdminActivityLogs() {
                         </td>
 
                         {/* Status */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle border-y border-gray-100 bg-white group-hover:bg-gray-50 transition-colors ${isExpanded ? "border-b-transparent" : "shadow-sm"}`}>
+                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
                           <span className={`text-[11px] font-semibold font-sans px-2 py-0.5 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
                             {log.status}
                           </span>
@@ -549,14 +557,8 @@ export default function AdminActivityLogs() {
                           )}
                         </td>
 
-                        {/* IP */}
-                        {/* <td className="px-3 py-3 whitespace-nowrap align-middle">
-                          <span className="text-[10px] font-mono text-gray-400">{maskIp(log.ipAddress)}</span>
-                        </td> */}
-
                         {/* Expand */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 align-middle rounded-r-2xl border-y border-r border-gray-100 bg-white group-hover:bg-gray-50 transition-colors ${isExpanded ? "rounded-br-none border-b-transparent relative" : "shadow-sm"}`}>
-                          {isExpanded && <div className="absolute right-0 bottom-0 h-px w-full bg-gradient-to-l from-transparent to-gray-100" />}
+                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 align-middle rounded-r-2xl border-y border-r border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 rounded-br-none border-b-transparent relative" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
                           {hasMetadata && (
                             <button
                               className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
@@ -574,18 +576,21 @@ export default function AdminActivityLogs() {
 
                       {/* Expandable metadata row */}
                       {isExpanded && hasMetadata && (
-                        <tr key={`${log.id}-meta`} className="bg-indigo-50/20 backdrop-blur-sm relative">
-                          <td colSpan={6} className="px-4 sm:px-6 pb-5 pt-2 rounded-b-2xl border-b border-x border-gray-100/50 shadow-sm relative top-[-1px]">
-                            <div className="rounded-2xl border border-indigo-100/40 bg-white/90 shadow-sm px-5 py-4">
+                        <tr key={`${log.id}-meta`} className="bg-transparent">
+                          <td colSpan={6} className="px-4 sm:px-6 pb-6 pt-4 rounded-b-2xl border-b border-x border-gray-200 bg-gray-50/50 shadow-sm">
+                            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-6 py-5">
                               {(() => {
                                 const metadata = log.metadata || {};
                                 const isAuthRoleRedundant = log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER";
+                                const isListAction = log.action === "ADMIN_CAROUSEL_UPDATED" || log.action === "ADMIN_FEATURED_UPDATED";
+                                const excludeStats = isListAction ? ["added", "removed", "reordered", "imagesCount", "artworksCount"] : [];
                                 const topLevelEntries = Object.entries(metadata).filter(
                                     ([key]) => key !== "changes" && key !== "imageChanges"
                                       && key !== "addedArtworks" && key !== "removedArtworks"
-                                      && key !== "reorderedArtworks" && key !== "featuredSnapshot"
+                                      && key !== "reorderedArtworks" && key !== "reorderedImages" && key !== "featuredSnapshot"
                                       && key !== "carouselSnapshot"
                                       && !(isAuthRoleRedundant && key === "role")
+                                      && !excludeStats.includes(key)
                                   );
                                 const changesObject =
                                   metadata.changes && typeof metadata.changes === "object"
@@ -607,11 +612,11 @@ export default function AdminActivityLogs() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setRawJsonForId((prev) => (prev === log.id ? null : log.id));
+                                          setRawJsonForIds((prev) => ({ ...prev, [log.id]: !prev[log.id] }));
                                         }}
                                         className="text-[11px] font-sans text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline"
                                       >
-                                        {rawJsonForId === log.id ? "Hide raw JSON" : "View raw JSON"}
+                                        {rawJsonForIds[log.id] ? "Hide raw JSON" : "View raw JSON"}
                                       </button>
                                     </div>
 
@@ -629,14 +634,14 @@ export default function AdminActivityLogs() {
                                                   <ArtistsMapDisplay value={value} />
                                                 ) : (
                                                   <span
-                                                    className="truncate block"
+                                                    className="block"
                                                     title={
                                                       typeof value === "string" || typeof value === "number" || typeof value === "boolean"
                                                         ? String(value)
                                                         : undefined
                                                     }
                                                   >
-                                                    {summarizeMetadataValue(value)}
+                                                    <ExpandableText text={summarizeMetadataValue(value)} />
                                                   </span>
                                                 )}
                                               </dd>
@@ -671,16 +676,16 @@ export default function AdminActivityLogs() {
                                                   </span>
                                                   {pair ? (
                                                     <>
-                                                      <span className="truncate text-red-600/80" title={pair.before != null ? formatChangeValue(pair.before) : "—"}>
-                                                        {formatChangeValue(pair.before)}
+                                                      <span className="text-red-600/80" title={pair.before != null ? formatChangeValue(pair.before) : "—"}>
+                                                        <ExpandableText text={formatChangeValue(pair.before)} />
                                                       </span>
-                                                      <span className="truncate text-emerald-600/90" title={pair.after != null ? formatChangeValue(pair.after) : "—"}>
-                                                        {formatChangeValue(pair.after)}
+                                                      <span className="text-emerald-600/90" title={pair.after != null ? formatChangeValue(pair.after) : "—"}>
+                                                        <ExpandableText text={formatChangeValue(pair.after)} />
                                                       </span>
                                                     </>
                                                   ) : (
-                                                    <span className="col-span-2 truncate text-gray-500 italic">
-                                                      {summarizeMetadataValue(value)}
+                                                    <span className="col-span-2 text-gray-500 italic">
+                                                      <ExpandableText text={summarizeMetadataValue(value)} />
                                                     </span>
                                                   )}
                                                 </div>
@@ -705,6 +710,27 @@ export default function AdminActivityLogs() {
                                               </span>
                                             ) : null
                                           )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* ── Reordered images ── */}
+                                    {Array.isArray(metadata.reorderedImages) && metadata.reorderedImages.length > 0 && (
+                                      <div className="mt-3 border-t border-dashed border-gray-200 pt-3">
+                                        <p className="text-[11px] font-sans font-medium text-amber-600 uppercase tracking-wide mb-1.5">
+                                          ✦ Images Reordered ({metadata.reorderedImages.length})
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {metadata.reorderedImages.map((img, i) => (
+                                            <span key={i} className="inline-flex flex-wrap items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100 text-[11px] font-sans text-amber-700 font-medium">
+                                              {img.url && <img src={img.url} alt="thumbnail" className="w-4 h-4 object-cover rounded shadow-sm border border-amber-200" />}
+                                              {img.from != null && img.to != null && (
+                                                <span className="bg-amber-100 text-amber-700 rounded-full px-1.5 py-px text-[10px] font-bold">
+                                                  #{img.from + 1} → #{img.to + 1}
+                                                </span>
+                                              )}
+                                            </span>
+                                          ))}
                                         </div>
                                       </div>
                                     )}
@@ -803,11 +829,21 @@ export default function AdminActivityLogs() {
                                         </ol>
                                       </div>
                                     )}
-                                    {rawJsonForId === log.id && (
-                                      <pre className="mt-3 p-2.5 bg-gray-900 text-[11px] font-mono text-gray-100 rounded-lg overflow-x-auto leading-relaxed custom-scrollbar">
-                                        {JSON.stringify(metadata, null, 2)}
-                                      </pre>
-                                    )}
+                                    <AnimatePresence>
+                                      {rawJsonForIds[log.id] && (
+                                        <motion.div
+                                          initial={{ height: 0, opacity: 0 }}
+                                          animate={{ height: "auto", opacity: 1 }}
+                                          exit={{ height: 0, opacity: 0 }}
+                                          transition={{ duration: 0.2 }}
+                                          className="overflow-hidden"
+                                        >
+                                          <pre className="mt-3 p-2.5 bg-gray-900 text-[11px] font-mono text-gray-100 rounded-lg overflow-x-auto whitespace-pre-wrap break-words leading-relaxed custom-scrollbar max-h-96 overflow-y-auto">
+                                            {JSON.stringify(metadata, null, 2)}
+                                          </pre>
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
                                   </>
                                 );
                               })()}

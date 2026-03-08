@@ -15,6 +15,7 @@ import PaintBrushIcon from "@heroicons/react/24/outline/PaintBrushIcon";
 import Cog6ToothIcon from "@heroicons/react/24/outline/Cog6ToothIcon";
 import CpuChipIcon from "@heroicons/react/24/outline/CpuChipIcon";
 import ClipboardDocumentListIcon from "@heroicons/react/24/outline/ClipboardDocumentListIcon";
+import { useAuth } from "@/contexts/AuthContext";
 
 const CATEGORY_ICONS = {
   AUTH: ShieldCheckIcon,
@@ -23,6 +24,31 @@ const CATEGORY_ICONS = {
   SYSTEM: CpuChipIcon,
   OTHER: ClipboardDocumentListIcon,
 };
+
+function ExpandableText({ text, maxLength = 80 }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  if (typeof text !== "string") {
+    return <span>{text}</span>;
+  }
+
+  if (text.length <= maxLength) {
+    return <span className="whitespace-pre-wrap break-words">{text}</span>;
+  }
+
+  return (
+    <span className="whitespace-pre-wrap break-words">
+      {expanded ? text : `${text.slice(0, maxLength)}…`}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+        className="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline ml-1 font-medium bg-white/50 px-1 rounded inline-flex align-middle"
+      >
+        {expanded ? "read less" : "read more"}
+      </button>
+    </span>
+  );
+}
 
 function humanizeMetadataKey(key) {
   if (!key) return "";
@@ -51,12 +77,12 @@ function summarizeMetadataValue(value) {
 
   if (type === "string") {
     if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return formatDateTime(value);
-    return value.length > 80 ? `${value.slice(0, 77)}…` : value;
+    return value;
   }
 
   if (type === "number" || type === "boolean") {
     const text = String(value);
-    return text.length > 80 ? `${text.slice(0, 77)}…` : text;
+    return text;
   }
 
   if (Array.isArray(value)) {
@@ -85,7 +111,7 @@ function formatChangeValue(value) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "string") {
     if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return formatDateTime(value);
-    return value.length > 60 ? `${value.slice(0, 57)}…` : value;
+    return value;
   }
   if (typeof value === "number") return String(value);
   if (typeof value === "object" && value !== null && value.updated) return "(updated)";
@@ -150,6 +176,7 @@ function ArtistsMapDisplay({ value }) {
  *   showIp      - (admin only) show IP address
  */
 export default function ActivityLogEntry({ log, showActor = false, showIp = false }) {
+  const { isSuperAdmin } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [showRaw, setShowRaw]   = useState(false);
   const categoryStyle = getCategoryStyle(log.action);
@@ -159,6 +186,8 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
   const metaSummary   = getMetadataSummary(log.action, log.metadata);
   const metadata      = log.metadata || {};
   const isAuthRoleRedundant = log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER";
+  const isListAction = log.action === "ADMIN_CAROUSEL_UPDATED" || log.action === "ADMIN_FEATURED_UPDATED";
+  const excludeStats = isListAction ? ["added", "removed", "reordered", "imagesCount", "artworksCount"] : [];
   const topLevelEntries = Object.entries(metadata).filter(
     ([key]) =>
       key !== "changes" &&
@@ -166,16 +195,18 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
       key !== "addedArtworks" &&
       key !== "removedArtworks" &&
       key !== "reorderedArtworks" &&
+      key !== "reorderedImages" &&
       key !== "featuredSnapshot" &&
       key !== "carouselSnapshot" &&
-      !(isAuthRoleRedundant && key === "role")
+      !(isAuthRoleRedundant && key === "role") &&
+      !excludeStats.includes(key)
   );
   const changesObject   = metadata.changes && typeof metadata.changes === "object"
     ? metadata.changes
     : null;
   const hasMetadata = topLevelEntries.length > 0 || !!changesObject || !!metadata.imageChanges ||
     Array.isArray(metadata.addedArtworks) || Array.isArray(metadata.removedArtworks) ||
-    Array.isArray(metadata.reorderedArtworks);
+    Array.isArray(metadata.reorderedArtworks) || Array.isArray(metadata.reorderedImages);
 
   const handleToggleExpanded = () => {
     setExpanded((v) => !v);
@@ -197,8 +228,8 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
       </div>
 
       {/* Card Content Container */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl shadow-sm hover:shadow-md group-hover:border-indigo-100 transition-all duration-300">
-        <div className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 pb-3">
+      <div className={`backdrop-blur-md border rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 ${expanded ? "bg-gray-50/80 border-gray-200" : "bg-white/80 border-gray-100 group-hover:border-indigo-100"}`}>
+        <div className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 pb-4">
           {/* Main content */}
           <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -259,7 +290,7 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="mt-4 rounded-2xl border border-indigo-100/40 bg-indigo-50/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] px-4 py-3.5">
+                <div className="mt-4 rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3.5 sm:px-5 sm:py-4">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <p className="text-[11px] font-sans font-medium text-gray-600 uppercase tracking-wide">
@@ -270,16 +301,18 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                         {Object.keys(metadata).length === 1 ? "field" : "fields"}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowRaw((v) => !v);
-                      }}
-                      className="text-[11px] font-sans text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline"
-                    >
-                      {showRaw ? "Hide raw JSON" : "View raw JSON"}
-                    </button>
+                    {(isSuperAdmin || showActor) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowRaw((v) => !v);
+                        }}
+                        className="text-[11px] font-sans text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline rounded-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
+                      >
+                        {showRaw ? "Hide raw JSON" : "View raw JSON"}
+                      </button>
+                    )}
                   </div>
 
                   {topLevelEntries.length > 0 && (
@@ -296,14 +329,14 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                                 <ArtistsMapDisplay value={value} />
                               ) : (
                                 <span
-                                  className="truncate block"
+                                  className="block"
                                   title={
                                     typeof value === "string" || typeof value === "number" || typeof value === "boolean"
                                       ? String(value)
                                       : undefined
                                   }
                                 >
-                                  {summarizeMetadataValue(value)}
+                                  <ExpandableText text={summarizeMetadataValue(value)} />
                                 </span>
                               )}
                             </dd>
@@ -321,8 +354,8 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                       <div className="rounded-lg border border-gray-100 bg-white/80 overflow-hidden">
                         <div className="grid grid-cols-3 gap-2 px-3 py-1.5 bg-gray-50/80 text-[11px] font-sans font-medium text-gray-500">
                           <span>Field</span>
-                          <span>From</span>
-                          <span>To</span>
+                          <span>Before</span>
+                          <span>After</span>
                         </div>
                         <div className="divide-y divide-gray-100">
                           {Object.entries(changesObject).map(([fieldKey, value]) => {
@@ -337,17 +370,17 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                                 </span>
                                 {pair ? (
                                   <>
-                                    <span className="truncate text-red-600/80" title={pair.before != null ? formatChangeValue(pair.before) : "—"}>
-                                      {pair.before != null ? formatChangeValue(pair.before) : "—"}
+                                    <span className="text-red-600/80" title={pair.before != null ? formatChangeValue(pair.before) : "—"}>
+                                      <ExpandableText text={pair.before != null ? formatChangeValue(pair.before) : "—"} />
                                     </span>
-                                    <span className="truncate text-emerald-600/90" title={pair.after != null ? formatChangeValue(pair.after) : "—"}>
-                                      {pair.after != null ? formatChangeValue(pair.after) : "—"}
+                                    <span className="text-emerald-600/90" title={pair.after != null ? formatChangeValue(pair.after) : "—"}>
+                                      <ExpandableText text={pair.after != null ? formatChangeValue(pair.after) : "—"} />
                                     </span>
                                   </>
                                 ) : (
                                   <>
-                                    <span className="col-span-2 truncate text-gray-500 italic">
-                                      {summarizeMetadataValue(value)}
+                                    <span className="col-span-2 text-gray-500 italic">
+                                      <ExpandableText text={summarizeMetadataValue(value)} />
                                     </span>
                                   </>
                                 )}
@@ -373,6 +406,27 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                             </span>
                           ) : null
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Reordered images ── */}
+                  {Array.isArray(metadata.reorderedImages) && metadata.reorderedImages.length > 0 && (
+                    <div className="mt-3 border-t border-dashed border-gray-200 pt-3">
+                      <p className="text-[11px] font-sans font-medium text-amber-600 uppercase tracking-wide mb-1.5">
+                        ✦ Images Reordered ({metadata.reorderedImages.length})
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {metadata.reorderedImages.map((img, i) => (
+                          <span key={i} className="inline-flex flex-wrap items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100 text-[11px] font-sans text-amber-700 font-medium">
+                            {img.url && <img src={img.url} alt="thumbnail" className="w-4 h-4 object-cover rounded shadow-sm border border-amber-200" />}
+                            {img.from != null && img.to != null && (
+                              <span className="bg-amber-100 text-amber-700 rounded-full px-1.5 py-px text-[10px] font-bold">
+                                #{img.from + 1} → #{img.to + 1}
+                              </span>
+                            )}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -421,21 +475,35 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {metadata.reorderedArtworks.map((a, i) => (
-                          <span key={i} className="inline-flex flex-wrap items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100 text-[11px] font-sans text-amber-600 font-medium">
+                          <span key={i} className="inline-flex flex-wrap items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100 text-[11px] font-sans text-amber-700 font-medium">
                             <span className="font-semibold">{a.artworkTitle || a.title || "Untitled"}</span>
                             {a.artistName && <span className="text-amber-500">· {a.artistName}</span>}
-                            {a.from != null && a.to != null && <span className="bg-amber-200 text-amber-800 rounded-full px-1.5 py-px text-[10px] font-bold">#{a.from + 1} ➝ #{a.to + 1}</span>}
+                            {a.from != null && a.to != null && (
+                              <span className="bg-amber-100 text-amber-700 rounded-full px-1.5 py-px text-[10px] font-bold">
+                                #{a.from + 1} → #{a.to + 1}
+                              </span>
+                            )}
                           </span>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {showRaw && (
-                    <pre className="mt-3 p-2.5 bg-gray-900 text-[11px] font-mono text-gray-100 rounded-lg overflow-x-auto leading-relaxed custom-scrollbar">
-                      {JSON.stringify(metadata, null, 2)}
-                    </pre>
-                  )}
+                  <AnimatePresence>
+                    {showRaw && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <pre className="mt-3 p-2.5 bg-gray-900 text-[11px] font-mono text-gray-100 rounded-lg overflow-x-auto whitespace-pre-wrap break-words leading-relaxed custom-scrollbar max-h-96 overflow-y-auto">
+                          {JSON.stringify(metadata, null, 2)}
+                        </pre>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
