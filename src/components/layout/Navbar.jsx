@@ -195,7 +195,7 @@ export default function Navbar() {
                   <Link
                     to="/"
                     onClick={handleLogoClick}
-                    className="relative group"
+                    className="relative group rounded-md outline-none"
                   >
                     <span className="font-artistic text-lg sm:text-xl lg:text-2xl font-bold tracking-wide">
                       <span className="text-indigo-600">Art</span>
@@ -233,7 +233,7 @@ export default function Navbar() {
                                     : "bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800"
                                 )
                               : classNames(
-                                  "relative group px-2 lg:px-3 py-2.5 text-sm lg:text-base font-sans tracking-wide transition-all duration-300 flex items-center whitespace-nowrap h-auto",
+                                  "relative group px-2 lg:px-3 py-2.5 text-sm lg:text-base font-sans tracking-wide transition-all duration-300 flex items-center whitespace-nowrap h-auto rounded-xl outline-none",
                                   (
                                     item.href === "/admin"
                                       ? location.pathname === "/admin"

@@ -156,7 +156,7 @@ export default function Footer() {
               <Link
                 to="/"
                 onClick={handleLogoClick}
-                className="inline-block group"
+                className="inline-block group rounded-md outline-none"
               >
                 <span className="font-artistic text-xl font-bold tracking-wide relative">
                   <span className="text-indigo-600">Art</span>
@@ -185,7 +185,7 @@ export default function Footer() {
                   <li key={link.path}>
                     <Link
                       to={link.path}
-                      className="text-gray-600 hover:text-indigo-600 transition-colors text-sm font-medium relative group inline-block"
+                      className="text-gray-600 hover:text-indigo-600 transition-colors text-sm font-medium relative group inline-block rounded-md outline-none"
                     >
                       {link.name}
                       <div className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-indigo-300/0 via-indigo-300/50 to-indigo-300/0 scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
@@ -206,7 +206,7 @@ export default function Footer() {
               <div className="font-sans text-sm text-gray-600">
                 <a
                   href="mailto:art-showcase@techness.in"
-                  className="inline-flex items-center space-x-2 group relative"
+                  className="inline-flex items-center space-x-2 group relative rounded-md outline-none"
                 >
                   <svg
                     className="w-4 h-4 text-indigo-500 transition-transform group-hover:scale-110 duration-300"
@@ -265,7 +265,7 @@ export default function Footer() {
                   href="https://ramsaoji.techness.in/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 text-indigo-500 hover:text-indigo-600 transition-colors"
+                  className="ml-1 text-indigo-500 hover:text-indigo-600 transition-colors rounded-sm outline-none"
                 >
                   Ram Saoji
                 </a>
