@@ -584,18 +584,23 @@ export default function AdminActivityLogs() {
                                 const isAuthRoleRedundant = log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER";
                                 const isListAction = log.action === "ADMIN_CAROUSEL_UPDATED" || log.action === "ADMIN_FEATURED_UPDATED";
                                 const excludeStats = isListAction ? ["added", "removed", "reordered", "imagesCount", "artworksCount"] : [];
-                                const topLevelEntries = Object.entries(metadata).filter(
-                                    ([key]) => key !== "changes" && key !== "imageChanges"
-                                      && key !== "addedArtworks" && key !== "removedArtworks"
-                                      && key !== "reorderedArtworks" && key !== "reorderedImages" && key !== "featuredSnapshot"
-                                      && key !== "carouselSnapshot"
-                                      && !(isAuthRoleRedundant && key === "role")
-                                      && !excludeStats.includes(key)
-                                  );
-                                const changesObject =
-                                  metadata.changes && typeof metadata.changes === "object"
-                                    ? metadata.changes
-                                    : null;
+                                  const rawTopLevelEntries = Object.entries(metadata).filter(
+                                      ([key]) => key !== "changes" && key !== "imageChanges"
+                                        && key !== "addedArtworks" && key !== "removedArtworks"
+                                        && key !== "reorderedArtworks" && key !== "reorderedImages" && key !== "featuredSnapshot"
+                                        && key !== "carouselSnapshot"
+                                        && !(isAuthRoleRedundant && key === "role")
+                                        && !excludeStats.includes(key)
+                                    );
+                                  
+                                  const LONG_TEXT_FIELDS = ["description", "bio", "prompt", "about", "notes"];
+                                  const topLevelEntries = rawTopLevelEntries.filter(([key]) => !LONG_TEXT_FIELDS.includes(key));
+                                  const longTextEntries = rawTopLevelEntries.filter(([key]) => LONG_TEXT_FIELDS.includes(key));
+
+                                  const changesObject =
+                                    metadata.changes && typeof metadata.changes === "object"
+                                      ? metadata.changes
+                                      : null;
                                 return (
                                   <>
                                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -604,8 +609,8 @@ export default function AdminActivityLogs() {
                                           Details
                                         </p>
                                         <p className="text-[11px] font-sans text-gray-400">
-                                          {Object.keys(metadata).length}{" "}
-                                          {Object.keys(metadata).length === 1 ? "field" : "fields"}
+                                          {rawTopLevelEntries.length}{" "}
+                                          {rawTopLevelEntries.length === 1 ? "field" : "fields"}
                                         </p>
                                       </div>
                                       <button
@@ -649,6 +654,21 @@ export default function AdminActivityLogs() {
                                           );
                                         })}
                                       </dl>
+                                    )}
+
+                                    {longTextEntries.length > 0 && (
+                                      <div className={topLevelEntries.length > 0 ? "mt-3 pt-3 border-t border-dashed border-gray-200 space-y-3" : "space-y-3"}>
+                                        {longTextEntries.map(([key, value]) => (
+                                          <div key={key}>
+                                            <p className="text-[11px] font-sans font-medium text-gray-600 uppercase tracking-wide mb-1.5">
+                                              {humanizeMetadataKey(key)}
+                                            </p>
+                                            <div className="text-xs font-sans text-gray-800 leading-relaxed bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
+                                              <ExpandableText text={summarizeMetadataValue(value)} />
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
                                     )}
 
                                     {/* ── Field changes (before → after) ── */}

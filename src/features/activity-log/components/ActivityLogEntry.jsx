@@ -188,7 +188,7 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
   const isAuthRoleRedundant = log.action === "AUTH_LOGIN_SUCCESS" || log.action === "AUTH_REGISTER";
   const isListAction = log.action === "ADMIN_CAROUSEL_UPDATED" || log.action === "ADMIN_FEATURED_UPDATED";
   const excludeStats = isListAction ? ["added", "removed", "reordered", "imagesCount", "artworksCount"] : [];
-  const topLevelEntries = Object.entries(metadata).filter(
+  const rawTopLevelEntries = Object.entries(metadata).filter(
     ([key]) =>
       key !== "changes" &&
       key !== "imageChanges" &&
@@ -201,10 +201,15 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
       !(isAuthRoleRedundant && key === "role") &&
       !excludeStats.includes(key)
   );
+
+  const LONG_TEXT_FIELDS = ["description", "bio", "prompt", "about", "notes"];
+  const topLevelEntries = rawTopLevelEntries.filter(([key]) => !LONG_TEXT_FIELDS.includes(key));
+  const longTextEntries = rawTopLevelEntries.filter(([key]) => LONG_TEXT_FIELDS.includes(key));
+
   const changesObject   = metadata.changes && typeof metadata.changes === "object"
     ? metadata.changes
     : null;
-  const hasMetadata = topLevelEntries.length > 0 || !!changesObject || !!metadata.imageChanges ||
+  const hasMetadata = rawTopLevelEntries.length > 0 || !!changesObject || !!metadata.imageChanges ||
     Array.isArray(metadata.addedArtworks) || Array.isArray(metadata.removedArtworks) ||
     Array.isArray(metadata.reorderedArtworks) || Array.isArray(metadata.reorderedImages);
 
@@ -297,8 +302,8 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                         Details
                       </p>
                       <p className="text-[11px] font-sans text-gray-400">
-                        {Object.keys(metadata).length}{" "}
-                        {Object.keys(metadata).length === 1 ? "field" : "fields"}
+                        {rawTopLevelEntries.length}{" "}
+                        {rawTopLevelEntries.length === 1 ? "field" : "fields"}
                       </p>
                     </div>
                     {(isSuperAdmin || showActor) && (
@@ -344,6 +349,21 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                         );
                       })}
                     </dl>
+                  )}
+
+                  {longTextEntries.length > 0 && (
+                    <div className={topLevelEntries.length > 0 ? "mt-3 pt-3 border-t border-dashed border-gray-200 space-y-3" : "space-y-3"}>
+                      {longTextEntries.map(([key, value]) => (
+                        <div key={key}>
+                          <p className="text-[11px] font-sans font-medium text-gray-600 uppercase tracking-wide mb-1.5">
+                            {humanizeMetadataKey(key)}
+                          </p>
+                          <div className="text-xs font-sans text-gray-800 leading-relaxed bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
+                            <ExpandableText text={summarizeMetadataValue(value)} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
 
                   {changesObject && Object.keys(changesObject).length > 0 && (
