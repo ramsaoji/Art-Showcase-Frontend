@@ -7,6 +7,7 @@ import {
   useMemo,
 } from "react";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
 
 const AuthContext = createContext();
 
@@ -21,25 +22,17 @@ export function useAuth() {
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Get tRPC utils for query invalidation
   const utils = trpc.useContext();
 
-  // Helper: set token in localStorage and state (try/catch per Vercel 4.4 - localStorage can throw)
-  const saveToken = (jwt) => {
-    setToken(jwt);
+  // Helper: clear any leftover local token
+  const clearLocalToken = () => {
     try {
-      if (jwt) {
-        localStorage.setItem("token", jwt);
-      } else {
-        localStorage.removeItem("token");
-      }
-    } catch {
-      // Ignore in incognito, quota exceeded, or disabled
-    }
+      localStorage.removeItem("token");
+    } catch { }
   };
 
   // Helper: clear all artwork-related localStorage data (try/catch per Vercel 4.4)
@@ -58,15 +51,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Fetch user info if token exists
+  // Fetch user info on mount. The cookie is automatically verified.
   useEffect(() => {
     async function fetchUser() {
-      if (!token) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
       // If we already have user data, don't fetch again
       if (user) {
         setLoading(false);
@@ -76,16 +63,11 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setError(null);
       try {
-        // Call /user.me with Authorization header
-        const me = await trpcClient.user.me.query(undefined, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const me = await trpcClient.user.me.query();
         setUser(me);
       } catch (err) {
         setUser(null);
-        saveToken(null);
-        setError("Session expired. Please log in again.");
-
+        clearLocalToken();
         // Clear all artwork-related localStorage data on session expiration
         clearArtworkLocalStorage();
       } finally {
@@ -94,7 +76,7 @@ export function AuthProvider({ children }) {
     }
     fetchUser();
     // eslint-disable-next-line
-  }, [token]);
+  }, []);
 
   // Login function
   const login = useCallback(
@@ -103,7 +85,8 @@ export function AuthProvider({ children }) {
       setError(null);
       try {
         const res = await trpcClient.user.login.mutate({ email, password });
-        saveToken(res.token);
+        // Instead of saving token to localStorage, we rely on the HttpOnly cookie the backend sets
+        clearLocalToken();
         setUser(res.user);
 
         // Reset queries to ensure fresh data and show loading state
@@ -112,25 +95,7 @@ export function AuthProvider({ children }) {
 
         return res.user;
       } catch (err) {
-        // Parse error message if it's a JSON string (validation error)
-        let errorMessage = err.message || "Login failed";
-        try {
-          // Check if the error message is a JSON string
-          if (errorMessage.startsWith("[") && errorMessage.includes("code")) {
-            const parsedError = JSON.parse(errorMessage);
-            // Handle validation errors
-            if (
-              parsedError[0]?.code === "too_small" &&
-              parsedError[0]?.path?.includes("password")
-            ) {
-              errorMessage = `Password must contain at least ${parsedError[0].minimum} characters`;
-            }
-          }
-        } catch (parseError) {
-          // If parsing fails, use the original error message
-        }
-
-        setError(errorMessage);
+        setError(getFriendlyErrorMessage(err));
         throw err;
       } finally {
         setLoading(false);
@@ -140,10 +105,16 @@ export function AuthProvider({ children }) {
   );
 
   // Logout function
-  const logout = useCallback(() => {
-    // Clear token and user state
-    saveToken(null);
+  const logout = useCallback(async () => {
+    try {
+      await trpcClient.user.logout.mutate();
+    } catch (err) {
+      console.error("Logout request failed", err);
+    }
+
+    // Clear user state
     setUser(null);
+    clearLocalToken();
 
     // Clear all artwork-related localStorage data
     clearArtworkLocalStorage();
@@ -170,9 +141,8 @@ export function AuthProvider({ children }) {
       loading,
       error,
       clearError,
-      token,
     }),
-    [user, isSuperAdmin, isArtist, login, logout, loading, error, clearError, token]
+    [user, isSuperAdmin, isArtist, login, logout, loading, error, clearError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

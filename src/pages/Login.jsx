@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "react-hook-form";
@@ -41,6 +41,12 @@ export default function Login() {
     setError,
     formState: { isSubmitting },
   } = form;
+
+  // Effect: Clear any stale auth error on mount (prevents ghost toasts on remount)
+  useEffect(() => {
+    clearError();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Effect: Route redirection upon successful login verification
   useEffect(() => {

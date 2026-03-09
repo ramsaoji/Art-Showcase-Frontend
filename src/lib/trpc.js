@@ -15,13 +15,12 @@ export const trpcClient = trpc.createClient({
     httpLink({
       url: baseUrl + "/trpc",
       fetch(url, options = {}) {
-        // Inject JWT token from localStorage
-        const token = localStorage.getItem("token");
-        const headers = new Headers(options.headers || {});
-        if (token) {
-          headers.set("Authorization", `Bearer ${token}`);
-        }
-        return fetch(url, { ...options, headers });
+        // Automatically inject cookies
+        const fetchOptions = {
+          ...options,
+          credentials: "include", // This enables sending 'HttpOnly' cookies
+        };
+        return fetch(url, fetchOptions);
       },
     }),
   ],
