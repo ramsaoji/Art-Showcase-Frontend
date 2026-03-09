@@ -30,7 +30,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isSuperAdmin, isArtist, user, logout, loading, token } = useAuth();
+  const { isSuperAdmin, isArtist, user, logout, loading } = useAuth();
   const mobileMenuRef = useRef(null);
 
   useEffect(() => {
@@ -281,7 +281,7 @@ export default function Navbar() {
 
               {/* Right side - User actions */}
               <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 ml-auto">
-                {loading && token ? (
+                {loading && !user ? (
                    // Skeleton Loader for Auth Section
                    <div className="hidden lg:flex items-center space-x-4 animate-pulse">
                      <div className="h-8 w-24 bg-gray-200 rounded-xl" />

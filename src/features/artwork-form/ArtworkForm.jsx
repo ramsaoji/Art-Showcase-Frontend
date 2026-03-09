@@ -123,7 +123,7 @@ export default function ArtworkForm({
       baseUrl +
         "/trpc/artwork.getArtistUsageStats?input=" +
         encodeURIComponent(JSON.stringify({ artistId: targetArtistId })),
-      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      { credentials: "include" }
     )
       .then((r) => r.json())
       .then((json) => setEditArtistUsageStats(json?.result?.data ?? null))
