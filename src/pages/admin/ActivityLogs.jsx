@@ -14,6 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   ALL_ACTION_OPTIONS,
   exportLogsToExcel,
   getActionCategory,
@@ -453,26 +461,27 @@ export default function AdminActivityLogs() {
         />
       ) : (
         <>
-          <div className="w-full overflow-x-auto rounded-xl custom-scrollbar pb-10">
-            <table className="min-w-[820px] w-full text-left font-sans border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  {[
-                    { label: "Timestamp", width: "w-[15%]" },
-                    { label: "Actor", width: "w-[20%]" },
-                    { label: "Action", width: "w-[12%]" },
-                    { label: "Target", width: "w-[38%]" },
-                    { label: "Status", width: "w-[10%]" },
-                    { label: "", width: "w-[5%]" }
-                  ].map((h, i) => (
-                    <th key={i} className={`px-3 sm:px-4 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${h.width}`}>
-                      {h.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {allLogs.map((log, index) => {
+          <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-xl shadow-sm overflow-hidden pb-2 mb-4">
+            <div className="w-full overflow-x-auto custom-scrollbar">
+              <Table className="min-w-[820px] w-full text-left font-sans">
+                <TableHeader className="bg-gray-50/80 border-b border-gray-100">
+                  <TableRow className="hover:bg-transparent border-0">
+                    {[
+                      { label: "Timestamp", width: "w-[15%]" },
+                      { label: "Actor", width: "w-[20%]" },
+                      { label: "Action", width: "w-[12%]" },
+                      { label: "Target", width: "w-[38%]" },
+                      { label: "Status", width: "w-[10%]" },
+                      { label: "", width: "w-[5%]" }
+                    ].map((h, i) => (
+                      <TableHead key={i} className={`px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${h.width}`}>
+                        {h.label}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allLogs.map((log, index) => {
                   const catStyle = getCategoryStyle(log.action);
                   const statusStyle = getStatusStyle(log.status);
                   const roleStyle = getRoleStyle(log.actorRole);
@@ -487,18 +496,12 @@ export default function AdminActivityLogs() {
 
                   return (
                     <Fragment key={log.id}>
-                      {index > 0 && (
-                        <tr className="h-2.5">
-                          <td colSpan={6} className="p-0 border-0 bg-transparent"></td>
-                        </tr>
-                      )}
-                      <tr
-                        className={`group ${hasMetadata ? "cursor-pointer" : "cursor-default"
-                          }`}
+                      <TableRow
+                        className={`group border-b border-gray-100 transition-colors duration-200 ${isExpanded ? "bg-gray-50/80 border-b-transparent" : "hover:bg-gray-50/50 bg-white"} ${hasMetadata ? "cursor-pointer" : "cursor-default"}`}
                         onClick={hasMetadata ? () => toggleRow(log.id) : undefined}
                       >
                         {/* Timestamp */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle rounded-l-2xl border-y border-l border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 rounded-bl-none border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
+                        <TableCell className="px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle">
                           <div>
                             <p className="text-xs font-sans text-gray-700 font-medium">
                               {formatRelativeTime(log.createdAt)}
@@ -507,10 +510,10 @@ export default function AdminActivityLogs() {
                               {formatAbsoluteTime(log.createdAt)}
                             </p>
                           </div>
-                        </td>
+                        </TableCell>
 
                         {/* Actor */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle max-w-[160px] border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
+                        <TableCell className="px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle max-w-[160px]">
                           <p className="text-xs font-sans text-gray-800 font-medium truncate" title={log.actorName}>
                             {log.actorName ?? "—"}
                           </p>
@@ -519,18 +522,18 @@ export default function AdminActivityLogs() {
                               {log.actorRole}
                             </span>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Action */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
+                        <TableCell className="px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${catStyle.bg} ${catStyle.text} ${catStyle.border}`}>
                             <CategoryIcon className={`w-4 h-4 ${catStyle.text}`} aria-hidden="true" />
                             {getActionLabel(log.action)}
                           </span>
-                        </td>
+                        </TableCell>
 
                         {/* Target */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 align-middle max-w-[160px] border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
+                        <TableCell className="px-4 py-3 sm:py-3.5 align-middle max-w-[160px]">
                           {log.targetLabel ? (
                             <p className="text-xs font-sans text-gray-700 truncate" title={log.targetLabel}>
                               {log.targetLabel}
@@ -543,10 +546,10 @@ export default function AdminActivityLogs() {
                           {metaSummary && (
                             <p className="text-[10px] font-sans text-gray-400 truncate">{metaSummary}</p>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Status */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle border-y border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 border-b-transparent" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
+                        <TableCell className="px-4 py-3 sm:py-3.5 whitespace-nowrap align-middle">
                           <span className={`text-[11px] font-semibold font-sans px-2 py-0.5 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
                             {log.status}
                           </span>
@@ -555,10 +558,10 @@ export default function AdminActivityLogs() {
                               {log.errorMsg}
                             </p>
                           )}
-                        </td>
+                        </TableCell>
 
                         {/* Expand */}
-                        <td className={`px-3 sm:px-4 py-3 sm:py-3.5 align-middle rounded-r-2xl border-y border-r border-gray-200 transition-colors ${isExpanded ? "bg-gray-50/50 rounded-br-none border-b-transparent relative" : "bg-white group-hover:bg-gray-50 shadow-sm"}`}>
+                        <TableCell className="px-4 py-3 sm:py-3.5 align-middle">
                           {hasMetadata && (
                             <button
                               className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors"
@@ -571,13 +574,13 @@ export default function AdminActivityLogs() {
                               }
                             </button>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
 
                       {/* Expandable metadata row */}
                       {isExpanded && hasMetadata && (
-                        <tr key={`${log.id}-meta`} className="bg-transparent">
-                          <td colSpan={6} className="px-4 sm:px-6 pb-6 pt-4 rounded-b-2xl border-b border-x border-gray-200 bg-gray-50/50 shadow-sm">
+                        <TableRow key={`${log.id}-meta`} className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
+                          <TableCell colSpan={6} className="px-6 pb-6 pt-4 border-0">
                             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-6 py-5">
                               {(() => {
                                 const metadata = log.metadata || {};
@@ -866,14 +869,15 @@ export default function AdminActivityLogs() {
                                 );
                               })()}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )}
                     </Fragment>
                   );
                 })}
-              </tbody>
-            </table>
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {/* Load more */}

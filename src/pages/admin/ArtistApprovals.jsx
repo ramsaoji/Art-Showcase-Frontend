@@ -11,7 +11,14 @@ import ResultCount from "@/components/common/ResultCount";
 import Pagination from "@/components/common/Pagination";
 import EmptyState from "@/components/common/EmptyState";
 import { Badge } from "@/components/ui/badge";
-
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 /**
  * ArtistApprovals Page
  * Admin view for reviewing, approving, activating, and removing artist accounts.
@@ -180,112 +187,114 @@ export default function ArtistApprovals() {
       ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
-          <div className="w-full overflow-x-auto rounded-xl custom-scrollbar">
-            <table className="min-w-[600px] w-full text-left font-sans border-separate border-spacing-y-2">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Artist Name
-                  </th>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-center">
-                    Artworks
-                  </th>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-center">
-                    Email Verified
-                  </th>
-                  <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Active
-                  </th>
-                  <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Approved
-                  </th>
-                  <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {artistUsers.map((artist) => {
-                    const canDelete = (artist.artworksCount ?? 0) === 0;
+          <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm overflow-hidden mb-4">
+            <div className="w-full overflow-x-auto custom-scrollbar">
+              <Table className="min-w-[700px] w-full text-left font-sans">
+                <TableHeader className="bg-gray-50/80 border-b border-gray-100">
+                  <TableRow className="hover:bg-transparent border-0">
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Artist Name
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Email
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-center">
+                      Artworks
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-center">
+                      Email Verified
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Active
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Approved
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {artistUsers.map((artist) => {
+                      const canDelete = (artist.artworksCount ?? 0) === 0;
 
-                    return (
-                      <tr
-                        key={artist.id}
-                        className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-white/20"
-                      >
-                        <td
-                          className="px-4 py-3 font-sans align-middle text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate text-left"
-                          title={artist.artistName}
+                      return (
+                        <TableRow
+                          key={artist.id}
+                          className="group border-b border-gray-100 hover:bg-gray-50/50 transition-colors duration-200"
                         >
-                          {artist.artistName}
-                        </td>
-                        <td
-                          className="px-4 py-3 font-sans align-middle text-gray-700 whitespace-nowrap max-w-[200px] truncate text-left"
-                          title={artist.email}
-                        >
-                          {artist.email}
-                        </td>
-                        <td className="px-4 py-3 font-sans align-middle text-gray-700 text-center">
-                          {artist.artworksCount ?? 0}
-                        </td>
-                        <td className="px-4 py-3 font-sans align-middle text-center">
-                          <Badge variant={artist.emailVerified ? "success" : "destructive"}>
-                            {artist.emailVerified ? "Verified" : "Not Verified"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 font-sans align-middle text-left">
-                          <Badge variant={artist.active ? "success" : "destructive"}>
-                            {artist.active ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 font-sans align-middle text-left">
-                          <Badge variant={artist.approved ? "default" : "warning"}>
-                            {artist.approved ? "Approved" : "Pending"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 font-sans align-middle whitespace-normal min-w-[120px] text-left">
-                          <div className="flex items-center gap-2 justify-start">
-                            {artist.emailVerified && !artist.approved && (
-                              <button
-                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-600 hover:via-indigo-700 hover:to-indigo-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={() => handleApprove(artist.id)}
-                                disabled={approveMutation.isLoading}
-                              >
-                                Approve
-                              </button>
-                            )}
-                            {artist.emailVerified && (
-                              <button
-                                className={`min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 rounded-lg font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  artist.active
-                                    ? "bg-gradient-to-r from-amber-300 to-amber-400 text-amber-900 hover:from-amber-400 hover:to-amber-500"
-                                    : "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                                }`}
-                                onClick={() => handleSetActive(artist.id, !artist.active, artist)}
-                                disabled={setActiveMutation.isLoading}
-                              >
-                                {artist.active ? "Deactivate" : "Activate"}
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                className="min-w-[110px] px-4 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 font-sans font-semibold transition-all duration-200 border-none outline-none shadow-sm hover:shadow-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={() => handleDeleteUserClick(artist)}
-                                disabled={deleteUserMutation.isLoading || isDeletingUser}
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
+                          <TableCell
+                            className="px-5 py-4 font-sans align-middle text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate text-left"
+                            title={artist.artistName}
+                          >
+                            {artist.artistName}
+                          </TableCell>
+                          <TableCell
+                            className="px-5 py-4 font-sans align-middle text-gray-600 whitespace-nowrap max-w-[200px] truncate text-left group-hover:text-gray-900 transition-colors"
+                            title={artist.email}
+                          >
+                            {artist.email}
+                          </TableCell>
+                          <TableCell className="px-5 py-4 font-sans align-middle text-gray-700 text-center font-medium">
+                            {artist.artworksCount ?? 0}
+                          </TableCell>
+                          <TableCell className="px-5 py-4 font-sans align-middle text-center">
+                            <Badge variant={artist.emailVerified ? "success" : "destructive"}>
+                              {artist.emailVerified ? "Verified" : "Not Verified"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 font-sans align-middle text-left">
+                            <Badge variant={artist.active ? "success" : "destructive"}>
+                              {artist.active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 font-sans align-middle text-left">
+                            <Badge variant={artist.approved ? "default" : "warning"}>
+                              {artist.approved ? "Approved" : "Pending"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 font-sans align-middle whitespace-normal min-w-[120px] text-left">
+                            <div className="flex items-center gap-2 justify-start">
+                              {artist.emailVerified && !artist.approved && (
+                                <button
+                                  className="min-w-[100px] px-3 py-1.5 sm:px-3 sm:py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                  onClick={() => handleApprove(artist.id)}
+                                  disabled={approveMutation.isLoading}
+                                >
+                                  Approve
+                                </button>
+                              )}
+                              {artist.emailVerified && (
+                                <button
+                                  className={`min-w-[100px] px-3 py-1.5 sm:px-3 sm:py-1.5 rounded-md font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    artist.active
+                                      ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                      : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                  }`}
+                                  onClick={() => handleSetActive(artist.id, !artist.active, artist)}
+                                  disabled={setActiveMutation.isLoading}
+                                >
+                                  {artist.active ? "Deactivate" : "Activate"}
+                                </button>
+                              )}
+                              {canDelete && (
+                                <button
+                                  className="min-w-[100px] px-3 py-1.5 sm:px-3 sm:py-1.5 bg-rose-100 text-rose-700 rounded-md hover:bg-rose-200 font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                  onClick={() => handleDeleteUserClick(artist)}
+                                  disabled={deleteUserMutation.isLoading || isDeletingUser}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>

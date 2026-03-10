@@ -14,7 +14,14 @@ import ResultCount from "@/components/common/ResultCount";
 import Pagination from "@/components/common/Pagination";
 import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
-
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 /**
  * ArtistQuotaLimits page — admin view for reviewing and editing per-artist
  * upload and AI quota limits. Uses sonner toast-free inline Alert for feedback (S4).
@@ -181,63 +188,67 @@ export default function ArtistQuotaLimits() {
       ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
-          <div className="w-full overflow-x-auto rounded-xl custom-scrollbar">
-            <table className="min-w-[500px] w-full text-left font-sans border-separate border-spacing-y-2">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Artist Name
-                  </th>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left" title="Monthly upload / AI daily / Images per artwork">
-                    Limits
-                  </th>
-                  <th className="px-6 py-3 font-sans text-gray-700 text-sm font-semibold whitespace-nowrap text-left">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {artistUsers.map((artist) => (
-                  <tr
-                    key={artist.id}
-                    className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-white/20"
-                  >
-                    <td
-                      className="px-4 py-3 font-sans align-middle text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate text-left"
-                      title={artist.artistName}
+          <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm overflow-hidden mb-4">
+            <div className="w-full overflow-x-auto custom-scrollbar">
+              <Table className="min-w-[600px] w-full text-left font-sans">
+                <TableHeader className="bg-gray-50/80 border-b border-gray-100">
+                  <TableRow className="hover:bg-transparent border-0">
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Artist Name
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Email
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left" title="Monthly upload / AI daily / Images per artwork">
+                      Limits
+                    </TableHead>
+                    <TableHead className="px-5 py-4 font-sans text-gray-700 text-[13px] font-semibold whitespace-nowrap text-left">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {artistUsers.map((artist) => (
+                    <TableRow
+                      key={artist.id}
+                      className="group border-b border-gray-100 hover:bg-gray-50/50 transition-colors duration-200"
                     >
-                      {artist.artistName}
-                    </td>
-                    <td
-                      className="px-4 py-3 font-sans align-middle text-gray-700 whitespace-nowrap max-w-[200px] truncate text-left"
-                      title={artist.email}
-                    >
-                      {artist.email}
-                    </td>
-                    <td className="px-4 py-3 font-sans align-middle text-left">
-                      <span
-                        className="text-sm text-gray-600 font-mono tabular-nums"
-                        title="Monthly / AI daily / Images per artwork"
+                      <TableCell
+                        className="px-5 py-4 font-sans align-middle text-gray-900 font-medium whitespace-nowrap max-w-[180px] truncate text-left"
+                        title={artist.artistName}
                       >
-                        {getLimitsSummary(artist, backendLimits)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-sans align-middle text-left">
-                      <Button
-                        size="sm"
-                        onClick={() => openLimitsDialog(artist)}
-                        title="Edit quota & limits"
+                        {artist.artistName}
+                      </TableCell>
+                      <TableCell
+                        className="px-5 py-4 font-sans align-middle text-gray-600 whitespace-nowrap max-w-[200px] truncate text-left group-hover:text-gray-900 transition-colors"
+                        title={artist.email}
                       >
-                        Edit limits
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {artist.email}
+                      </TableCell>
+                      <TableCell className="px-5 py-4 font-sans align-middle text-left">
+                        <span
+                          className="text-sm text-gray-700 font-mono tabular-nums font-medium"
+                          title="Monthly / AI daily / Images per artwork"
+                        >
+                          {getLimitsSummary(artist, backendLimits)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-5 py-4 font-sans align-middle text-left">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openLimitsDialog(artist)}
+                          title="Edit quota & limits"
+                          className="font-medium text-xs bg-white text-gray-700 border-gray-300 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200"
+                        >
+                          Edit limits
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
