@@ -6,7 +6,7 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { trpc, trpcClient } from "@/lib/trpc";
+import { trpc, trpcClient, setMemoryToken } from "@/lib/trpc";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 
 const AuthContext = createContext();
@@ -68,6 +68,7 @@ export function AuthProvider({ children }) {
       } catch (err) {
         setUser(null);
         clearLocalToken();
+        setMemoryToken(null);
         // Clear all artwork-related localStorage data on session expiration
         clearArtworkLocalStorage();
       } finally {
@@ -87,6 +88,13 @@ export function AuthProvider({ children }) {
         const res = await trpcClient.user.login.mutate({ email, password });
         // Instead of saving token to localStorage, we rely on the HttpOnly cookie the backend sets
         clearLocalToken();
+
+        // Enterprise solution: store token in memory to gracefully handle browser cookie propagation delays
+        // This bypasses 401 race conditions instantly globally.
+        if (res.token) {
+          setMemoryToken(res.token);
+        }
+
         setUser(res.user);
 
         // Reset queries to ensure fresh data and show loading state
@@ -115,6 +123,7 @@ export function AuthProvider({ children }) {
     // Clear user state
     setUser(null);
     clearLocalToken();
+    setMemoryToken(null);
 
     // Clear all artwork-related localStorage data
     clearArtworkLocalStorage();
