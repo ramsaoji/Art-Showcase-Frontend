@@ -385,10 +385,29 @@ const CarouselManagement = () => {
       <ScrollableListPanel>
         {isLoading && items.length === 0 ? (
           <div className="flex flex-col gap-3 min-h-[10rem] p-2">
-             <Skeleton className="h-16 w-full rounded-2xl" />
-             <Skeleton className="h-16 w-full rounded-2xl opacity-80" />
-             <Skeleton className="h-16 w-full rounded-2xl opacity-60" />
-             <Skeleton className="h-16 w-full rounded-2xl opacity-40" />
+            {[1, 0.85, 0.7, 0.55].map((opacity, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-xl bg-white/90 border border-gray-200 flex items-center gap-3"
+                style={{ opacity }}
+              >
+                {/* Order badge */}
+                <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
+                {/* Thumbnail */}
+                <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
+                {/* Title + artist */}
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <Skeleton className="h-4 w-3/5 rounded" />
+                  <Skeleton className="h-3 w-2/5 rounded" />
+                </div>
+                {/* Status badge */}
+                <Skeleton className="h-5 w-16 rounded-full flex-shrink-0" />
+                {/* Drag handle */}
+                <Skeleton className="w-8 h-8 rounded-lg flex-shrink-0" />
+                {/* Toggle button */}
+                <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+              </div>
+            ))}
           </div>
         ) : (
           <DndContext

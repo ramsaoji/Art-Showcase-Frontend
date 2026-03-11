@@ -66,7 +66,7 @@ export default defineConfig({
             return "query-vendor";
 
           // Excel export
-          if (id.includes("exceljs") || id.includes("file-saver"))
+          if (id.includes("exceljs") || id.includes("file-saver") || id.includes("xlsx"))
             return "excel-vendor";
 
           // Let Rollup handle all other node_modules automatically
@@ -74,8 +74,7 @@ export default defineConfig({
         },
       },
     },
-    // Enable source maps for production
-    sourcemap: true,
+    sourcemap: false,
     // Enable minification
     minify: "terser",
     terserOptions: {

@@ -1,12 +1,42 @@
-import React, { Suspense, lazy } from "react";
+import React, { lazy } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Route } from "react-router-dom";
 import "./index.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 import { STALE_TIME_MS } from "@/lib/queryOptions";
-import PageLoader from "@/components/common/PageLoader";
+import { queryClient } from "@/lib/queryClient";
+
+// ─── Homepage prefetch ────────────────────────────────────────────────────
+// Fire the 3 homepage queries immediately on module load so data is in cache
+// by the time React mounts Home.jsx. Skips skeletons on fast connections.
+const PREFETCH_STALE_MS = STALE_TIME_MS || 300_000;
+
+function prefetchHomepageQueries() {
+  const prefetchQuery = (queryKey, fetcher) => {
+    queryClient.prefetchQuery({
+      queryKey,
+      queryFn: fetcher,
+      staleTime: PREFETCH_STALE_MS,
+    });
+  };
+
+  prefetchQuery(
+    [["artwork", "getArtworksForHeroCarousel"], { type: "query" }],
+    () => trpcClient.artwork.getArtworksForHeroCarousel.query()
+  );
+  prefetchQuery(
+    [["artwork", "getFeaturedArtworks"], { type: "query" }],
+    () => trpcClient.artwork.getFeaturedArtworks.query()
+  );
+  prefetchQuery(
+    [["artwork", "getArtworkStats"], { type: "query" }],
+    () => trpcClient.artwork.getArtworkStats.query()
+  );
+}
+
+// Run immediately — network request starts before React even boots
+prefetchHomepageQueries();
 
 // Performance monitoring — logs Core Web Vitals to console in development.
 // To send to an analytics service in production, replace this with a fetch/beacon call.
@@ -32,11 +62,6 @@ if ("PerformanceObserver" in window) {
     // PerformanceObserver for longtask not supported
   }
 }
-
-// Using global queryClient from lib/queryClient
-
-
-import { queryClient } from "@/lib/queryClient";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

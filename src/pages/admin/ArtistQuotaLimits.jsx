@@ -183,7 +183,7 @@ export default function ArtistQuotaLimits() {
       )}
 
       {isLoading ? (
-        <AdminTableSkeleton />
+        <AdminTableSkeleton columns={4} actionButtons={1} />
       ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />

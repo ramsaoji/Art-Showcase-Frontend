@@ -123,7 +123,11 @@ export default function GalleryGrid({
               "aspect-[4/3]", "aspect-[3/4]", "aspect-[2/3]", "aspect-[4/5]"
             ].map((aspectClass, index) => (
               <div key={`masonry-skel-${index}`} className="mb-4 sm:mb-6 animate-pulse">
-                <div className={`bg-gray-200 rounded-2xl w-full ${aspectClass}`} />
+                {/* rounded-2xl matches MasonryArtworkCard container, overflow-hidden clips gradient */}
+                <div className={`relative bg-gray-200 rounded-2xl w-full overflow-hidden ${aspectClass}`}>
+                  {/* Bottom gradient overlay — mirrors MasonryArtworkCard hover info area */}
+                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-gray-300/60 to-transparent" />
+                </div>
               </div>
             ))}
           </Masonry>

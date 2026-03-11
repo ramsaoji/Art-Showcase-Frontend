@@ -447,7 +447,7 @@ export default function AdminActivityLogs() {
 
       {/* ── Table ──────────────────────────────────────────────── */}
       {isLoading ? (
-        <AdminTableSkeleton />
+        <AdminTableSkeleton columns={6} actionButtons={1} />
       ) : isError ? (
         <div className="text-center py-10">
           <p className="text-gray-500 font-sans text-sm">Failed to load logs.</p>

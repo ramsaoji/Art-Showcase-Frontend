@@ -459,9 +459,27 @@ const FeaturedArtworksManagement = () => {
           <ScrollableListPanel>
             {isLoadingAvailable && available.length === 0 ? (
               <div className="flex flex-col gap-3 min-h-[10rem] p-2">
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <Skeleton className="h-16 w-full rounded-2xl opacity-80" />
-                <Skeleton className="h-16 w-full rounded-2xl opacity-60" />
+                {[1, 0.8, 0.6].map((opacity, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl bg-white/90 border border-gray-200 flex items-center gap-3"
+                    style={{ opacity }}
+                  >
+                    {/* Order badge */}
+                    <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex-shrink-0" />
+                    {/* Thumbnail */}
+                    <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
+                    {/* Title + artist */}
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                      <Skeleton className="h-4 w-3/5 rounded" />
+                      <Skeleton className="h-3 w-2/5 rounded" />
+                    </div>
+                    {/* Available badge */}
+                    <Skeleton className="h-5 w-20 rounded-full flex-shrink-0 hidden sm:block" />
+                    {/* Arrow action icon */}
+                    <Skeleton className="w-5 h-5 rounded-full flex-shrink-0" />
+                  </div>
+                ))}
               </div>
             ) : (
               <AnimatePresence>
@@ -506,9 +524,29 @@ const FeaturedArtworksManagement = () => {
           <ScrollableListPanel>
             {isLoadingFeatured && featured.length === 0 ? (
               <div className="flex flex-col gap-3 min-h-[10rem] p-2">
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <Skeleton className="h-16 w-full rounded-2xl opacity-80" />
-                <Skeleton className="h-16 w-full rounded-2xl opacity-60" />
+                {[1, 0.8, 0.6].map((opacity, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl bg-white/90 border border-gray-200 flex items-center gap-3"
+                    style={{ opacity }}
+                  >
+                    {/* Order badge — indigo tint for featured */}
+                    <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex-shrink-0 bg-indigo-100" />
+                    {/* Thumbnail */}
+                    <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
+                    {/* Title + artist */}
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                      <Skeleton className="h-4 w-3/5 rounded" />
+                      <Skeleton className="h-3 w-2/5 rounded" />
+                    </div>
+                    {/* Featured badge */}
+                    <Skeleton className="h-5 w-20 rounded-full flex-shrink-0 hidden sm:block bg-indigo-100" />
+                    {/* Drag handle — only featured rows have this */}
+                    <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
+                    {/* Arrow action icon */}
+                    <Skeleton className="w-5 h-5 rounded-full flex-shrink-0" />
+                  </div>
+                ))}
               </div>
             ) : (
               <DndContext

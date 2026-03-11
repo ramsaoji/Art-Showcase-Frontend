@@ -182,7 +182,7 @@ export default function ArtistApprovals() {
         placeholder="Search by name or email..."
       />
       {isLoading ? (
-        <AdminTableSkeleton />
+        <AdminTableSkeleton columns={7} actionButtons={3} />
       ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
