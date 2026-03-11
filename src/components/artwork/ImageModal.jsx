@@ -14,7 +14,7 @@ import CarouselDots from "@/components/artwork/CarouselDots";
 import CarouselNavButton from "@/components/artwork/CarouselNavButton";
 import { InstagramIcon, YouTubeIcon } from "@/components/artwork/SocialMediaIcons";
 import PurchaseFooter from "@/components/artwork/PurchaseFooter";
-import Loader from "@/components/common/Loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import SocialMediaModal from "@/components/sections/SocialMediaModal";
 import PurchaseRequestModal from "@/features/purchase-request";
 import ArtworkActions from "@/components/artwork/ArtworkActions";
@@ -268,11 +268,11 @@ export default function ImageModal({
                 className="relative w-full max-w-5xl min-w-[320px] sm:min-w-[480px] md:min-w-[600px] lg:min-w-[700px] flex flex-col xl:flex-row bg-transparent backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 ring-1 ring-white/5"
                 style={{ height: "calc(100dvh - 5rem)" }}
               >
-                {/* Image Section */}
-                <div className="relative flex h-2/5 sm:h-1/2 w-full min-w-[220px] sm:min-w-[320px] md:min-w-[400px] lg:min-w-[500px] min-h-[220px] sm:min-h-[320px] md:min-h-[400px] lg:min-h-[500px] items-center justify-center flex-[3_3_0%] bg-gradient-to-br from-gray-900/50 to-black/30 md:h-2/3 xl:h-full">
+                  {/* Image Section */}
+                <div className="relative flex h-2/5 sm:h-1/2 w-full min-w-[220px] sm:min-w-[320px] md:min-w-[400px] lg:min-w-[500px] min-h-[220px] sm:min-h-[320px] md:min-h-[400px] lg:min-h-[500px] items-center justify-center flex-[3_3_0%] bg-gradient-to-br from-gray-900/50 to-black/30 md:h-2/3 xl:h-full relative overflow-hidden">
                   {isLoading && !hasError && (
-                    <div className="absolute inset-0 flex items-center justify-center z-20 w-full h-full min-h-40 min-w-40 sm:min-h-0 sm:min-w-0">
-                      <Loader size={isDesktop ? "large" : "medium"} />
+                    <div className="absolute inset-0 z-20 w-full h-full p-0">
+                      <Skeleton className="w-full h-full opacity-60 rounded-none bg-indigo-50/10" />
                     </div>
                   )}
 

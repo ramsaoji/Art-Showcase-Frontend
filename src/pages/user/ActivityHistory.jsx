@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import PageBackground from "@/components/common/PageBackground";
 import PageHeader from "@/components/common/PageHeader";
-import Loader from "@/components/common/Loader";
+
 import EmptyState from "@/components/common/EmptyState";
 import ActivityLogEntry from "@/features/activity-log/components/ActivityLogEntry";
+import ActivityHistorySkeleton from "@/components/skeletons/ActivityHistorySkeleton";
 import {
   ALL_ACTION_OPTIONS,
   exportLogsToExcel,
@@ -257,9 +258,7 @@ export default function ActivityHistory() {
 
         {/* ── Log list ──────────────────────────────────────────── */}
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader size="medium" />
-          </div>
+          <ActivityHistorySkeleton />
         ) : isError ? (
           <div className="text-center py-16">
             <p className="text-gray-500 font-sans">Failed to load activity logs.</p>

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import ArtworkForm from "@/features/artwork-form";
-import Loader from "@/components/common/Loader";
+import RouteSuspenseFallback from "@/components/common/RouteSuspenseFallback";
 import { useAuth } from "@/contexts/AuthContext";
 import Alert from "@/components/common/Alert";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
@@ -123,8 +123,8 @@ export default function EditArtwork() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader />
+      <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 sm:py-16 bg-white/50">
+        <RouteSuspenseFallback />
       </div>
     );
   }

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import Alert from "@/components/common/Alert";
-import Loader from "@/components/common/Loader";
+
+import AdminTableSkeleton from "@/components/skeletons/AdminTableSkeleton";
 import ArtistLimitsModal from "@/features/artist-limits";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import { useBackendLimits } from "@/lib/trpc";
@@ -181,10 +182,8 @@ export default function ArtistQuotaLimits() {
         <Alert type="error" message={error} className="mb-4 items-center font-sans" />
       )}
 
-      {isLoading || isFetching ? (
-        <div className="flex justify-center py-16">
-          <Loader size="medium" />
-        </div>
+      {isLoading ? (
+        <AdminTableSkeleton />
       ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />

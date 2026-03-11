@@ -7,6 +7,7 @@ import Masonry from "react-masonry-css";
 import Loader from "@/components/common/Loader";
 import EmptyState from "@/components/common/EmptyState";
 import { useAuth } from "@/contexts/AuthContext";
+import GalleryGridSkeleton from "@/components/skeletons/GalleryGridSkeleton";
 
 /**
  * GalleryGrid — renders the artwork grid with infinite scroll.
@@ -128,13 +129,7 @@ export default function GalleryGrid({
           </Masonry>
         ) : (
           <div className="space-y-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={`grid-skel-${index}`} className="animate-pulse">
-                  <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4" />
-                </div>
-              ))}
-            </div>
+            <GalleryGridSkeleton count={8} />
           </div>
         )
       ) : (

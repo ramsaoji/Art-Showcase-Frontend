@@ -19,7 +19,7 @@ import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 import Alert from "@/components/common/Alert";
 import Badge from "@/components/artwork/Badge";
 import StatusBadge from "@/components/artwork/StatusBadge";
-import Loader from "@/components/common/Loader";
+
 import { Button } from "@/components/ui/button";
 import { trackArtworkView, trackShare } from "@/services/analytics";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,6 +59,8 @@ const descriptionMotion = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, delay: 0.5 },
 };
+
+import ArtworkDetailSkeleton from "@/components/skeletons/ArtworkDetailSkeleton";
 
 /**
  * ArtworkDetail page — full-page view of a single artwork.
@@ -243,11 +245,7 @@ export default function ArtworkDetail() {
   }, []);
 
   if (artworkLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50">
-        <Loader size="large" />
-      </div>
-    );
+    return <ArtworkDetailSkeleton />;
   }
 
   if (error) {

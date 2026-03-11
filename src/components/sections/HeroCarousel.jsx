@@ -6,7 +6,7 @@ import ArrowRightIcon from "@heroicons/react/24/outline/ArrowRightIcon";
 import ChevronLeftIcon from "@heroicons/react/24/outline/ChevronLeftIcon";
 import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
 import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
-import Loader from "@/components/common/Loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import Alert from "@/components/common/Alert";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
@@ -276,13 +276,6 @@ export default function HeroCarousel() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[80vh] sm:min-h-[calc(100vh-5rem)] flex items-center justify-center">
-        <Loader size="large" />
-      </div>
-    );
-  }
 
   return (
     <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden">
@@ -384,10 +377,10 @@ export default function HeroCarousel() {
                   {/* Gradient glow behind the image */}
                   <div className="absolute inset-0 xl:rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 blur-xl -z-10 hidden xl:block" />
 
-                  {/* Loader on top while image loads */}
+                  {/* Skeleton placeholder while image loads */}
                   {!artworkLoaded && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-20">
-                      <Loader />
+                    <div className="absolute inset-0 z-20">
+                      <Skeleton className="w-full h-full xl:rounded-3xl" />
                     </div>
                   )}
                 </div>

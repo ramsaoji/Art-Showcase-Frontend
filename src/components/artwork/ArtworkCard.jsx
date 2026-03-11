@@ -16,6 +16,7 @@ import CarouselDots from "@/components/artwork/CarouselDots";
 import CarouselNavButton from "@/components/artwork/CarouselNavButton";
 import { InstagramIcon, YouTubeIcon } from "@/components/artwork/SocialMediaIcons";
 import { useAuth } from "@/contexts/AuthContext";
+import { trpc } from "@/lib/trpc";
 import PurchaseRequestModal from "@/features/purchase-request";
 import PurchaseFooter from "@/components/artwork/PurchaseFooter";
 import SocialMediaModal from "@/components/sections/SocialMediaModal";
@@ -160,10 +161,29 @@ const ArtworkCard = memo(function ArtworkCard({
     (isArtist && isOwner) ||
     (artwork?.status && artwork.status !== "ACTIVE");
 
+  // Debounced hover prefetching
+  const prefetchTimer = useRef(null);
+  const utils = trpc.useContext();
+
+  const handleMouseEnter = useCallback(() => {
+    prefetchTimer.current = setTimeout(() => {
+      utils.artwork.getArtworkById.prefetch(
+        { id: safeArtwork.id },
+        { staleTime: 5 * 60 * 1000 }
+      );
+    }, 150);
+  }, [safeArtwork.id, utils]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (prefetchTimer.current) clearTimeout(prefetchTimer.current);
+  }, []);
+
   return (
     <motion.div
       ref={cardRef}
       layout
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       {...cardVariants}
       className={`group relative bg-gradient-to-br from-white/90 via-white/95 to-gray-50/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 ring-1 ring-white/10 hover:shadow-3xl hover:shadow-indigo-500/10 transition-all duration-500 
         h-[680px] flex flex-col justify-between overflow-hidden`}

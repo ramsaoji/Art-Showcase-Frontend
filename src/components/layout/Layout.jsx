@@ -1,7 +1,9 @@
+import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import RouteSuspenseFallback from "@/components/common/RouteSuspenseFallback";
 
 // Hoist static background to avoid reconciling on every Layout render (rendering-hoist-jsx)
 const LAYOUT_BACKGROUND = (
@@ -50,7 +52,9 @@ export default function Layout() {
         {/* key forces a full unmount+remount of page content on navigation,
             which resets any nested scroll containers and prevents stale positions */}
         <div key={pathname} className="relative min-h-screen">
-          <Outlet />
+          <React.Suspense fallback={<RouteSuspenseFallback />}>
+            <Outlet />
+          </React.Suspense>
         </div>
         <Footer />
       </main>

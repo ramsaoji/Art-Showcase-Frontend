@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import Loader from "@/components/common/Loader";
+
+import AdminTableSkeleton from "@/components/skeletons/AdminTableSkeleton";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import { ADMIN_LIST_QUERY_OPTIONS } from "@/lib/queryOptions";
@@ -180,10 +181,8 @@ export default function ArtistApprovals() {
         onChange={handleSearchChange}
         placeholder="Search by name or email..."
       />
-      {isLoading || isFetching ? (
-        <div className="flex justify-center py-16">
-          <Loader size="medium" />
-        </div>
+      {isLoading ? (
+        <AdminTableSkeleton />
       ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />

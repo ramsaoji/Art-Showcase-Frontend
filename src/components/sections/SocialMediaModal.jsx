@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import useScrollLock from "@/hooks/useScrollLock";
 import { motion } from "framer-motion";
 
-import Loader from "@/components/common/Loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // shadcn components
 import { X } from "lucide-react";
@@ -143,8 +143,8 @@ export default function SocialMediaModal({
 
           {/* Loading state */}
           {isLoading && (
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
-              <Loader size="medium" />
+            <div className="flex-1 w-full h-full p-2">
+              <Skeleton className="w-full h-full rounded-2xl" />
             </div>
           )}
 

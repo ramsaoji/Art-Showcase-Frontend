@@ -1,9 +1,10 @@
 import { useState, useCallback, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
-import Loader from "@/components/common/Loader";
+
 import EmptyState from "@/components/common/EmptyState";
 import SectionHeader from "@/components/common/SectionHeader";
+import AdminTableSkeleton from "@/components/skeletons/AdminTableSkeleton";
 import SearchBar from "@/components/common/SearchBar";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
@@ -446,9 +447,7 @@ export default function AdminActivityLogs() {
 
       {/* ── Table ──────────────────────────────────────────────── */}
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Loader size="medium" />
-        </div>
+        <AdminTableSkeleton />
       ) : isError ? (
         <div className="text-center py-10">
           <p className="text-gray-500 font-sans text-sm">Failed to load logs.</p>

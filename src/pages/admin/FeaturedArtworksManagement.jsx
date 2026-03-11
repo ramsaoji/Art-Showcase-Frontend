@@ -23,7 +23,7 @@ import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
 import ArrowRightCircleIcon from "@heroicons/react/24/solid/ArrowRightCircleIcon";
 import ArrowLeftCircleIcon from "@heroicons/react/24/solid/ArrowLeftCircleIcon";
 import ArrowUpCircleIcon from "@heroicons/react/24/solid/ArrowUpCircleIcon";
-import Loader from "@/components/common/Loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import Badge from "@/components/artwork/Badge";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import { getThumbnailUrl } from "@/utils/cloudinary";
@@ -442,15 +442,7 @@ const FeaturedArtworksManagement = () => {
     updateFeatured.mutate({ artworks: payload });
   }, [featured, available, updateFeatured]);
 
-  if (
-    (isLoadingAvailable && available.length === 0) ||
-    (isLoadingFeatured && featured.length === 0)
-  )
-    return (
-      <div className="flex justify-center items-center min-h-[32rem]">
-        <Loader size="medium" />
-      </div>
-    );
+
 
   // Success, error, and unsaved changes messages at the top
   const hasUnsavedChanges =
@@ -466,8 +458,10 @@ const FeaturedArtworksManagement = () => {
           />
           <ScrollableListPanel>
             {isLoadingAvailable && available.length === 0 ? (
-              <div className="flex justify-center items-center min-h-[10rem]">
-                <Loader size="medium" />
+              <div className="flex flex-col gap-3 min-h-[10rem] p-2">
+                <Skeleton className="h-16 w-full rounded-2xl" />
+                <Skeleton className="h-16 w-full rounded-2xl opacity-80" />
+                <Skeleton className="h-16 w-full rounded-2xl opacity-60" />
               </div>
             ) : (
               <AnimatePresence>
@@ -511,8 +505,10 @@ const FeaturedArtworksManagement = () => {
           />
           <ScrollableListPanel>
             {isLoadingFeatured && featured.length === 0 ? (
-              <div className="flex justify-center items-center min-h-[10rem]">
-                <Loader size="medium" />
+              <div className="flex flex-col gap-3 min-h-[10rem] p-2">
+                <Skeleton className="h-16 w-full rounded-2xl" />
+                <Skeleton className="h-16 w-full rounded-2xl opacity-80" />
+                <Skeleton className="h-16 w-full rounded-2xl opacity-60" />
               </div>
             ) : (
               <DndContext

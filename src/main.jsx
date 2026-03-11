@@ -33,26 +33,17 @@ if ("PerformanceObserver" in window) {
   }
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      staleTime: STALE_TIME_MS, // 5 min — no refetch on minimize/restore or tab switch
-    },
-  },
-});
+// Using global queryClient from lib/queryClient
+
+
+import { queryClient } from "@/lib/queryClient";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-              <App />
-            </Suspense>
-          </BrowserRouter>
+          <App />
         </AuthProvider>
       </QueryClientProvider>
     </trpc.Provider>

@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
 import Alert from "@/components/common/Alert";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
+import StatisticsSkeleton from "@/components/skeletons/StatisticsSkeleton";
 
 // Custom INR Icon component
 const INRIcon = ({ className }) => (
@@ -55,26 +56,6 @@ const StatCard = memo(({ icon: Icon, label, value, subtext, delay }) => (
   </motion.div>
 ));
 
-const SkeletonCard = ({ delay }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ duration: 0.5, delay, ease: "easeOut" }}
-    className="relative p-6 bg-gradient-to-br from-white/50 via-white/60 to-gray-50/50 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl animate-pulse"
-  >
-    {/* Icon placeholder */}
-    <div className="absolute -top-4 left-6">
-      <div className="p-3 bg-gray-300 rounded-xl shadow-lg w-12 h-12" />
-    </div>
-
-    {/* Content placeholder */}
-    <div className="mt-4">
-      <div className="h-10 w-24 bg-gray-300 rounded-md mb-2" />
-      <div className="h-4 w-28 bg-gray-200 rounded-md" />
-      <div className="h-3 w-24 bg-gray-200 rounded-md mt-3" />
-    </div>
-  </motion.div>
-);
 
 StatCard.displayName = "StatCard";
 
@@ -171,33 +152,7 @@ export default function Statistics() {
   ]);
 
   if (isLoading) {
-    return (
-      <section className="relative py-10 sm:py-20 overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
-          </div>
-        </div>
-
-        <div className="relative container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <div className="font-artistic text-4xl sm:text-5xl font-bold text-gray-600 tracking-wide mb-4">
-              Our Growing Community
-            </div>
-            <div className="font-sans text-lg text-gray-400 max-w-2xl mx-auto">
-              Loading community stats...
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {[0.1, 0.2, 0.3].map((delay) => (
-              <SkeletonCard key={delay} delay={delay} />
-            ))}
-          </div>
-        </div>
-      </section>
-    );
+    return <StatisticsSkeleton />;
   }
 
   if (error) {

@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import Loader from "@/components/common/Loader";
+import RouteSuspenseFallback from "@/components/common/RouteSuspenseFallback";
 
 /**
  * ProtectedRoute
@@ -23,8 +23,8 @@ function ProtectedRoute({
   // Show loading state while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader size="large" />
+      <div className="min-h-screen">
+        <RouteSuspenseFallback />
       </div>
     );
   }

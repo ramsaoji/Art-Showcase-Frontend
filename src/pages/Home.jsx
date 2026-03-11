@@ -1,4 +1,4 @@
-import { useCallback, useState, lazy, Suspense, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,14 @@ import ImageModal from "@/components/artwork/ImageModal";
 import ArtworkCard from "@/components/artwork/ArtworkCard";
 import HeroCarousel from "@/components/sections/HeroCarousel";
 import Alert from "@/components/common/Alert";
-import Loader from "@/components/common/Loader";
+import GalleryGridSkeleton from "@/components/skeletons/GalleryGridSkeleton";
 import {
   trackArtworkInteraction,
   trackUserAction,
 } from "@/services/analytics";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import ScrollToTopButton from "@/components/layout/ScrollToTopButton";
-
-// Lazy load the Statistics component
-const Statistics = lazy(() => import("@/components/sections/Statistics"));
+import Statistics from "@/components/sections/Statistics";
 
 // Hoist static animation variants outside component (rendering-hoist-jsx)
 const container = {
@@ -250,13 +248,7 @@ export default function Home() {
 
           {isLoading ? (
             <div className="space-y-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="animate-pulse">
-                    <div className="bg-gray-200 rounded-2xl aspect-[3/4] mb-4"></div>
-                  </div>
-                ))}
-              </div>
+              <GalleryGridSkeleton count={3} className="!grid-cols-1 sm:!grid-cols-2 lg:!grid-cols-3 xl:!grid-cols-3 !gap-8 sm:!gap-10" />
             </div>
           ) : error ? (
             <div className="max-w-xl mx-auto">
@@ -323,16 +315,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats Section - Lazy loaded */}
-      <Suspense
-        fallback={
-          <div className="py-16 flex justify-center">
-            <Loader size="large" />
-          </div>
-        }
-      >
-        <Statistics />
-      </Suspense>
+      {/* Stats Section - Data loading handled internally */}
+      <Statistics />
 
       {selectedArtwork && (
         <ImageModal

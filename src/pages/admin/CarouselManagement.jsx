@@ -20,7 +20,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import CheckIcon from "@heroicons/react/24/solid/CheckIcon";
 import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
-import Loader from "@/components/common/Loader";
+
+import { Skeleton } from "@/components/ui/skeleton";
 import Badge from "@/components/artwork/Badge";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import { getThumbnailUrl } from "@/utils/cloudinary";
@@ -374,12 +375,6 @@ const CarouselManagement = () => {
       }))
     );
 
-  if (isLoading && items.length === 0)
-    return (
-      <div className="flex justify-center items-center min-h-[32rem]">
-        <Loader size="medium" />
-      </div>
-    );
 
   return (
     <div className="font-sans w-full">
@@ -388,7 +383,15 @@ const CarouselManagement = () => {
         description="Select images to display in the homepage carousel and drag to set the order. The top-most selected image will appear first."
       />
       <ScrollableListPanel>
-        <DndContext
+        {isLoading && items.length === 0 ? (
+          <div className="flex flex-col gap-3 min-h-[10rem] p-2">
+             <Skeleton className="h-16 w-full rounded-2xl" />
+             <Skeleton className="h-16 w-full rounded-2xl opacity-80" />
+             <Skeleton className="h-16 w-full rounded-2xl opacity-60" />
+             <Skeleton className="h-16 w-full rounded-2xl opacity-40" />
+          </div>
+        ) : (
+          <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
@@ -408,7 +411,8 @@ const CarouselManagement = () => {
               />
             ))}
           </SortableContext>
-        </DndContext>
+          </DndContext>
+        )}
         <LoadMoreTrigger
           onClick={handleLoadMore}
           isLoading={isFetching && items.length > 0}
