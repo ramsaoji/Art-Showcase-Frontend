@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
@@ -14,14 +14,16 @@ import {
   formatPrice,
   formatLocalDateTime,
   resolveArtworkPricing,
+  getFriendlyErrorMessage,
 } from "@/utils/formatters";
 import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
+import ErrorState from "@/components/common/ErrorState";
 import Alert from "@/components/common/Alert";
 import Badge from "@/components/artwork/Badge";
 import StatusBadge from "@/components/artwork/StatusBadge";
 
 import { Button } from "@/components/ui/button";
-import { trackArtworkView, trackShare } from "@/services/analytics";
+import { trackArtworkView, trackShare, trackError } from "@/services/analytics";
 import { useAuth } from "@/contexts/AuthContext";
 import PurchaseRequestModal from "@/features/purchase-request";
 import useOptimizedImage from "@/hooks/useOptimizedImage";
@@ -71,6 +73,9 @@ export default function ArtworkDetail() {
   const { id } = useParams();
   const [showShareToast, setShowShareToast] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageRetryKey, setImageRetryKey] = useState(0);
+  const hasLoggedError = useRef(false);
+  const hasLoggedImageError = useRef(false);
   const { isSuperAdmin, isArtist, user } = useAuth();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,14 +105,39 @@ export default function ArtworkDetail() {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: 5 * 60 * 1000,
+      onError: (err) => {
+        if (!hasLoggedError.current) {
+          trackError(
+            getFriendlyErrorMessage(err) ||
+              "Could not load artwork details. Please try again.",
+            "ArtworkDetail"
+          );
+          hasLoggedError.current = true;
+        }
+      },
     }
   );
+  useEffect(() => {
+    if (!error) {
+      hasLoggedError.current = false;
+    }
+  }, [error]);
 
   useEffect(() => {
     if (artwork?.id && artwork?.title) {
       trackArtworkView(artwork.id, artwork.title);
     }
   }, [artwork?.id, artwork?.title]);
+
+  useEffect(() => {
+    if (imageError && !hasLoggedImageError.current) {
+      trackError("Artwork image failed to load.", "ArtworkDetailImage");
+      hasLoggedImageError.current = true;
+    }
+    if (!imageError) {
+      hasLoggedImageError.current = false;
+    }
+  }, [imageError]);
 
   const handleShare = useCallback(async () => {
     const shareUrl = window.location.href;
@@ -252,13 +282,30 @@ export default function ArtworkDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-indigo-50">
         <div className="max-w-xl mx-auto w-full">
-          <Alert
-            type="error"
-            message={
+          <ErrorState
+            title="Failed to load artwork"
+            description={
               getFriendlyErrorMessage(error) ||
               "Could not load artwork details. Please try again."
             }
-            onRetry={refetch}
+            primaryAction={
+              <Button
+                variant="default"
+                className="rounded-full px-8 font-artistic text-base"
+                onClick={() => refetch()}
+              >
+                Retry
+              </Button>
+            }
+            secondaryAction={
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-full px-6 font-artistic text-base"
+              >
+                <Link to="/gallery">Back to Gallery</Link>
+              </Button>
+            }
           />
         </div>
       </div>
@@ -269,9 +316,19 @@ export default function ArtworkDetail() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-indigo-50">
         <div className="max-w-xl mx-auto w-full">
-          <Alert
-            type="warning"
-            message="Artwork not found. The artwork might have been removed or is no longer available."
+          <ErrorState
+            severity="warning"
+            title="Artwork not found"
+            description="The artwork might have been removed or is no longer available."
+            secondaryAction={
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-full px-6 font-artistic text-base"
+              >
+                <Link to="/gallery">Back to Gallery</Link>
+              </Button>
+            }
           />
         </div>
       </div>
@@ -289,15 +346,26 @@ export default function ArtworkDetail() {
             {/* Enhanced Image Section */}
             <div className="relative flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900/50 to-black/30 h-[50vh] md:h-[60vh] xl:min-h-[60vh] xl:h-auto">
               {images.length === 0 || imageError ? (
-                <div className="flex flex-col items-center justify-center text-gray-300 p-8 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-                  <PhotoIcon className="h-16 w-16 mb-4 text-gray-400" />
-                  <p className="text-lg font-sans text-gray-300">
-                    Image not available
-                  </p>
-                  <p className="text-sm font-sans text-gray-400 mt-2">
-                    Please try again later
-                  </p>
-                </div>
+                <ErrorState
+                  severity="warning"
+                  title="Image not available"
+                  description="Please try again later."
+                  primaryAction={
+                    imageError ? (
+                      <Button
+                        variant="default"
+                        className="rounded-full px-6 font-artistic text-base"
+                        onClick={() => {
+                          setImageError(false);
+                          setIsLoading(true);
+                          setImageRetryKey((k) => k + 1);
+                        }}
+                      >
+                        Retry image
+                      </Button>
+                    ) : undefined
+                  }
+                />
               ) : (
                 <div
                   className="relative w-full h-full flex items-center justify-center select-none overflow-hidden"
@@ -376,6 +444,7 @@ export default function ArtworkDetail() {
                   >
                     <div className="relative overflow-hidden shadow-lg md:shadow-2xl md:ring-1 md:ring-white/20 group-hover:ring-white/30 transition-all duration-300 group-hover:scale-[1.02]">
                       <img
+                        key={`${currentImage?.cloudinary_public_id || currentImage?.url || "image"}-${imageRetryKey}`}
                         src={
                           imageState.fullSizeUrl ||
                           currentImage.url ||

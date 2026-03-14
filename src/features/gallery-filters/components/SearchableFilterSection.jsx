@@ -26,6 +26,7 @@ import { maskEmailInLabel } from "../utils/filterUtils";
  * @param {boolean} [props.showFooter=true] - Whether to render Apply/Reset footer buttons.
  * @param {Function} [props.onChange] - Fired immediately on each checkbox toggle (no Apply needed).
  * @param {string} [props.loadingMessage="Loading..."] - Text shown while loading.
+ * @param {boolean} [props.disabled=false] - Disables inputs and selection controls.
  */
 export default function SearchableFilterSection({
   title,
@@ -45,6 +46,7 @@ export default function SearchableFilterSection({
   showFooter = true,
   onChange,
   loadingMessage = "Loading...",
+  disabled = false,
 }) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [tempSelectedValues, setTempSelectedValues] = useState(
@@ -101,6 +103,7 @@ export default function SearchableFilterSection({
   const scrollableId = `${title.replace(/\s+/g, "-")}-scrollable-list`;
 
   const toggleSelection = (value) => {
+    if (disabled) return;
     setTempSelectedValues((prev) => {
       let newValues;
       if (value === "all") newValues = [];
@@ -132,13 +135,15 @@ export default function SearchableFilterSection({
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             placeholder={searchPlaceholder}
+            disabled={disabled}
             className="pl-9 pr-8 py-2 text-sm rounded-xl"
           />
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
           {localSearch && (
             <button
               onClick={() => setLocalSearch("")}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={disabled}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <XMarkIcon className="h-3.5 w-3.5" />
             </button>
@@ -170,11 +175,12 @@ export default function SearchableFilterSection({
                   setTempSelectedValues([]);
                   if (onChange) onChange([]);
                 }}
+                disabled={disabled}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans flex items-center ${
                   tempSelectedValues.length === 0
                     ? "bg-indigo-50 text-indigo-900 font-medium"
                     : "text-gray-600 hover:bg-gray-50"
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <div
                   className={`mr-2 h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
@@ -218,11 +224,12 @@ export default function SearchableFilterSection({
                   <button
                     key={value}
                     onClick={() => toggleSelection(value)}
+                    disabled={disabled}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm font-sans flex items-center ${
                       active
                         ? "bg-indigo-50 text-indigo-900 font-medium"
                         : "text-gray-600 hover:bg-gray-50"
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     <div
                       className={`mr-2 h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
@@ -261,13 +268,15 @@ export default function SearchableFilterSection({
                 setTempSelectedValues([]);
                 if (onChange) onChange([]);
               }}
-              className="px-4 py-2 rounded-lg text-sm font-sans font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+              disabled={disabled}
+              className="px-4 py-2 rounded-lg text-sm font-sans font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Reset
             </button>
             <button
               onClick={() => onApply(tempSelectedValues)}
-              className="flex-1 px-4 py-2 rounded-lg text-sm font-sans font-medium bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm hover:shadow transition-all"
+              disabled={disabled}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-sans font-medium bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Apply Filters
             </button>

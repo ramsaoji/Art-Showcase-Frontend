@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, memo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
@@ -23,8 +23,13 @@ import ChevronUpDownIcon from "@heroicons/react/24/solid/ChevronUpDownIcon";
 import ArrowRightCircleIcon from "@heroicons/react/24/solid/ArrowRightCircleIcon";
 import ArrowLeftCircleIcon from "@heroicons/react/24/solid/ArrowLeftCircleIcon";
 import ArrowUpCircleIcon from "@heroicons/react/24/solid/ArrowUpCircleIcon";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import StarIcon from "@heroicons/react/24/outline/StarIcon";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import Badge from "@/components/artwork/Badge";
+import EmptyState from "@/components/common/EmptyState";
+import ErrorState from "@/components/common/ErrorState";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import { getThumbnailUrl } from "@/utils/cloudinary";
 import useMediaQuery from "@/hooks/useMediaQuery";
@@ -32,6 +37,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import ScrollableListPanel from "@/components/common/ScrollableListPanel";
 import LoadMoreTrigger from "@/components/common/LoadMoreTrigger";
 import LoadingButton from "@/components/common/LoadingButton";
+import { trackError } from "@/services/analytics";
 
 const SortableArtwork = memo(function SortableArtwork({
   id,
@@ -284,12 +290,17 @@ const FeaturedArtworksManagement = () => {
   const [previousFeatured, setPreviousFeatured] = useState([]);
   const [originalFeatured, setOriginalFeatured] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const hasLoggedAvailableError = useRef(false);
+  const hasLoggedFeaturedError = useRef(false);
 
   // Independent queries for available and featured artworks
   const {
     data: availableData,
     isLoading: isLoadingAvailable,
     isFetching: isFetchingAvailable,
+    isError: isAvailableError,
+    error: availableError,
+    refetch: refetchAvailable,
   } = trpc.artwork.getAvailableArtworksAdmin.useQuery(
     { limit, offset: availableOffset },
     {
@@ -297,12 +308,25 @@ const FeaturedArtworksManagement = () => {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: 2 * 60 * 1000,
+      onError: (err) => {
+        if (!hasLoggedAvailableError.current) {
+          trackError(
+            getFriendlyErrorMessage(err) ||
+              "Failed to load available artworks.",
+            "FeaturedArtworksAvailable"
+          );
+          hasLoggedAvailableError.current = true;
+        }
+      },
     }
   );
   const {
     data: featuredData,
     isLoading: isLoadingFeatured,
     isFetching: isFetchingFeatured,
+    isError: isFeaturedError,
+    error: featuredError,
+    refetch: refetchFeatured,
   } = trpc.artwork.getFeaturedArtworksAdmin.useQuery(
     { limit, offset: featuredOffset },
     {
@@ -310,8 +334,28 @@ const FeaturedArtworksManagement = () => {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: 2 * 60 * 1000,
+      onError: (err) => {
+        if (!hasLoggedFeaturedError.current) {
+          trackError(
+            getFriendlyErrorMessage(err) ||
+              "Failed to load featured artworks.",
+            "FeaturedArtworksFeatured"
+          );
+          hasLoggedFeaturedError.current = true;
+        }
+      },
     }
   );
+  useEffect(() => {
+    if (!isAvailableError) {
+      hasLoggedAvailableError.current = false;
+    }
+  }, [isAvailableError]);
+  useEffect(() => {
+    if (!isFeaturedError) {
+      hasLoggedFeaturedError.current = false;
+    }
+  }, [isFeaturedError]);
   const updateFeatured = trpc.artwork.updateFeaturedArtworks.useMutation({
     onMutate: () => {
       // Optimistic update - update the UI when mutation starts
@@ -465,8 +509,6 @@ const FeaturedArtworksManagement = () => {
                     className="p-3 rounded-xl bg-white/90 border border-gray-200 flex items-center gap-3"
                     style={{ opacity }}
                   >
-                    {/* Order badge */}
-                    <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex-shrink-0" />
                     {/* Thumbnail */}
                     <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
                     {/* Title + artist */}
@@ -474,20 +516,39 @@ const FeaturedArtworksManagement = () => {
                       <Skeleton className="h-4 w-3/5 rounded" />
                       <Skeleton className="h-3 w-2/5 rounded" />
                     </div>
-                    {/* Available badge */}
-                    <Skeleton className="h-5 w-20 rounded-full flex-shrink-0 hidden sm:block" />
-                    {/* Arrow action icon */}
-                    <Skeleton className="w-5 h-5 rounded-full flex-shrink-0" />
+                    {/* Action area */}
+                    <Skeleton className="h-8 w-16 rounded-lg flex-shrink-0" />
                   </div>
                 ))}
               </div>
             ) : (
               <AnimatePresence>
-                {available.length === 0 && (
-                  <div className="text-center text-gray-400 py-8">
-                    No available artworks.
-                  </div>
-                )}
+                {isAvailableError ? (
+                  <ErrorState
+                    variant="plain"
+                    title="Failed to load available artworks"
+                    description={
+                      getFriendlyErrorMessage(availableError) ||
+                      "Please try again."
+                    }
+                    primaryAction={
+                      <Button
+                        variant="default"
+                        className="rounded-full px-6 font-artistic text-base"
+                        onClick={() => refetchAvailable()}
+                      >
+                        Retry
+                      </Button>
+                    }
+                  />
+                ) : available.length === 0 ? (
+                  <EmptyState
+                    variant="plain"
+                    icon={PhotoIcon}
+                    title="No available artworks"
+                    description="All active artworks have been featured, or there are no active artworks yet."
+                  />
+                ) : null}
                 {available.map((artwork, idx) => (
                   <SortableArtwork
                     key={artwork.id}
@@ -501,11 +562,13 @@ const FeaturedArtworksManagement = () => {
                 ))}
               </AnimatePresence>
             )}
+          {!isAvailableError && (
             <LoadMoreTrigger
               onClick={handleLoadMoreAvailable}
               isLoading={isFetchingAvailable && available.length > 0}
               label={hasMoreAvailable && !isFetchingAvailable ? "Load More" : undefined}
             />
+          )}
             {!hasMoreAvailable && available.length > 0 && (
               <div className="text-center text-xs text-gray-400 py-2">
                 All available artworks loaded
@@ -530,8 +593,6 @@ const FeaturedArtworksManagement = () => {
                     className="p-3 rounded-xl bg-white/90 border border-gray-200 flex items-center gap-3"
                     style={{ opacity }}
                   >
-                    {/* Order badge — indigo tint for featured */}
-                    <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex-shrink-0 bg-indigo-100" />
                     {/* Thumbnail */}
                     <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
                     {/* Title + artist */}
@@ -539,12 +600,8 @@ const FeaturedArtworksManagement = () => {
                       <Skeleton className="h-4 w-3/5 rounded" />
                       <Skeleton className="h-3 w-2/5 rounded" />
                     </div>
-                    {/* Featured badge */}
-                    <Skeleton className="h-5 w-20 rounded-full flex-shrink-0 hidden sm:block bg-indigo-100" />
-                    {/* Drag handle — only featured rows have this */}
-                    <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
-                    {/* Arrow action icon */}
-                    <Skeleton className="w-5 h-5 rounded-full flex-shrink-0" />
+                    {/* Action area */}
+                    <Skeleton className="h-8 w-16 rounded-lg flex-shrink-0" />
                   </div>
                 ))}
               </div>
@@ -561,11 +618,32 @@ const FeaturedArtworksManagement = () => {
                   strategy={verticalListSortingStrategy}
                 >
                   <AnimatePresence>
-                    {featured.length === 0 && (
-                      <div className="text-center text-gray-400 py-8">
-                        No featured artworks.
-                      </div>
-                    )}
+                    {isFeaturedError ? (
+                      <ErrorState
+                        variant="plain"
+                        title="Failed to load featured artworks"
+                        description={
+                          getFriendlyErrorMessage(featuredError) ||
+                          "Please try again."
+                        }
+                        primaryAction={
+                          <Button
+                            variant="default"
+                            className="rounded-full px-6 font-artistic text-base"
+                            onClick={() => refetchFeatured()}
+                          >
+                            Retry
+                          </Button>
+                        }
+                      />
+                    ) : featured.length === 0 ? (
+                      <EmptyState
+                        variant="plain"
+                        icon={StarIcon}
+                        title="No featured artworks"
+                        description="Click on artworks in the left panel to add them to the featured list."
+                      />
+                    ) : null}
                     {featured.map((artwork, idx) => (
                       <SortableArtwork
                         key={artwork.id}
@@ -581,11 +659,13 @@ const FeaturedArtworksManagement = () => {
                 </SortableContext>
               </DndContext>
             )}
+          {!isFeaturedError && (
             <LoadMoreTrigger
               onClick={handleLoadMoreFeatured}
               isLoading={isFetchingFeatured && featured.length > 0}
               label={hasMoreFeatured && !isFetchingFeatured ? "Load More" : undefined}
             />
+          )}
             {!hasMoreFeatured && featured.length > 0 && (
               <div className="text-center text-xs text-gray-400 py-2">
                 All featured artworks loaded

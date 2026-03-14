@@ -54,6 +54,7 @@ import {
  * @param {Function} props.markDropdownOpened - Signals that a dropdown has been opened (for lazy load).
  * @param {string} props.layoutType - Current layout type ('grid' or 'masonry').
  * @param {Function} props.setLayoutType - Setter for layout type.
+ * @param {boolean} [props.disabled=false] - Disables filter/search interactions while loading.
  */
 export default function GalleryFilters({
   filters,
@@ -84,6 +85,7 @@ export default function GalleryFilters({
   markDropdownOpened,
   layoutType,
   setLayoutType,
+  disabled = false,
 }) {
   const { isSuperAdmin, isArtist, user } = useAuth();
   useScrollLock(isMobileFiltersOpen);
@@ -166,7 +168,7 @@ export default function GalleryFilters({
   };
 
   return (
-    <div className="mb-12">
+    <div className={`mb-12 ${disabled ? "opacity-60 pointer-events-none" : ""}`} aria-disabled={disabled}>
       {/* Mobile Actions: Filter Button & View Toggle */}
       <div className="md:hidden flex items-center gap-3 mb-4">
         {/* Layout Toggle */}
@@ -324,6 +326,7 @@ export default function GalleryFilters({
                 showFooter={false}
                 onChange={(values) => handleFilterChange("artist", values)}
                 loadingMessage="Loading artists..."
+                disabled={disabled}
               />
             </div>
 
@@ -344,6 +347,7 @@ export default function GalleryFilters({
                 showFooter={false}
                 onChange={(values) => handleFilterChange("material", values)}
                 loadingMessage="Loading materials..."
+                disabled={disabled}
               />
             </div>
 
@@ -364,6 +368,7 @@ export default function GalleryFilters({
                 showFooter={false}
                 onChange={(values) => handleFilterChange("style", values)}
                 loadingMessage="Loading styles..."
+                disabled={disabled}
               />
             </div>
 
@@ -414,21 +419,27 @@ export default function GalleryFilters({
 
       {/* Desktop Filters */}
       <div className="hidden md:flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3 xl:flex-1">
         {/* Filters Dropdown */}
-        <div className="relative" ref={filtersDropdownRef}>
+        <div className="relative shrink-0" ref={filtersDropdownRef}>
           <button
             type="button"
             onClick={() => toggleDropdown("filters", syncTempFiltersFromProps)}
             className="inline-flex items-center px-4 py-2.5 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            aria-expanded={openDropdown === "filters"}
           >
-            <FunnelIcon className="h-5 w-5 mr-2" />
-            Filters
-            {(filters.featured?.length > 0 || filters.discount?.length > 0 || filters.status?.length > 0 || filters.availability?.length > 0) && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
-                {["featured", "discount", "status", "availability"].filter((k) => filters[k]?.length > 0).length}
-              </span>
-            )}
-            <ChevronIcon />
+            <span className="inline-flex items-center">
+              <FunnelIcon className="h-5 w-5 mr-2" />
+              <span>Filters</span>
+            </span>
+            <span className="ml-3 inline-flex items-center">
+              {(filters.featured?.length > 0 || filters.discount?.length > 0 || filters.status?.length > 0 || filters.availability?.length > 0) && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
+                  {["featured", "discount", "status", "availability"].filter((k) => filters[k]?.length > 0).length}
+                </span>
+              )}
+              <ChevronIcon className={openDropdown === "filters" ? "rotate-180" : ""} />
+            </span>
           </button>
           {openDropdown === "filters" && (
             <div className="absolute left-0 z-50 mt-2 w-72 origin-top-left rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 p-4">
@@ -543,19 +554,22 @@ export default function GalleryFilters({
 
         {/* Artist Dropdown */}
         {Array.isArray(artists) && (
-          <div className="relative" ref={artistDropdownRef}>
+          <div className="relative shrink-0" ref={artistDropdownRef}>
             <button
               type="button"
               onClick={() => toggleDropdown("artist", () => markDropdownOpened("artist"))}
               className="inline-flex items-center px-4 py-2.5 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              aria-expanded={openDropdown === "artist"}
             >
-              Artist
-              {filters.artist?.length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
-                  {filters.artist.length}
-                </span>
-              )}
-              <ChevronIcon />
+              <span>Artist</span>
+              <span className="ml-3 inline-flex items-center">
+                {filters.artist?.length > 0 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
+                    {filters.artist.length}
+                  </span>
+                )}
+                <ChevronIcon className={openDropdown === "artist" ? "rotate-180" : ""} />
+              </span>
             </button>
             {openDropdown === "artist" && (
               <div className="absolute left-0 z-50 mt-2 w-72 origin-top-left rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 p-4">
@@ -574,6 +588,7 @@ export default function GalleryFilters({
                   shouldShowFullEmail={shouldShowFullEmail}
                   renderFooterWrapper={(footer) => <div onClick={() => setOpenDropdown(null)}>{footer}</div>}
                   loadingMessage="Loading artists..."
+                  disabled={disabled}
                 />
               </div>
             )}
@@ -582,19 +597,22 @@ export default function GalleryFilters({
 
         {/* Material Dropdown */}
         {Array.isArray(materials) && (
-          <div className="relative" ref={materialDropdownRef}>
+          <div className="relative shrink-0" ref={materialDropdownRef}>
             <button
               type="button"
               onClick={() => toggleDropdown("material", () => markDropdownOpened("material"))}
               className="inline-flex items-center px-4 py-2.5 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              aria-expanded={openDropdown === "material"}
             >
-              Material
-              {filters.material?.length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
-                  {filters.material.length}
-                </span>
-              )}
-              <ChevronIcon />
+              <span>Material</span>
+              <span className="ml-3 inline-flex items-center">
+                {filters.material?.length > 0 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
+                    {filters.material.length}
+                  </span>
+                )}
+                <ChevronIcon className={openDropdown === "material" ? "rotate-180" : ""} />
+              </span>
             </button>
             {openDropdown === "material" && (
               <div className="absolute left-0 z-50 mt-2 w-72 origin-top-left rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 p-4">
@@ -612,6 +630,7 @@ export default function GalleryFilters({
                   onLoadMore={loadMoreMaterials}
                   renderFooterWrapper={(footer) => <div onClick={() => setOpenDropdown(null)}>{footer}</div>}
                   loadingMessage="Loading materials..."
+                  disabled={disabled}
                 />
               </div>
             )}
@@ -620,19 +639,22 @@ export default function GalleryFilters({
 
         {/* Style Dropdown */}
         {Array.isArray(styles) && (
-          <div className="relative" ref={styleDropdownRef}>
+          <div className="relative shrink-0" ref={styleDropdownRef}>
             <button
               type="button"
               onClick={() => toggleDropdown("style", () => markDropdownOpened("style"))}
               className="inline-flex items-center px-4 py-2.5 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              aria-expanded={openDropdown === "style"}
             >
-              Style
-              {filters.style?.length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
-                  {filters.style.length}
-                </span>
-              )}
-              <ChevronIcon />
+              <span>Style</span>
+              <span className="ml-3 inline-flex items-center">
+                {filters.style?.length > 0 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans font-medium bg-indigo-100 text-indigo-800">
+                    {filters.style.length}
+                  </span>
+                )}
+                <ChevronIcon className={openDropdown === "style" ? "rotate-180" : ""} />
+              </span>
             </button>
             {openDropdown === "style" && (
               <div className="absolute left-0 z-50 mt-2 w-72 origin-top-left rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 p-4">
@@ -650,16 +672,16 @@ export default function GalleryFilters({
                   onLoadMore={loadMoreStyles}
                   renderFooterWrapper={(footer) => <div onClick={() => setOpenDropdown(null)}>{footer}</div>}
                   loadingMessage="Loading styles..."
+                  disabled={disabled}
                 />
               </div>
             )}
           </div>
         )}
-
-        <div className="flex-1" />
+        </div>
 
         {/* Layout Toggle and Sort Dropdown (right aligned) */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-3 shrink-0 xl:ml-auto">
           {/* Layout Toggle */}
           <div className="flex items-center p-1 bg-white border border-gray-200 rounded-full shadow-sm h-10">
             <button
@@ -688,15 +710,16 @@ export default function GalleryFilters({
             </button>
           </div>
 
-          <div className="relative h-10" ref={sortDropdownRef}>
+          <div className="relative h-10 shrink-0" ref={sortDropdownRef}>
             <button
               type="button"
               onClick={() => toggleDropdown("sort")}
               className="inline-flex items-center h-full px-4 rounded-full text-sm font-sans font-medium tracking-wide bg-white shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              aria-expanded={openDropdown === "sort"}
             >
               Sort by:{" "}
               {sortBy.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
-              <ChevronIcon />
+              <ChevronIcon className={openDropdown === "sort" ? "rotate-180" : ""} />
             </button>
             {openDropdown === "sort" && (
               <div className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5">
@@ -927,9 +950,9 @@ function CheckboxIcon({ active, small = false }) {
 /**
  * ChevronIcon — small downward chevron used in dropdown trigger buttons.
  */
-function ChevronIcon() {
+function ChevronIcon({ className = "" }) {
   return (
-    <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <svg className={`ml-2 h-4 w-4 transition-transform duration-200 ${className}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
   );

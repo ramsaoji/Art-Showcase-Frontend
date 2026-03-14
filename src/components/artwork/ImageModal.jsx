@@ -269,10 +269,10 @@ export default function ImageModal({
                 style={{ height: "calc(100dvh - 5rem)" }}
               >
                   {/* Image Section */}
-                <div className="relative flex h-2/5 sm:h-1/2 w-full min-w-[220px] sm:min-w-[320px] md:min-w-[400px] lg:min-w-[500px] min-h-[220px] sm:min-h-[320px] md:min-h-[400px] lg:min-h-[500px] items-center justify-center flex-[3_3_0%] bg-gradient-to-br from-gray-900/50 to-black/30 md:h-2/3 xl:h-full relative overflow-hidden">
+                <div className="relative flex h-2/5 sm:h-1/2 w-full min-w-[220px] sm:min-w-[320px] md:min-w-0 xl:min-w-[400px] 2xl:min-w-[500px] min-h-[220px] sm:min-h-[320px] md:min-h-[300px] lg:min-h-[340px] xl:min-h-0 items-center justify-center flex-[3_3_0%] bg-gradient-to-br from-gray-900/50 to-black/30 md:h-[54%] lg:h-[58%] xl:h-full overflow-hidden">
                   {isLoading && !hasError && (
                     <div className="absolute inset-0 z-20 w-full h-full p-0">
-                      <Skeleton className="w-full h-full opacity-60 rounded-none bg-indigo-50/10" />
+                      <Skeleton className="w-full h-full opacity-60 rounded-none" />
                     </div>
                   )}
 
@@ -301,7 +301,7 @@ export default function ImageModal({
                         className="relative z-10 w-full h-full flex items-center justify-center cursor-zoom-in group"
                         onClick={() => setFullScreenImageOpen(true)}
                       >
-                        <div className="relative overflow-hidden md:shadow-2xl md:ring-1 md:ring-white/20 group-hover:ring-white/30 transition-all duration-300 group-hover:scale-[1.02]">
+                        <div className="relative max-h-full max-w-full overflow-hidden md:max-h-[46vh] lg:max-h-[50vh] xl:max-h-full md:shadow-2xl md:ring-1 md:ring-white/20 group-hover:ring-white/30 transition-all duration-300 group-hover:scale-[1.02]">
                           <img
                             src={highQualityLoaded ? getHighQualityImageUrl() : getPreviewImageUrl()}
                             alt={image?.title}
@@ -377,7 +377,7 @@ export default function ImageModal({
                 </div>
 
                 {/* Details Section */}
-                <div className="relative h-3/5 w-full flex-shrink-0 flex-[2_2_0%] bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl flex flex-col md:h-1/3 xl:h-full xl:border-l xl:border-t-0 border-t border-white/20">
+                <div className="relative h-3/5 w-full flex-shrink-0 flex-[2_2_0%] bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl flex flex-col md:h-[46%] lg:h-[42%] xl:h-full xl:border-l xl:border-t-0 border-t border-white/20">
                   {/* Header row: close button + share button */}
                   <div className="flex items-center justify-between px-4 py-2 sm:px-6 sm:py-2 flex-shrink-0">
                     {/* Share button */}

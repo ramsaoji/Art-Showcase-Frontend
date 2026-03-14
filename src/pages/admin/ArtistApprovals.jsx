@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -11,7 +11,9 @@ import SearchBar from "@/components/common/SearchBar";
 import ResultCount from "@/components/common/ResultCount";
 import Pagination from "@/components/common/Pagination";
 import EmptyState from "@/components/common/EmptyState";
+import ErrorState from "@/components/common/ErrorState";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { trackError } from "@/services/analytics";
 /**
  * ArtistApprovals Page
  * Admin view for reviewing, approving, activating, and removing artist accounts.
@@ -32,16 +35,44 @@ export default function ArtistApprovals() {
   const [search, setSearch] = useState("");
   const utils = trpc.useContext();
 
+  // Latches to true after first successful data load — never resets on search change
+  const hasLoadedOnce = useRef(false);
+  const hasLoggedError = useRef(false);
+
   // Fetch paginated users
   const {
     data: userPage,
     refetch,
-    isLoading,
     isFetching,
+    isError,
+    error,
   } = trpc.user.listUsers.useQuery(
     { page, limit, search },
-    ADMIN_LIST_QUERY_OPTIONS
+    {
+      ...ADMIN_LIST_QUERY_OPTIONS,
+      onError: (err) => {
+        if (!hasLoggedError.current) {
+          trackError(
+            getFriendlyErrorMessage(err) || "Failed to load artist approvals.",
+            "ArtistApprovals"
+          );
+          hasLoggedError.current = true;
+        }
+      },
+    }
   );
+  useEffect(() => {
+    if (!isError) {
+      hasLoggedError.current = false;
+    }
+  }, [isError]);
+
+  // Latch on first data arrival
+  if (userPage !== undefined && !hasLoadedOnce.current) {
+    hasLoadedOnce.current = true;
+  }
+  const isInitialLoad = !hasLoadedOnce.current;
+  const isRefetching = isFetching && !isInitialLoad;
 
   const allUsers = userPage?.users || [];
   const totalPages = userPage?.totalPages || 1;
@@ -96,8 +127,8 @@ export default function ArtistApprovals() {
   const [isSettingActive, setIsSettingActive] = useState(false);
 
   // Memoized handlers (rerender-functional-setstate)
-  const handleSearchChange = useCallback((e) => {
-    setSearch(e.target.value);
+  const handleSearchChange = useCallback((value) => {
+    setSearch(value);
   }, []);
 
   const handlePreviousPage = useCallback(() => {
@@ -176,18 +207,48 @@ export default function ArtistApprovals() {
         title="Manage Artist Approvals"
         description="Review, approve, activate, or remove artists. Use the search to find artists by name or email. Only approved and active artists can submit artworks."
       />
-      <SearchBar
-        value={search}
-        onChange={handleSearchChange}
-        placeholder="Search by name or email..."
-      />
-      {isLoading ? (
-        <AdminTableSkeleton columns={7} actionButtons={3} />
-      ) : artistUsers.length > 0 ? (
+
+      {/* Initial full skeleton includes a search bar placeholder */}
+      {isInitialLoad && isFetching ? (
         <>
-          <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
-          <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div className="w-full overflow-x-auto custom-scrollbar">
+          <SearchBar value="" onChange={() => {}} placeholder="Search by name or email..." disabled />
+          <AdminTableSkeleton columns={7} actionButtons={3} />
+        </>
+      ) : (
+        <>
+          {/* Search bar — hide on hard error to avoid confusing UX */}
+          {!isError && (
+            <SearchBar
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Search by name or email..."
+            />
+          )}
+
+          {isError ? (
+            <ErrorState
+              title="Failed to load artists"
+              description={
+                getFriendlyErrorMessage(error) ||
+                "Something went wrong while fetching artist approvals."
+              }
+              primaryAction={
+                <Button
+                  variant="default"
+                  className="rounded-full px-8 font-artistic text-base"
+                  onClick={() => refetch()}
+                >
+                  Retry
+                </Button>
+              }
+            />
+          ) : isFetching && !isInitialLoad ? (
+            <AdminTableSkeleton columns={7} actionButtons={3} />
+          ) : artistUsers.length > 0 ? (
+            <>
+              <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
+              <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm overflow-hidden mb-4">
+                <div className="w-full overflow-x-auto custom-scrollbar">
               <Table className="min-w-[700px] w-full text-left font-sans">
                 <TableHeader className="bg-gray-50/80 border-b border-gray-100">
                   <TableRow className="hover:bg-transparent border-0">
@@ -295,13 +356,26 @@ export default function ArtistApprovals() {
               </Table>
             </div>
           </div>
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} disabled={isRefetching} />
+            </>
+          ) : (
+            <EmptyState
+              title="No artists found"
+              description={search ? "No artists match your search. Try a different name or email." : "There are currently no artists to manage. New artists will appear here when they sign up."}
+              action={
+                search ? (
+                  <Button
+                    variant="default"
+                    className="rounded-full px-8 font-artistic text-base"
+                    onClick={() => setSearch("")}
+                  >
+                    Clear search
+                  </Button>
+                ) : undefined
+              }
+            />
+          )}
         </>
-      ) : (
-        <EmptyState
-          title="No artists found"
-          description="There are currently no artists to manage. New artists will appear here when they sign up."
-        />
       )}
       {deleteDialogOpen && userToDelete && (
         <ConfirmationDialog

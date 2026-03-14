@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import Alert from "@/components/common/Alert";
+import ErrorState from "@/components/common/ErrorState";
 
 import AdminTableSkeleton from "@/components/skeletons/AdminTableSkeleton";
 import ArtistLimitsModal from "@/features/artist-limits";
@@ -23,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { trackError } from "@/services/analytics";
 /**
  * ArtistQuotaLimits page — admin view for reviewing and editing per-artist
  * upload and AI quota limits. Uses sonner toast-free inline Alert for feedback (S4).
@@ -34,15 +36,44 @@ export default function ArtistQuotaLimits() {
   const [search, setSearch] = useState("");
   const utils = trpc.useContext();
 
+  // Latches to true after first successful data load — never resets on search change
+  const hasLoadedOnce = useRef(false);
+  const hasLoggedError = useRef(false);
+
   const {
     data: userPage,
     refetch,
-    isLoading,
     isFetching,
+    isError,
+    error: fetchError,
   } = trpc.user.listUsers.useQuery(
     { page, limit, search },
-    ADMIN_LIST_QUERY_OPTIONS
+    {
+      ...ADMIN_LIST_QUERY_OPTIONS,
+      onError: (err) => {
+        if (!hasLoggedError.current) {
+          trackError(
+            getFriendlyErrorMessage(err) ||
+              "Failed to load artist quota limits.",
+            "ArtistQuotaLimits"
+          );
+          hasLoggedError.current = true;
+        }
+      },
+    }
   );
+  useEffect(() => {
+    if (!isError) {
+      hasLoggedError.current = false;
+    }
+  }, [isError]);
+
+  // Latch on first data arrival
+  if (userPage !== undefined && !hasLoadedOnce.current) {
+    hasLoadedOnce.current = true;
+  }
+  const isInitialLoad = !hasLoadedOnce.current;
+  const isRefetching = isFetching && !isInitialLoad;
 
   const allUsers = userPage?.users || [];
   const totalPages = userPage?.totalPages || 1;
@@ -146,7 +177,7 @@ export default function ArtistQuotaLimits() {
     }
   }, [limitsDialogUser, limitsForm, updateUserMutation]);
 
-  const handleSearchChange = useCallback((e) => setSearch(e.target.value), []);
+  const handleSearchChange = useCallback((value) => setSearch(value), []);
   const handlePreviousPage = useCallback(() => setPage((p) => Math.max(1, p - 1)), []);
   const handleNextPage = useCallback(
     (totalPages) => setPage((p) => Math.min(totalPages, p + 1)),
@@ -172,19 +203,48 @@ export default function ArtistQuotaLimits() {
         title="Quota & limits"
         description="View and edit per-artist upload and AI limits. Changes apply to all artworks for that artist."
       />
-      <SearchBar
-        value={search}
-        onChange={handleSearchChange}
-        placeholder="Search by name or email..."
-      />
 
-      {error && (
-        <Alert type="error" message={error} className="mb-4 items-center font-sans" />
-      )}
+      {/* Initial full skeleton includes a search bar placeholder */}
+      {isInitialLoad && isFetching ? (
+        <>
+          <SearchBar value="" onChange={() => {}} placeholder="Search by name or email..." disabled />
+          <AdminTableSkeleton columns={4} actionButtons={1} />
+        </>
+      ) : (
+        <>
+          {/* Search bar — hide on hard error to avoid confusing UX */}
+          {!isError && (
+            <SearchBar
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Search by name or email..."
+            />
+          )}
 
-      {isLoading ? (
-        <AdminTableSkeleton columns={4} actionButtons={1} />
-      ) : artistUsers.length > 0 ? (
+          {error && (
+            <Alert type="error" message={error} className="mb-4 items-center font-sans" />
+          )}
+
+          {isError ? (
+            <ErrorState
+              title="Failed to load artists"
+              description={
+                getFriendlyErrorMessage(fetchError) ||
+                "Something went wrong while fetching quota limits."
+              }
+              primaryAction={
+                <Button
+                  variant="default"
+                  className="rounded-full px-8 font-artistic text-base"
+                  onClick={() => refetch()}
+                >
+                  Retry
+                </Button>
+              }
+            />
+          ) : isFetching && !isInitialLoad ? (
+            <AdminTableSkeleton columns={4} actionButtons={1} />
+          ) : artistUsers.length > 0 ? (
         <>
           <ResultCount count={artistUsers.length} total={artistTotalCount} label="artists" />
           <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm overflow-hidden mb-4">
@@ -250,13 +310,26 @@ export default function ArtistQuotaLimits() {
             </div>
           </div>
 
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} disabled={isRefetching} />
+          </>
+          ) : (
+            <EmptyState
+              title="No artists found"
+              description={search ? "No artists match your search. Try a different name or email." : "No artists to manage yet. Check the Approvals tab for pending artists."}
+              action={
+                search ? (
+                  <Button
+                    variant="default"
+                    className="rounded-full px-8 font-artistic text-base"
+                    onClick={() => setSearch("")}
+                  >
+                    Clear search
+                  </Button>
+                ) : undefined
+              }
+            />
+          )}
         </>
-      ) : (
-        <EmptyState
-          title="No artists found"
-          description="No artists match your search. Try a different query or check the Approvals tab for pending artists."
-        />
       )}
 
       <ArtistLimitsModal

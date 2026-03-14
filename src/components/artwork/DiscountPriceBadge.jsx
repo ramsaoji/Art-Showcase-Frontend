@@ -23,6 +23,12 @@ export default function DiscountPriceBadge({
       badge: "text-[10px]",
       pillPx: "px-2",
     },
+    card: {
+      main: "text-lg md:text-xl lg:text-2xl",
+      strike: "text-[13px] md:text-sm lg:text-base",
+      badge: "text-[10px] md:text-[10px] lg:text-[11px]",
+      pillPx: "px-2 md:px-2 lg:px-2.5",
+    },
     md: {
       main: "text-xl sm:text-2xl",
       strike: "text-[15px] sm:text-base",

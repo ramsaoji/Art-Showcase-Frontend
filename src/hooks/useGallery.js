@@ -5,8 +5,10 @@ import { trpc, useArtistsSearch, useMaterialsSearch, useStylesSearch } from "@/l
 import {
   trackArtworkInteraction,
   trackUserAction,
+  trackError,
 } from "@/services/analytics";
 import { useAuth } from "@/contexts/AuthContext";
+import { getFriendlyErrorMessage } from "@/utils/formatters";
 
 /**
  * Custom hook that manages all gallery state: search, filters, sort, infinite
@@ -17,6 +19,7 @@ export default function useGallery() {
   const location = useLocation();
   const navigate = useNavigate();
   const initialized = useRef(false);
+  const hasLoggedError = useRef(false);
   const { isArtist, user, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
   const prevUserRef = useRef(user?.id);
@@ -167,12 +170,26 @@ export default function useGallery() {
     retryDelay: 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    staleTime: 5 * 60 * 1000, // 5 min â€” no refetch on minimize/restore
+    staleTime: 5 * 60 * 1000, // 5 min — no refetch on minimize/restore
     gcTime: 10 * 60 * 1000, // 10 min cache (React Query v5; was cacheTime)
     keepPreviousData: true,
     enabled: !authLoading,
+    onError: (err) => {
+      if (!hasLoggedError.current) {
+        trackError(
+          getFriendlyErrorMessage(err) ||
+            "There was an issue fetching the gallery.",
+          "Gallery"
+        );
+        hasLoggedError.current = true;
+      }
+    },
   });
-
+  useEffect(() => {
+    if (!error) {
+      hasLoggedError.current = false;
+    }
+  }, [error]);
   // Reset pagination when filters change (using stable queryKey)
   const prevQueryKey = useRef(queryKey);
   useEffect(() => {
@@ -860,3 +877,6 @@ export default function useGallery() {
     markDropdownOpened,
   };
 }
+
+
+

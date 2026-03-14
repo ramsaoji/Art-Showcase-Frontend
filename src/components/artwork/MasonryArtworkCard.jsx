@@ -6,6 +6,7 @@ import useOptimizedImage from "@/hooks/useOptimizedImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveArtworkPricing } from "@/utils/formatters";
 import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
@@ -142,7 +143,7 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
         <div className="relative w-full overflow-hidden">
           {!isVisible ? (
             /* Before intersection: block placeholder holds space in flow */
-            <div className="w-full bg-gray-200 animate-pulse" style={{ minHeight: '180px' }} />
+            <Skeleton className="w-full rounded-none" style={{ minHeight: "180px" }} />
           ) : (
             <>
               <img
@@ -156,7 +157,7 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
               />
               {/* Loading pulse overlays the img while high-quality version is loading */}
               {!imageState.highQualityLoaded && (
-                <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                <Skeleton className="absolute inset-0 rounded-none" />
               )}
             </>
           )}

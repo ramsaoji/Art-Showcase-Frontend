@@ -128,8 +128,8 @@ export function AuthProvider({ children }) {
     // Clear all artwork-related localStorage data
     clearArtworkLocalStorage();
 
-    // Reset all queries to ensure fresh public data is fetched and show loading state
-    utils.reset();
+    // Invalidate all queries to ensure fresh data on next visit (less aggressive than reset)
+    utils.invalidate();
   }, [utils]);
 
   // Clear error function for external use

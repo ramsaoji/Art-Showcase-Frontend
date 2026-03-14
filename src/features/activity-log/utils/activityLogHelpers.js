@@ -459,3 +459,20 @@ export const ALL_ACTION_OPTIONS = Object.keys(ACTION_LABELS).map((k) => ({
   value: k,
   label: ACTION_LABELS[k],
 }));
+
+// Actions visible to artists in Activity History filters
+const ARTIST_ACTION_SET = new Set([
+  ...ACTION_CATEGORIES.AUTH,
+  ...ACTION_CATEGORIES.ARTWORK,
+  ...ACTION_CATEGORIES.SYSTEM,
+]);
+
+export const ARTIST_ACTION_OPTIONS = ALL_ACTION_OPTIONS.filter((opt) =>
+  ARTIST_ACTION_SET.has(opt.value)
+);
+
+export function getActionOptionsForRole(role) {
+  if (role === "SUPER_ADMIN") return ALL_ACTION_OPTIONS;
+  if (role === "ARTIST") return ARTIST_ACTION_OPTIONS;
+  return ARTIST_ACTION_OPTIONS;
+}

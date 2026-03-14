@@ -1,12 +1,12 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import StarIcon from "@heroicons/react/24/outline/StarIcon";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
-import Alert from "@/components/common/Alert";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import StatisticsSkeleton from "@/components/skeletons/StatisticsSkeleton";
+import { trackError } from "@/services/analytics";
 
 // Custom INR Icon component
 const INRIcon = ({ className }) => (
@@ -60,12 +60,28 @@ const StatCard = memo(({ icon: Icon, label, value, subtext, delay }) => (
 StatCard.displayName = "StatCard";
 
 export default function Statistics() {
-  const { data, isLoading, error, refetch } =
+  const hasLoggedError = useRef(false);
+  const { data, isLoading, error } =
     trpc.artwork.getArtworkStats.useQuery(undefined, {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: 5 * 60 * 1000,
+      onError: (err) => {
+        if (!hasLoggedError.current) {
+          trackError(
+            getFriendlyErrorMessage(err) ||
+              "An unexpected error occurred while fetching statistics.",
+            "Statistics"
+          );
+          hasLoggedError.current = true;
+        }
+      },
     });
+  useEffect(() => {
+    if (!error) {
+      hasLoggedError.current = false;
+    }
+  }, [error]);
   const { isSuperAdmin, isArtist } = useAuth();
   const {
     totalArtworksCount = 0,
@@ -156,20 +172,7 @@ export default function Statistics() {
   }
 
   if (error) {
-    return (
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-xl mx-auto">
-          <Alert
-            type="error"
-            message={
-              getFriendlyErrorMessage(error) ||
-              "An unexpected error occurred while fetching statistics."
-            }
-            onRetry={refetch}
-          />
-        </div>
-      </section>
-    );
+    return null;
   }
 
   if (allZero) return null;

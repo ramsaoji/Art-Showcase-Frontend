@@ -8,9 +8,9 @@ import ChevronRightIcon from "@heroicons/react/24/outline/ChevronRightIcon";
 import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
-import Alert from "@/components/common/Alert";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import useMediaQuery from "@/hooks/useMediaQuery";
+import { trackError } from "@/services/analytics";
 
 const CarouselIndicators = ({
   slides,
@@ -52,6 +52,7 @@ export default function HeroCarousel() {
   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
   const [artworkLoaded, setArtworkLoaded] = useState(false);
   const timerRef = useRef(null);
+  const hasLoggedError = useRef(false);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   // Use tRPC query to fetch artworks
@@ -59,11 +60,19 @@ export default function HeroCarousel() {
     data: artworks = [],
     isLoading,
     error,
-    refetch,
   } = trpc.artwork.getArtworksForHeroCarousel.useQuery(undefined, {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: 5 * 60 * 1000,
+    onError: (err) => {
+      if (!hasLoggedError.current) {
+        trackError(
+          getFriendlyErrorMessage(err) || "Failed to load carousel images.",
+          "HeroCarousel"
+        );
+        hasLoggedError.current = true;
+      }
+    },
   });
 
   // Create slides array with welcome slide + artwork slides
@@ -194,23 +203,11 @@ export default function HeroCarousel() {
     }
   }, [currentSlideIndex, slides]);
 
-  // Show error alert if there is an error
-  if (error) {
-    return (
-      <div className="relative h-[80vh] sm:h-[calc(100vh-5rem)] overflow-hidden flex items-center justify-center p-4 w-full">
-        <div className="w-full max-w-md mx-auto">
-          <Alert
-            type="error"
-            message={
-              getFriendlyErrorMessage(error) ||
-              "Failed to load carousel images."
-            }
-            onRetry={refetch}
-          />
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!error) {
+      hasLoggedError.current = false;
+    }
+  }, [error]);
 
   // Fallback content when no images are available
   if (!isLoading && slides.length <= 1) {

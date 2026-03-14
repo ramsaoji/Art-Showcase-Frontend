@@ -6,6 +6,7 @@ import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -282,10 +283,10 @@ export default function Navbar() {
               {/* Right side - User actions */}
               <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 ml-auto">
                 {loading && !user ? (
-                   // Skeleton Loader for Auth Section
-                   <div className="hidden lg:flex items-center space-x-4 animate-pulse">
-                     <div className="h-8 w-24 bg-gray-200 rounded-xl" />
-                     <div className="h-9 w-9 bg-gray-200 rounded-full" />
+                   // Skeleton loader for auth section
+                   <div className="hidden lg:flex items-center space-x-4">
+                     <Skeleton className="h-8 w-24 rounded-xl" />
+                     <Skeleton className="h-9 w-9 rounded-full" />
                    </div>
                 ) : user ? (
                   <>

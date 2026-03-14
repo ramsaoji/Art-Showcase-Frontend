@@ -6,6 +6,8 @@ import { trackPageView } from "@/services/analytics";
 import RouteSuspenseFallback from "@/components/common/RouteSuspenseFallback";
 import { Toaster } from "@/components/ui/sonner";
 import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import ErrorState from "@/components/common/ErrorState";
+import { Button } from "@/components/ui/button";
 import Home from "./pages/Home";
 
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -73,13 +75,24 @@ class ErrorBoundary extends React.Component {
           "You appear to be offline or the page failed to load. Please check your internet connection and try again.";
       }
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 text-red-800 p-4">
-          <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
-          <p className="text-center mb-4">{friendlyMessage}</p>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 max-w-2xl mx-auto">
+          <ErrorState
+            title="Something went wrong"
+            description={friendlyMessage}
+            primaryAction={
+              <Button
+                variant="default"
+                className="rounded-full px-8 font-artistic text-base"
+                onClick={() => window.location.reload()}
+              >
+                Reload page
+              </Button>
+            }
+          />
           {import.meta.env.DEV && this.state.error && (
-            <details className="text-sm text-red-600 bg-red-100 p-2 rounded w-full max-w-md overflow-auto">
-              <summary>Error Details</summary>
-              <pre className="whitespace-pre-wrap break-all">
+            <details className="text-sm text-red-600 bg-red-100 p-4 rounded-xl w-full overflow-auto mt-4 text-left">
+              <summary className="cursor-pointer font-semibold mb-2">Error Details</summary>
+              <pre className="whitespace-pre-wrap break-words">
                 {this.state.error.toString()}
                 <br />
                 {this.state.errorInfo?.componentStack}

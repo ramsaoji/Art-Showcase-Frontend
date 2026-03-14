@@ -8,12 +8,14 @@ import GallerySearch from "./GallerySearch";
  * @param {Function} props.handleSearchInput - Called with the new value on each keystroke.
  * @param {Function} props.clearSearch - Clears the search input.
  * @param {boolean} props.isSearching - When true, shows the searching indicator inside GallerySearch.
+ * @param {boolean} [props.disabled=false] - Disables the gallery search controls.
  */
 function GalleryHeader({
   searchInput,
   handleSearchInput,
   clearSearch,
   isSearching,
+  disabled = false,
 }) {
   return (
     <div className="max-w-3xl mx-auto text-center mb-10">
@@ -30,6 +32,7 @@ function GalleryHeader({
         handleSearchInput={handleSearchInput}
         clearSearch={clearSearch}
         isSearching={isSearching}
+        disabled={disabled}
       />
     </div>
   );

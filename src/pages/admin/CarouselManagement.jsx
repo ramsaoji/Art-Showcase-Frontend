@@ -29,6 +29,11 @@ import SectionHeader from "@/components/common/SectionHeader";
 import ScrollableListPanel from "@/components/common/ScrollableListPanel";
 import LoadMoreTrigger from "@/components/common/LoadMoreTrigger";
 import LoadingButton from "@/components/common/LoadingButton";
+import EmptyState from "@/components/common/EmptyState";
+import ErrorState from "@/components/common/ErrorState";
+import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
+import { trackError } from "@/services/analytics";
+import { Button } from "@/components/ui/button";
 
 const SortableItem = memo(function SortableItem({
   id,
@@ -228,8 +233,9 @@ const CarouselManagement = () => {
   const [originalItems, setOriginalItems] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const limit = 10;
+  const hasLoggedError = useRef(false);
 
-  const { data, isLoading, isFetching } =
+  const { data, isLoading, isFetching, isError, error, refetch } =
     trpc.artwork.getCarouselImages.useQuery(
       { limit, offset },
       {
@@ -237,8 +243,22 @@ const CarouselManagement = () => {
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
         staleTime: 2 * 60 * 1000,
+        onError: (err) => {
+          if (!hasLoggedError.current) {
+            trackError(
+              getFriendlyErrorMessage(err) || "Failed to load carousel images.",
+              "CarouselManagement"
+            );
+            hasLoggedError.current = true;
+          }
+        },
       }
     );
+  useEffect(() => {
+    if (!isError) {
+      hasLoggedError.current = false;
+    }
+  }, [isError]);
   const updateCarouselOrder = trpc.artwork.updateCarouselOrder.useMutation({
     onMutate: () => {
       // Optimistic update - update the UI when mutation starts
@@ -391,8 +411,6 @@ const CarouselManagement = () => {
                 className="p-3 rounded-xl bg-white/90 border border-gray-200 flex items-center gap-3"
                 style={{ opacity }}
               >
-                {/* Order badge */}
-                <Skeleton className="w-6 h-6 rounded-full flex-shrink-0" />
                 {/* Thumbnail */}
                 <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" />
                 {/* Title + artist */}
@@ -400,12 +418,8 @@ const CarouselManagement = () => {
                   <Skeleton className="h-4 w-3/5 rounded" />
                   <Skeleton className="h-3 w-2/5 rounded" />
                 </div>
-                {/* Status badge */}
-                <Skeleton className="h-5 w-16 rounded-full flex-shrink-0" />
-                {/* Drag handle */}
-                <Skeleton className="w-8 h-8 rounded-lg flex-shrink-0" />
-                {/* Toggle button */}
-                <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
+                {/* Action area */}
+                <Skeleton className="h-8 w-16 rounded-lg flex-shrink-0" />
               </div>
             ))}
           </div>
@@ -419,6 +433,31 @@ const CarouselManagement = () => {
             items={items.map((item) => item.id)}
             strategy={verticalListSortingStrategy}
           >
+            {isError ? (
+              <ErrorState
+                variant="plain"
+                title="Failed to load carousel images"
+                description={
+                  getFriendlyErrorMessage(error) || "Please try again."
+                }
+                primaryAction={
+                  <Button
+                    variant="default"
+                    className="rounded-full px-6 font-artistic text-base"
+                    onClick={() => refetch()}
+                  >
+                    Retry
+                  </Button>
+                }
+              />
+            ) : items.length === 0 && !isLoading ? (
+              <EmptyState
+                variant="plain"
+                icon={PhotoIcon}
+                title="No images available"
+                description="There are no artwork images available to add to the carousel. Add artworks with images first."
+              />
+            ) : null}
             {items.map((item, idx) => (
               <SortableItem
                 key={item.id}
@@ -432,11 +471,13 @@ const CarouselManagement = () => {
           </SortableContext>
           </DndContext>
         )}
-        <LoadMoreTrigger
-          onClick={handleLoadMore}
-          isLoading={isFetching && items.length > 0}
-          label={hasMore && !isFetching ? "Load More" : undefined}
-        />
+        {!isError && (
+          <LoadMoreTrigger
+            onClick={handleLoadMore}
+            isLoading={isFetching && items.length > 0}
+            label={hasMore && !isFetching ? "Load More" : undefined}
+          />
+        )}
         {!hasMore && items.length > 0 && (
           <div className="text-center text-xs text-gray-400 py-2">
             All carousel images loaded

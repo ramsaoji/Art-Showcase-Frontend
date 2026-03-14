@@ -1,15 +1,17 @@
 import { useState, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import useGallery from "@/hooks/useGallery";
 import GalleryHeader from "@/components/gallery/GalleryHeader";
 import GalleryFilters from "@/features/gallery-filters";
 import GalleryGrid from "@/components/gallery/GalleryGrid";
 import ImageModal from "@/components/artwork/ImageModal";
-import Alert from "@/components/common/Alert";
+import ErrorState from "@/components/common/ErrorState";
 import ScrollToTopButton from "@/components/layout/ScrollToTopButton";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import PageBackground from "@/components/common/PageBackground";
 import { containerMotion } from "@/lib/motionConfigs";
+import { Button } from "@/components/ui/button";
 
 export default function Gallery() {
   const {
@@ -64,6 +66,11 @@ export default function Gallery() {
 
   // Layout view type: 'grid' or 'masonry'
   const [layoutType, setLayoutType] = useState('masonry');
+  const isFiltersDisabled =
+    isArtistsLoading ||
+    isArtistFilterLoading ||
+    isMaterialsLoading ||
+    isStylesLoading;
 
   // Memoized selectedArtworkIndex (js-cache-function-results)
   const selectedArtworkIndex = useMemo(() => {
@@ -90,18 +97,38 @@ export default function Gallery() {
 
   if (isError) {
     return (
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-xl mx-auto">
-          <Alert
-            type="error"
-            message={
-              getFriendlyErrorMessage(error) ||
-              "There was an issue fetching the gallery. Please try again."
-            }
-            onRetry={handleManualRefetch}
-          />
-        </div>
-      </section>
+      <div className="relative min-h-screen bg-white/50">
+        <PageBackground />
+        <section className="py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-xl mx-auto">
+            <ErrorState
+              title="Failed to load gallery"
+              description={
+                getFriendlyErrorMessage(error) ||
+                "There was an issue fetching the gallery. Please try again."
+              }
+              primaryAction={
+                <Button
+                  variant="default"
+                  className="rounded-full px-8 font-artistic text-base"
+                  onClick={() => handleManualRefetch()}
+                >
+                  Retry
+                </Button>
+              }
+              secondaryAction={
+                <Button
+                  asChild
+                  variant="outline"
+                  className="rounded-full px-6 font-artistic text-base"
+                >
+                  <Link to="/">Return Home</Link>
+                </Button>
+              }
+            />
+          </div>
+        </section>
+      </div>
     );
   }
 
@@ -119,6 +146,7 @@ export default function Gallery() {
             handleSearchInput={handleSearchInput}
             clearSearch={clearSearch}
             isSearching={isSearching}
+            disabled={false}
           />
           {/* Filters and Sort Section */}
           <GalleryFilters
@@ -151,6 +179,7 @@ export default function Gallery() {
             markDropdownOpened={markDropdownOpened}
             layoutType={layoutType}
             setLayoutType={setLayoutType}
+            disabled={isFiltersDisabled}
           />
 
           {/* Gallery Grid with Artworks */}

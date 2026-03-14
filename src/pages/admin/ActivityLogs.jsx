@@ -1,12 +1,14 @@
-import { useState, useCallback, Fragment } from "react";
+import { useState, useCallback, useRef, useEffect, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 
 import EmptyState from "@/components/common/EmptyState";
+import ErrorState from "@/components/common/ErrorState";
+import { Button } from "@/components/ui/button";
 import SectionHeader from "@/components/common/SectionHeader";
-import AdminTableSkeleton from "@/components/skeletons/AdminTableSkeleton";
+import ActivityLogsSkeleton from "@/components/skeletons/ActivityLogsSkeleton";
 import SearchBar from "@/components/common/SearchBar";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import {
   Select,
   SelectContent,
@@ -46,6 +48,8 @@ import PaintBrushIcon from "@heroicons/react/24/outline/PaintBrushIcon";
 import Cog6ToothIcon from "@heroicons/react/24/outline/Cog6ToothIcon";
 import CpuChipIcon from "@heroicons/react/24/outline/CpuChipIcon";
 import ClipboardDocumentListIcon from "@heroicons/react/24/outline/ClipboardDocumentListIcon";
+import { trackError } from "@/services/analytics";
+import { ADMIN_LIST_QUERY_OPTIONS } from "@/lib/queryOptions";
 
 const CATEGORY_ICONS = {
   AUTH: ShieldCheckIcon,
@@ -222,6 +226,10 @@ export default function AdminActivityLogs() {
   const [status, setStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  
+  // Latches to true after first successful data load — never resets on filter change
+  const hasLoadedOnce = useRef(false);
+  const hasLoggedError = useRef(false);
 
   // ── Expanded row state ────────────────────────────────────────────────────
   const [expandedIds, setExpandedIds] = useState({});
@@ -243,29 +251,53 @@ export default function AdminActivityLogs() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
     isLoading,
     isError,
     refetch,
   } = trpc.activityLog.getAdminActivityLogs.useInfiniteQuery(queryInput, {
     getNextPageParam: (last) => last.nextCursor,
     keepPreviousData: true,
-    // Always refetch when this tab/page is opened so admins see the latest events
-    staleTime: 0,
-    refetchOnMount: "always",
-    refetchOnReconnect: true,
+    ...ADMIN_LIST_QUERY_OPTIONS,
+    onError: (err) => {
+      if (!hasLoggedError.current) {
+        trackError(
+          err?.message || "Failed to load admin activity logs.",
+          "AdminActivityLogs"
+        );
+        hasLoggedError.current = true;
+      }
+    },
   });
+  useEffect(() => {
+    if (!isError) {
+      hasLoggedError.current = false;
+    }
+  }, [isError]);
 
   // ── Stats query ───────────────────────────────────────────────────────────
-  const { data: stats } = trpc.activityLog.getActivityLogStats.useQuery(
-    undefined,
+  const statsInput = {
+    ...(search ? { search } : {}),
+    ...(actorRole ? { actorRole } : {}),
+    ...(action ? { action } : {}),
+    ...(status ? { status } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
+  };
+  const { data: stats, isFetching: isStatsFetching } = trpc.activityLog.getActivityLogStats.useQuery(
+    statsInput,
     {
-      // Keep stats in sync with the latest logs whenever the tab is opened
-      staleTime: 0,
-      refetchOnMount: "always",
-      refetchOnReconnect: true,
+      ...ADMIN_LIST_QUERY_OPTIONS,
+      keepPreviousData: true,
     }
   );
 
+  // Latch hasLoadedOnce as soon as we get data for the first time
+  if (data !== undefined && !hasLoadedOnce.current) {
+    hasLoadedOnce.current = true;
+  }
+  const isInitialLoad = !hasLoadedOnce.current;
+  const isRefetching = isFetching && !isInitialLoad;
   const allLogs = data?.pages.flatMap((p) => p.logs) ?? [];
   const totalCount = data?.pages[0]?.totalCount;
   const hasActiveFilters = search || actorRole || action || status || dateFrom || dateTo;
@@ -304,162 +336,179 @@ export default function AdminActivityLogs() {
         description="Full audit trail of all platform actions — logins, artwork operations, admin actions, and system events."
       />
 
-      {/* ── Stats bar ──────────────────────────────────────────── */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <StatCard label="Total events" value={stats.totalLogs?.toLocaleString()} gradient="from-indigo-600 to-purple-600" />
-          <StatCard label="Last 24 hours" value={stats.logsLast24h?.toLocaleString()} gradient="from-blue-600 to-cyan-600" />
-          <StatCard label="Failed events" value={stats.failedLogs?.toLocaleString()} gradient="from-red-500 to-rose-600" />
-          <StatCard
-            label="Top action"
-            value={stats.topActions?.[0] ? getActionLabel(stats.topActions[0].action) : "—"}
-            gradient="from-amber-500 to-orange-500"
-            small
-          />
-        </div>
-      )}
-
-      {/* ── Search + filter bar ─────────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div className="flex-1 min-w-[220px] max-w-xl">
-          <SearchBar
-            inline
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search actor, target, action, status…"
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          {allLogs.length > 0 && (
-            <button
-              onClick={handleExportExcel}
-              className="group flex items-center gap-1.5 text-sm font-sans font-medium px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-            >
-              <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
-              Export Excel
-            </button>
-          )}
-
-          {/* <span className="text-xs font-sans text-gray-400 whitespace-nowrap">
-            {isLoading
-              ? "Loading…"
-              : totalCount != null
-              ? `${totalCount.toLocaleString()} total`
-              : `${allLogs.length} loaded`}
-            {hasActiveFilters && " (filtered)"}
-          </span> */}
-        </div>
-      </div>
-
-      {/* ── Filters panel ───────────────────────────────────────── */}
-      <div className="mb-5 bg-white/90 border border-gray-200 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div>
-          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Role</label>
-          <Select
-            value={actorRole || "ALL"}
-            onValueChange={(val) => setActorRole(val === "ALL" ? "" : val)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All roles</SelectItem>
-              {ROLE_OPTIONS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Action</label>
-          <Select
-            value={action || "ALL"}
-            onValueChange={(val) => setAction(val === "ALL" ? "" : val)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All actions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All actions</SelectItem>
-              {ALL_ACTION_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Status</label>
-          <Select
-            value={status || "ALL"}
-            onValueChange={(val) => setStatus(val === "ALL" ? "" : val)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">From</label>
-          <DateTimePicker
-            value={dateFrom || ""}
-            onChange={(val) => setDateFrom(val || "")}
-            placeholder="From date & time"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">To</label>
-          <DateTimePicker
-            value={dateTo || ""}
-            onChange={(val) => setDateTo(val || "")}
-            placeholder="To date & time"
-          />
-        </div>
-
-        {hasActiveFilters && (
-          <div className="col-span-full flex justify-end">
-            <button
-              onClick={handleClearFilters}
-              className="text-xs font-sans text-gray-500 hover:text-red-500 underline transition-colors"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Table ──────────────────────────────────────────────── */}
-      {isLoading ? (
-        <AdminTableSkeleton columns={6} actionButtons={1} />
+      {/* ── Initial full skeleton ───────────────────────────── */}
+      {isInitialLoad && isFetching ? (
+        <ActivityLogsSkeleton />
       ) : isError ? (
-        <div className="text-center py-10">
-          <p className="text-gray-500 font-sans text-sm">Failed to load logs.</p>
-          <button onClick={() => refetch()} className="mt-3 text-sm text-indigo-600 underline">Retry</button>
-        </div>
-      ) : allLogs.length === 0 ? (
-        <EmptyState
-          title="No logs found"
-          description={hasActiveFilters ? "Try adjusting your filters." : "Activity logs will appear here as events are recorded."}
+        <ErrorState
+          title="Failed to load logs"
+          description="Something went wrong while fetching the activity logs. Please try again."
+          primaryAction={
+            <Button
+              variant="default"
+              className="rounded-full px-8 font-artistic text-base"
+              onClick={() => refetch()}
+            >
+              Retry
+            </Button>
+          }
         />
       ) : (
         <>
+          {/* ── Stats bar — always visible after initial load ──── */}
+          {isStatsFetching ? (
+            <ActivityLogsSkeleton statsOnly />
+          ) : stats ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <StatCard label={stats.isFiltered ? "Matching events" : "Total events"} value={stats.totalLogs?.toLocaleString()} gradient="from-indigo-600 to-purple-600" />
+              <StatCard label={stats.isFiltered ? "Matching (24 h)" : "Last 24 hours"} value={stats.logsLast24h?.toLocaleString()} gradient="from-blue-600 to-cyan-600" />
+              <StatCard label={stats.isFiltered ? "Failed (filtered)" : "Failed events"} value={stats.failedLogs?.toLocaleString()} gradient="from-red-500 to-rose-600" />
+              <StatCard
+                label={stats.isFiltered ? "Top action (filtered)" : "Top action"}
+                value={stats.topActions?.[0] ? getActionLabel(stats.topActions[0].action) : "—"}
+                gradient="from-amber-500 to-orange-500"
+                small
+              />
+            </div>
+          ) : null}
+
+          {/* ── Search + filter bar ─────────────────────────────────── */}
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div className="flex-1 min-w-[220px] max-w-xl">
+              <SearchBar
+                inline
+                value={search}
+                onChange={setSearch}
+                placeholder="Search actor, target, action, status…"
+                className="w-full"
+              />
+            </div>
+
+            {/* <div className="flex items-center gap-2 shrink-0">
+              {allLogs.length > 0 && (
+                <button
+                  onClick={handleExportExcel}
+                  disabled={isRefetching}
+                  className="group flex items-center gap-1.5 text-sm font-sans font-medium px-4 py-2 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                  Export Excel
+                </button>
+              )}
+            </div> */}
+          </div>
+
+          {/* ── Filters panel ───────────────────────────────────────── */}
+          <div className="mb-5 bg-white/90 border border-gray-200 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Role</label>
+              <Select
+                value={actorRole || "ALL"}
+                onValueChange={(val) => setActorRole(val === "ALL" ? "" : val)}
+                disabled={isRefetching}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All roles</SelectItem>
+                  {ROLE_OPTIONS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Action</label>
+              <Select
+                value={action || "ALL"}
+                onValueChange={(val) => setAction(val === "ALL" ? "" : val)}
+                disabled={isRefetching}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All actions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All actions</SelectItem>
+                  {ALL_ACTION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Status</label>
+              <Select
+                value={status || "ALL"}
+                onValueChange={(val) => setStatus(val === "ALL" ? "" : val)}
+                disabled={isRefetching}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  {STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-sans font-medium text-gray-500 mb-1 uppercase tracking-wide">Date range</label>
+              <DateRangePicker
+                value={{ from: dateFrom || "", to: dateTo || "" }}
+                onChange={({ from, to }) => {
+                  setDateFrom(from || "");
+                  setDateTo(to || "");
+                }}
+                placeholder="Select date range"
+                disabled={isRefetching}
+                className="w-full"
+              />
+            </div>
+
+            {hasActiveFilters && (
+              <div className="col-span-full flex justify-end">
+                <button
+                  onClick={handleClearFilters}
+                  disabled={isRefetching}
+                  className="text-xs font-sans text-gray-500 hover:text-red-500 underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isFetching && !isInitialLoad ? (
+            <ActivityLogsSkeleton tableOnly rows={5} />
+          ) : allLogs.length === 0 ? (
+            <EmptyState
+              title="No logs found"
+              description={hasActiveFilters ? "No logs match your current filters. Try adjusting or clearing them." : "Activity logs will appear here as events are recorded on the platform."}
+              action={
+                hasActiveFilters ? (
+                  <Button
+                    variant="default"
+                    className="rounded-full px-8 font-artistic text-base"
+                    onClick={handleClearFilters}
+                  >
+                    Clear all filters
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
           <div className="w-full bg-white/90 backdrop-blur-sm border border-gray-100 rounded-xl shadow-sm overflow-hidden pb-2 mb-4">
             <div className="w-full overflow-x-auto custom-scrollbar">
               <Table className="min-w-[820px] w-full text-left font-sans">
@@ -480,7 +529,7 @@ export default function AdminActivityLogs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allLogs.map((log, index) => {
+                    {allLogs.map((log, index) => {
                   const catStyle = getCategoryStyle(log.action);
                   const statusStyle = getStatusStyle(log.status);
                   const roleStyle = getRoleStyle(log.actorRole);
@@ -875,28 +924,29 @@ export default function AdminActivityLogs() {
                   );
                 })}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           </div>
-
-          {/* Load more */}
-          {hasNextPage && (
-            <div className="flex justify-center mt-6">
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="px-6 py-2.5 text-sm font-sans font-medium bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 hover:shadow-sm transition-all disabled:opacity-50"
-              >
-                {isFetchingNextPage ? "Loading…" : "Load more rows"}
-              </button>
-            </div>
+          </div>
           )}
 
-          {!hasNextPage && allLogs.length > 10 && (
-            <p className="text-center text-xs font-sans text-gray-400 mt-6">
-              — All {allLogs.length} events loaded —
-            </p>
-          )}
+        {/* Load more */}
+        {hasNextPage && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="px-6 py-2.5 text-sm font-sans font-medium bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 hover:shadow-sm transition-all disabled:opacity-50"
+            >
+              {isFetchingNextPage ? "Loading…" : "Load more rows"}
+            </button>
+          </div>
+        )}
+
+        {!hasNextPage && allLogs.length > 10 && (
+          <p className="text-center text-xs font-sans text-gray-400 mt-6">
+            — All {allLogs.length} events loaded —
+          </p>
+        )}
         </>
       )}
     </>

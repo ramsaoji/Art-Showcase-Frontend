@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,12 @@ import EmptyState from "@/components/common/EmptyState";
 import ImageModal from "@/components/artwork/ImageModal";
 import ArtworkCard from "@/components/artwork/ArtworkCard";
 import HeroCarousel from "@/components/sections/HeroCarousel";
-import Alert from "@/components/common/Alert";
+import ErrorState from "@/components/common/ErrorState";
 import GalleryGridSkeleton from "@/components/skeletons/GalleryGridSkeleton";
 import {
   trackArtworkInteraction,
   trackUserAction,
+  trackError,
 } from "@/services/analytics";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import ScrollToTopButton from "@/components/layout/ScrollToTopButton";
@@ -81,6 +82,7 @@ const getArtworkTransition = (index) => ({
 
 export default function Home() {
   const [selectedArtwork, setSelectedArtwork] = useState(null);
+  const hasLoggedError = useRef(false);
 
   const {
     data: featuredArtworks = [],
@@ -91,7 +93,21 @@ export default function Home() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: 5 * 60 * 1000,
+    onError: (err) => {
+      if (!hasLoggedError.current) {
+        trackError(
+          getFriendlyErrorMessage(err) || "Failed to load featured artworks.",
+          "HomeFeaturedArtworks"
+        );
+        hasLoggedError.current = true;
+      }
+    },
   });
+  useEffect(() => {
+    if (!error) {
+      hasLoggedError.current = false;
+    }
+  }, [error]);
 
   const handleDelete = useCallback(
     (deletedId) => {
@@ -252,20 +268,42 @@ export default function Home() {
             </div>
           ) : error ? (
             <div className="max-w-xl mx-auto">
-              <Alert
-                type="error"
-                message={
+              <ErrorState
+                variant="plain"
+                title="Failed to load featured artworks"
+                description={
                   getFriendlyErrorMessage(error) ||
-                  "Failed to load featured artworks"
+                  "An unexpected error occurred while fetching featured artworks."
                 }
-                onRetry={refetch}
+                primaryAction={
+                  <Button
+                    variant="default"
+                    className="rounded-full px-8 font-artistic text-base"
+                    onClick={() => refetch()}
+                  >
+                    Retry
+                  </Button>
+                }
+                secondaryAction={
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="rounded-full px-6 font-artistic text-base"
+                  >
+                    <Link to="/gallery">Browse Gallery</Link>
+                  </Button>
+                }
               />
             </div>
           ) : featuredArtworks.length === 0 ? (
             <EmptyState
               title="No featured artworks"
-              description="Check back later for our featured collection."
-              className="bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-xl py-16"
+              description="No artworks have been featured yet. Browse the full gallery to explore our collection."
+              action={
+                <Button asChild variant="default" className="rounded-full px-8 font-artistic text-base">
+                  <Link to="/gallery">Browse Gallery</Link>
+                </Button>
+              }
             />
           ) : (
             <>

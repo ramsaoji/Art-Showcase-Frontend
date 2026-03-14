@@ -6,6 +6,8 @@ import MasonryArtworkCard from "@/components/artwork/MasonryArtworkCard";
 import Masonry from "react-masonry-css";
 import Loader from "@/components/common/Loader";
 import EmptyState from "@/components/common/EmptyState";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import GalleryGridSkeleton from "@/components/skeletons/GalleryGridSkeleton";
 
@@ -122,12 +124,8 @@ export default function GalleryGrid({
               "aspect-[3/4]", "aspect-[4/5]", "aspect-[1/1]", "aspect-[2/3]",
               "aspect-[4/3]", "aspect-[3/4]", "aspect-[2/3]", "aspect-[4/5]"
             ].map((aspectClass, index) => (
-              <div key={`masonry-skel-${index}`} className="mb-4 sm:mb-6 animate-pulse">
-                {/* rounded-2xl matches MasonryArtworkCard container, overflow-hidden clips gradient */}
-                <div className={`relative bg-gray-200 rounded-2xl w-full overflow-hidden ${aspectClass}`}>
-                  {/* Bottom gradient overlay — mirrors MasonryArtworkCard hover info area */}
-                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-gray-300/60 to-transparent" />
-                </div>
+              <div key={`masonry-skel-${index}`} className="mb-4 sm:mb-6">
+                <Skeleton className={`w-full rounded-2xl ${aspectClass}`} />
               </div>
             ))}
           </Masonry>
@@ -209,26 +207,26 @@ export default function GalleryGrid({
           icon={PhotoIcon}
           title={
             filtersActive
-              ? "No artworks found matching your criteria."
-              : "No artworks available."
+              ? "No artworks found"
+              : "No artworks available"
           }
           description={
             filtersActive
-              ? "Try adjusting your search or filter settings."
-              : undefined
+              ? "No artworks match your search or filter criteria. Try adjusting your selections."
+              : "There are no artworks to display at the moment. Check back soon."
           }
           action={
             filtersActive ? (
-              <button
+              <Button
                 type="button"
+                variant="default"
+                className="rounded-full px-8 font-artistic text-base"
                 onClick={handleResetAllFilters}
-                className="inline-flex font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors font-sans"
               >
                 Clear all filters
-              </button>
+              </Button>
             ) : undefined
           }
-          className="py-16 px-4 sm:px-6 lg:px-8 bg-white/60 backdrop-blur rounded-2xl shadow-sm border border-gray-100"
         />
       )}
     </div>

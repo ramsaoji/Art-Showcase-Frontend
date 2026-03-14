@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -6,11 +6,13 @@ import ArtworkForm from "@/features/artwork-form";
 import RouteSuspenseFallback from "@/components/common/RouteSuspenseFallback";
 import { useAuth } from "@/contexts/AuthContext";
 import Alert from "@/components/common/Alert";
+import ErrorState from "@/components/common/ErrorState";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import PageBackground from "@/components/common/PageBackground";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import FormCard from "@/components/common/FormCard";
+import { trackError } from "@/services/analytics";
 
 /**
  * EditArtwork page — loads an existing artwork by ID and allows the owner or
@@ -20,7 +22,10 @@ export default function EditArtwork() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { isSuperAdmin, user } = useAuth();
-  const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+  const [isNotFound, setIsNotFound] = useState(false);
+  const hasLoggedLoadError = useRef(false);
 
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
@@ -35,7 +40,15 @@ export default function EditArtwork() {
     { id: id },
     {
       enabled: !!id,
-      onError: (error) => setError(getFriendlyErrorMessage(error)),
+      onError: (err) => {
+        const msg = getFriendlyErrorMessage(err);
+        setLoadError(msg);
+        setIsNotFound(false);
+        if (!hasLoggedLoadError.current) {
+          trackError(msg || "Failed to load artwork for edit.", "EditArtwork");
+          hasLoggedLoadError.current = true;
+        }
+      },
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: 5 * 60 * 1000,
@@ -56,14 +69,25 @@ export default function EditArtwork() {
   // Handle case where artwork is not found
   useEffect(() => {
     if (!isLoading && !artworkData && !fetchError) {
-      setError("Artwork not found");
+      setIsNotFound(true);
+      setLoadError(null);
+    } else if (artworkData) {
+      setIsNotFound(false);
+      setLoadError(null);
     }
   }, [isLoading, artworkData, fetchError]);
+
+  useEffect(() => {
+    if (!loadError) {
+      hasLoggedLoadError.current = false;
+    }
+  }, [loadError]);
 
   const updateArtworkMutation = trpc.artwork.updateArtworkWithImage.useMutation(
     {
       onSuccess: () => {
         toast.success("Artwork updated successfully");
+        setSubmitError(null);
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
         utils.artwork.getArtworksForHeroCarousel.invalidate();
@@ -72,7 +96,8 @@ export default function EditArtwork() {
       },
       onError: (err) => {
         const msg = getFriendlyErrorMessage(err);
-        setError(msg);
+        setSubmitError(msg);
+        trackError(msg || "Failed to update artwork.", "EditArtworkSubmit");
         toast.error(msg);
       },
     }
@@ -81,7 +106,7 @@ export default function EditArtwork() {
   const handleSubmit = async (formData) => {
     if (!artworkData) return;
     try {
-      setError(null);
+      setSubmitError(null);
       const images = (formData.images || []).map((img) => ({
         id: img.id,
         url: img.url,
@@ -116,7 +141,7 @@ export default function EditArtwork() {
       };
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (err) {
-      setError(getFriendlyErrorMessage(err));
+      setSubmitError(getFriendlyErrorMessage(err));
     }
   };
 
@@ -129,31 +154,66 @@ export default function EditArtwork() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Error state (fetch/load failure only)
+  if (loadError) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-4">
-        <div className="w-full max-w-xl">
-          <Alert
-            type="error"
-            message={error}
-            onRetry={() => {
-              setError(null);
-              refetch();
-            }}
-          />
+      <div className="relative min-h-screen bg-white/50">
+        <PageBackground variant="extended" />
+        <div className="flex justify-center items-center min-h-screen p-4">
+          <div className="w-full max-w-xl">
+            <ErrorState
+              title="Failed to load artwork"
+              description={loadError}
+              primaryAction={
+                <Button
+                  variant="default"
+                  className="rounded-full px-8 font-artistic text-base"
+                  onClick={() => {
+                    setLoadError(null);
+                    refetch();
+                  }}
+                >
+                  Retry
+                </Button>
+              }
+              secondaryAction={
+                <Button
+                  variant="outline"
+                  className="rounded-full px-6 font-artistic text-base"
+                  onClick={() => navigate("/gallery")}
+                >
+                  Back to Gallery
+                </Button>
+              }
+            />
+          </div>
         </div>
       </div>
     );
   }
 
   // Artwork not found
-  if (!artworkData) {
+  if (isNotFound) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <p className="text-xl font-semibold mb-4 font-artistic text-gray-900">Artwork not found</p>
-          <Button onClick={() => navigate("/gallery")}>Back to Gallery</Button>
+      <div className="relative min-h-screen bg-white/50">
+        <PageBackground variant="extended" />
+        <div className="flex justify-center items-center min-h-screen p-4">
+          <div className="w-full max-w-xl">
+            <ErrorState
+              severity="warning"
+              title="Artwork not found"
+              description="The artwork might have been removed or is no longer available."
+              secondaryAction={
+                <Button
+                  variant="outline"
+                  className="rounded-full px-6 font-artistic text-base"
+                  onClick={() => navigate("/gallery")}
+                >
+                  Back to Gallery
+                </Button>
+              }
+            />
+          </div>
         </div>
       </div>
     );
@@ -175,6 +235,12 @@ export default function EditArtwork() {
           subtitle="Update your artwork details below. Make changes to your masterpiece and save to keep your gallery up to date."
           as="h2"
         />
+
+        {submitError && (
+          <div className="mb-4">
+            <Alert type="error" message={submitError} />
+          </div>
+        )}
 
         <FormCard maxWidth="4xl" noPadding>
           <div className="p-6 sm:p-8">
