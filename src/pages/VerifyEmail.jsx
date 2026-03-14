@@ -74,7 +74,7 @@ export default function VerifyEmail() {
     if (!token) {
       setStatus("error");
       setMessage(
-        "No verification token provided. Please check your email or contact support if the issue persists."
+        "This verification link looks incomplete or unavailable. Please open the latest email we sent you and try again, or contact support if you still need help."
       );
       return;
     }
