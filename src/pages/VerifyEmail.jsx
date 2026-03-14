@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import Loader from "@/components/common/Loader";
 import Alert from "@/components/common/Alert";
 import PageBackground from "@/components/common/PageBackground";
+import PageHeader from "@/components/common/PageHeader";
 import LoadingButton from "@/components/common/LoadingButton";
 import CheckCircleIcon from "@heroicons/react/24/outline/CheckCircleIcon";
 import XCircleIcon from "@heroicons/react/24/outline/XCircleIcon";
@@ -16,6 +17,8 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
+  const previewMode = searchParams.get("preview");
+  const isDevPreview = import.meta.env.DEV && !token;
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -34,6 +37,40 @@ export default function VerifyEmail() {
   }, [resendStatus]);
 
   useEffect(() => {
+    if (isDevPreview) {
+      if (previewMode === "success") {
+        setStatus("success");
+        setMessage(
+          "Preview mode: your email has been verified successfully! Your account is now pending approval from an administrator."
+        );
+        setIsTokenExpired(false);
+        return;
+      }
+
+      if (previewMode === "expired") {
+        setStatus("error");
+        setMessage(
+          "Preview mode: this verification link has expired. Enter your email below to resend a new one."
+        );
+        setIsTokenExpired(true);
+        return;
+      }
+
+      if (previewMode === "loading") {
+        setStatus("loading");
+        setMessage("");
+        setIsTokenExpired(false);
+        return;
+      }
+
+      setStatus("error");
+      setMessage(
+        "Preview mode: open this page with ?preview=success, ?preview=expired, or ?preview=loading to inspect each state."
+      );
+      setIsTokenExpired(false);
+      return;
+    }
+
     if (!token) {
       setStatus("error");
       setMessage(
@@ -71,60 +108,104 @@ export default function VerifyEmail() {
       }
     );
     // eslint-disable-next-line
-  }, [token]);
+  }, [isDevPreview, previewMode, token]);
 
   return (
-    <div className="min-h-screen flex items-start sm:items-center justify-center p-4 sm:p-6 bg-white/50">
+    <div className="relative h-full min-h-screen overflow-y-auto overflow-x-hidden px-4 sm:px-6 lg:px-8 py-12 bg-white/50">
       <PageBackground />
-      <FormCard maxWidth="4xl" className="space-y-8 text-center z-10">
+      <div className="relative">
+        <PageHeader
+          title="Verify Your Email"
+          subtitle="Complete account activation to continue into the gallery"
+        />
+
+        <FormCard maxWidth="2xl" className="relative z-10 text-center">
           {status === "loading" && (
-            <>
-              <Loader />
-              <p className="text-lg font-medium text-gray-600">
-                Verifying your email...
-              </p>
-            </>
+            <div className="mx-auto flex max-w-md flex-col items-center gap-5 py-6">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 ring-1 ring-indigo-100">
+                <Loader />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-wide">
+                  Verifying your email
+                </h2>
+                <p className="text-base font-sans text-gray-600 leading-relaxed">
+                  Please wait while we confirm your verification link.
+                </p>
+              </div>
+            </div>
           )}
+
           {status === "success" && (
-            <div className="flex flex-col items-center gap-4">
-              <Alert type="success" message={message} />
-              <CheckCircleIcon className="w-16 h-16 text-green-500" />
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">
-                Email Verified!
-              </h1>
-              <Button asChild className="mt-4">
+            <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-2">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-50 ring-1 ring-green-100">
+                <CheckCircleIcon className="w-11 h-11 text-green-600" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-wide">
+                  Email Verified
+                </h2>
+                <p className="text-base font-sans text-gray-600 leading-relaxed">
+                  Your account is now ready for the next step.
+                </p>
+              </div>
+              <Alert
+                type="success"
+                message={message}
+                className="w-full max-w-md text-left"
+              />
+              <Button asChild className="mt-2 w-full max-w-xs">
                 <Link to="/login">Proceed to Login</Link>
               </Button>
             </div>
           )}
+
           {status === "error" && (
-            <div className="flex flex-col items-center gap-4">
-              <XCircleIcon className="w-16 h-16 text-red-500" />
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">
-                Verification Failed
-              </h1>
+            <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-2">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 ring-1 ring-red-100">
+                <XCircleIcon className="w-11 h-11 text-red-600" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-wide">
+                  Verification Failed
+                </h2>
+                <p className="text-base font-sans text-gray-600 leading-relaxed">
+                  The link may be invalid, expired, or incomplete.
+                </p>
+              </div>
+
               {resendStatus ? (
                 <Alert
                   type={resendStatus.type}
                   message={resendStatus.message}
+                  className="w-full max-w-md text-left"
                 />
               ) : (
-                <Alert type="error" message={message} />
+                <Alert
+                  type="error"
+                  message={message}
+                  className="w-full max-w-md text-left"
+                />
               )}
+
               {isTokenExpired && (
-                <div className="mt-4 flex flex-col items-center w-full">
-                  <div className="w-full max-w-xs flex flex-col gap-2 items-center">
-                    <p className="text-gray-600 text-sm font-sans mb-1 text-center">
-                      If your verification link expired, enter your email to
-                      resend: <span className="text-red-500">*</span>
-                    </p>
+                <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-gray-50/80 p-5 text-left">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <h3 className="text-base font-semibold text-gray-900">
+                        Resend verification email
+                      </h3>
+                      <p className="text-sm font-sans text-gray-600 leading-relaxed">
+                        Enter the email address you used during signup and we&apos;ll send a fresh verification link.
+                      </p>
+                    </div>
                     <Input
                       type="email"
                       placeholder="Enter your email"
                       value={resendEmail}
                       onChange={(e) => setResendEmail(e.target.value)}
                       disabled={resendVerification.isLoading}
-                      className="w-full"
+                      className="w-full bg-white"
                     />
                     <LoadingButton
                       loading={resendVerification.isLoading}
@@ -151,24 +232,22 @@ export default function VerifyEmail() {
                           }
                         );
                       }}
-                      className="w-full mt-2"
+                      className="w-full"
                     >
                       Resend Verification Email
                     </LoadingButton>
                   </div>
                 </div>
               )}
-              <div className="my-6 w-full max-w-xs border-t border-gray-200" />
-              <Button
-                asChild
-                variant="outline"
-                className="w-full max-w-xs"
-              >
+
+              <div className="my-1 w-full max-w-xs border-t border-gray-200" />
+              <Button asChild variant="outline" className="w-full max-w-xs">
                 <Link to="/contact">Contact Support</Link>
               </Button>
             </div>
           )}
-      </FormCard>
+        </FormCard>
+      </div>
     </div>
   );
 }
