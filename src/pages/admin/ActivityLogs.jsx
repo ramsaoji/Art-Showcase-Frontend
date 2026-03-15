@@ -85,7 +85,7 @@ function ExpandableText({ text, maxLength = 80 }) {
 }
 
 const STATUS_OPTIONS = ["SUCCESS", "FAILED", "PARTIAL"];
-const ROLE_OPTIONS = ["ARTIST", "SUPER_ADMIN", "SYSTEM", "ANONYMOUS"];
+const ROLE_OPTIONS = ["ARTIST", "ADMIN", "SUPER_ADMIN", "SYSTEM", "ANONYMOUS"];
 
 function humanizeMetadataKey(key) {
   if (!key) return "";

@@ -5,20 +5,20 @@ import RouteSuspenseFallback from "@/components/common/RouteSuspenseFallback";
 
 /**
  * ProtectedRoute
- * Guards a route by authentication state, optional role, and optional superAdminOnly flag.
+ * Guards a route by authentication state, permission requirements, and
+ * optional account-state restrictions.
  * Renders a full-screen loader while auth is resolving, then redirects to /login
- * if unauthenticated or to / if the required role/admin check fails.
+ * if unauthenticated or to / if the permission or state checks fail.
  *
  * @param {React.ReactElement} props.children - The route content to render when access is granted.
- * @param {string} [props.requireRole] - If set, only users with this role can access the route.
- * @param {boolean} [props.superAdminOnly] - If true, only super admins can access the route.
  */
 function ProtectedRoute({
   children,
-  requireRole,
-  superAdminOnly,
+  requireAnyPermission,
+  requireAllPermissions,
+  allowAccountStates,
 }) {
-  const { user, role, isSuperAdmin, loading } = useAuth();
+  const { user, loading, can, accountState } = useAuth();
 
   // Show loading state while checking authentication
   if (loading) {
@@ -34,13 +34,27 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // If superAdminOnly, only allow super admins
-  if (superAdminOnly && !isSuperAdmin) {
+  if (
+    Array.isArray(allowAccountStates) &&
+    allowAccountStates.length > 0 &&
+    !allowAccountStates.includes(accountState)
+  ) {
     return <Navigate to="/" replace />;
   }
 
-  // If a specific role is required, check it
-  if (requireRole && role !== requireRole) {
+  if (
+    Array.isArray(requireAnyPermission) &&
+    requireAnyPermission.length > 0 &&
+    !requireAnyPermission.some((permission) => can(permission))
+  ) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (
+    Array.isArray(requireAllPermissions) &&
+    requireAllPermissions.length > 0 &&
+    !requireAllPermissions.every((permission) => can(permission))
+  ) {
     return <Navigate to="/" replace />;
   }
 

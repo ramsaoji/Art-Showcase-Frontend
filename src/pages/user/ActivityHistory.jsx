@@ -30,6 +30,7 @@ import {
 import { trackError } from "@/services/analytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { NO_REFETCH_ON_FOCUS } from "@/lib/queryOptions";
+import { PERMISSIONS } from "@/lib/rbac";
 
 const STATUS_OPTIONS = ["SUCCESS", "FAILED", "PARTIAL"];
 
@@ -42,7 +43,7 @@ const STAT_CARD_CLASS =
  * Shows the artist's own activity log with filters and infinite scroll.
  */
 export default function ActivityHistory() {
-  const { role } = useAuth();
+  const { can } = useAuth();
   const [search, setSearch] = useState("");
   const [action, setAction] = useState("");
   const [status, setStatus] = useState("");
@@ -114,12 +115,14 @@ export default function ActivityHistory() {
       : 0;
 
   const actionOptions = useMemo(() => {
-    if (role === "SUPER_ADMIN") return ALL_ACTION_OPTIONS;
+    if (can(PERMISSIONS.AUDIT_READ_ANY)) {
+      return ALL_ACTION_OPTIONS;
+    }
     if (!allLogs.length) return ARTIST_ACTION_OPTIONS;
     const seen = new Set(allLogs.map((log) => log.action));
     const relevant = ARTIST_ACTION_OPTIONS.filter((opt) => seen.has(opt.value));
     return relevant.length > 0 ? relevant : ARTIST_ACTION_OPTIONS;
-  }, [role, allLogs]);
+  }, [can, allLogs]);
   useEffect(() => {
     if (action && !actionOptions.some((opt) => opt.value === action)) {
       setAction("");

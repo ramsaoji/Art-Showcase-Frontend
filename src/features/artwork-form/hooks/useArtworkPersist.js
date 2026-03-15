@@ -8,11 +8,11 @@ import { toDatetimeLocalValue } from "@/utils/formatters";
  *
  * @param {object} params
  * @param {string} params.userId - Current user's ID, used to namespace storage keys.
- * @param {boolean} params.isSuperAdmin - Whether the current user is a super admin.
+ * @param {boolean} params.canAssignArtwork - Whether the current user can create artwork for another artist.
  * @param {object|null} params.initialData - Null in create mode; persistence is disabled in edit mode.
  * @returns {object} Persistence utilities.
  */
-export function useArtworkPersist({ userId, isSuperAdmin, initialData }) {
+export function useArtworkPersist({ userId, canAssignArtwork, initialData }) {
   const isEditMode = !!initialData;
 
   // ─── Namespaced localStorage keys ─────────────────────────────────────────
@@ -82,7 +82,7 @@ export function useArtworkPersist({ userId, isSuperAdmin, initialData }) {
           ...clean,
           artistId: savedArtistId || clean.artistId || "",
           status: parsed.status || "ACTIVE",
-          ...(isSuperAdmin && {
+          ...(canAssignArtwork && {
             expiresAt: parsed.expiresAt ? toDatetimeLocalValue(parsed.expiresAt) : "",
           }),
           images: [],
@@ -108,7 +108,7 @@ export function useArtworkPersist({ userId, isSuperAdmin, initialData }) {
       height: "",
       dimensions: "",
       status: "ACTIVE",
-      ...(isSuperAdmin && { expiresAt: getDefaultExpiresAt() }),
+      ...(canAssignArtwork && { expiresAt: getDefaultExpiresAt() }),
       images: [],
       discountPercent: "",
       discountStartAt: "",
@@ -162,7 +162,7 @@ export function useArtworkPersist({ userId, isSuperAdmin, initialData }) {
     };
     localStorage.setItem(FORM_DATA_KEY, JSON.stringify(clean));
     localStorage.setItem(DIMENSIONS_KEY, JSON.stringify(dimensionInputs));
-    if (isSuperAdmin && artistId) {
+    if (canAssignArtwork && artistId) {
       localStorage.setItem(ARTIST_ID_KEY, artistId);
     }
   };

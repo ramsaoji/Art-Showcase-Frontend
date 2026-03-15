@@ -14,7 +14,8 @@ const ImageCropper = lazy(() => import("@/components/artwork/ImageCropper"));
  * @param {Array} props.images - Current images array (file/preview objects).
  * @param {Function} props.setImages - Setter for the images array.
  * @param {number} props.imageUploadLimit - Max images allowed for this user.
- * @param {boolean} props.isSuperAdmin - Whether the current user is a super admin.
+ * @param {boolean} props.canAssignArtwork - Whether the current user can create artwork for another artist.
+ * @param {boolean} props.canManageCarousel - Whether the current user can manage carousel-specific image flags.
  * @param {Array<string>} props.imageErrors - Array of image-level error messages.
  * @param {Function} props.setImageErrors - Setter for image errors.
  * @param {Array<string>} props.validationErrors - Form-level validation error messages for images.
@@ -35,7 +36,8 @@ export default function ArtworkImageSection({
   images,
   setImages,
   imageUploadLimit,
-  isSuperAdmin,
+  canAssignArtwork,
+  canManageCarousel,
   imageErrors,
   setImageErrors,
   validationErrors,
@@ -57,7 +59,7 @@ export default function ArtworkImageSection({
       <ArtworkImageGrid
         images={images}
         setImages={setImages}
-        imageUploadLimit={isSuperAdmin ? 1000 : imageUploadLimit}
+        imageUploadLimit={canAssignArtwork ? 1000 : imageUploadLimit}
         imageErrors={imageErrors}
         validationErrors={validationErrors}
         onFilesSelected={onFilesSelected}
@@ -66,7 +68,8 @@ export default function ArtworkImageSection({
         onDismissErrors={onDismissErrors}
         fileSizeMB={fileSizeMB ?? 5}
         isAutoDismissible={isAutoDismissible}
-        isSuperAdmin={isSuperAdmin}
+        canAssignArtwork={canAssignArtwork}
+        canManageCarousel={canManageCarousel}
         validationError={isSubmitted ? validationError : null}
         setImageErrors={setImageErrors}
         setIsAutoDismissible={setIsAutoDismissible}

@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import ErrorState from "@/components/common/ErrorState";
 import { Button } from "@/components/ui/button";
+import { ACCOUNT_STATES, PERMISSIONS } from "@/lib/rbac";
 import Home from "./pages/Home";
 
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
@@ -142,7 +143,13 @@ const router = createBrowserRouter([
           {
             path: "/add-artwork",
             element: (
-              <ProtectedRoute>
+              <ProtectedRoute
+                allowAccountStates={[ACCOUNT_STATES.ACTIVE]}
+                requireAnyPermission={[
+                  PERMISSIONS.ARTWORK_CREATE_OWN,
+                  PERMISSIONS.ARTWORK_CREATE_ANY,
+                ]}
+              >
                 <AddArtwork />
               </ProtectedRoute>
             ),
@@ -150,7 +157,13 @@ const router = createBrowserRouter([
           {
             path: "/edit-artwork/:id",
             element: (
-              <ProtectedRoute>
+              <ProtectedRoute
+                allowAccountStates={[ACCOUNT_STATES.ACTIVE]}
+                requireAnyPermission={[
+                  PERMISSIONS.ARTWORK_UPDATE_OWN,
+                  PERMISSIONS.ARTWORK_UPDATE_ANY,
+                ]}
+              >
                 <EditArtwork />
               </ProtectedRoute>
             ),
@@ -158,7 +171,18 @@ const router = createBrowserRouter([
           {
             path: "/admin",
             element: (
-              <ProtectedRoute superAdminOnly>
+              <ProtectedRoute
+                allowAccountStates={[ACCOUNT_STATES.ACTIVE]}
+                requireAnyPermission={[
+                  PERMISSIONS.ARTIST_APPROVE,
+                  PERMISSIONS.ARTIST_QUOTA_MANAGE,
+                  PERMISSIONS.USER_STATE_MANAGE,
+                  PERMISSIONS.USER_DELETE_ANY,
+                  PERMISSIONS.ARTWORK_FEATURE_MANAGE,
+                  PERMISSIONS.CAROUSEL_MANAGE,
+                  PERMISSIONS.AUDIT_READ_ANY,
+                ]}
+              >
                 <AdminManagement />
               </ProtectedRoute>
             ),
@@ -166,7 +190,7 @@ const router = createBrowserRouter([
           {
             path: "/change-password",
             element: (
-              <ProtectedRoute>
+              <ProtectedRoute allowAccountStates={[ACCOUNT_STATES.ACTIVE]}>
                 <ChangePassword />
               </ProtectedRoute>
             ),
@@ -174,7 +198,7 @@ const router = createBrowserRouter([
           {
             path: "/activity-history",
             element: (
-              <ProtectedRoute>
+              <ProtectedRoute allowAccountStates={[ACCOUNT_STATES.ACTIVE]}>
                 <ActivityHistory />
               </ProtectedRoute>
             ),

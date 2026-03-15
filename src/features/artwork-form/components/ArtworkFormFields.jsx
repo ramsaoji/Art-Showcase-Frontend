@@ -39,8 +39,9 @@ import { formatPrice } from "@/utils/formatters";
  *   - "select" with hasExpiryConditional → Status select with expiry-aware disabled options
  *
  * @param {object} props
- * @param {boolean} props.isSuperAdmin - Controls adminOnly field visibility.
- * @param {boolean} props.isArtist - Controls AI quota hint display.
+ * @param {boolean} props.canAssignArtwork - Controls artist selection visibility.
+ * @param {boolean} props.canManageArtworkAdminFields - Controls admin-only field visibility.
+ * @param {boolean} props.showOwnAiUsage - Controls artist AI quota hint display.
  * @param {object|null} props.initialData - Edit mode data (controls createOnly field visibility).
  * @param {object|null} props.editArtistUsageStats - Admin edit mode: artist AI usage stats.
  * @param {object|null} props.selectedArtistUploadData - Admin add mode: selected artist stats.
@@ -58,8 +59,9 @@ import { formatPrice } from "@/utils/formatters";
  * @param {boolean} props.isSubmitted - Whether the form has been submitted (controls error display).
  */
 export default function ArtworkFormFields({
-  isSuperAdmin,
-  isArtist,
+  canAssignArtwork,
+  canManageArtworkAdminFields,
+  showOwnAiUsage,
   initialData,
   editArtistUsageStats,
   selectedArtistUploadData,
@@ -84,7 +86,10 @@ export default function ArtworkFormFields({
    * createOnly: hidden in edit mode (initialData present).
    */
   const visibleFields = artworkFieldsConfig.filter((field) => {
-    if (field.adminOnly && !isSuperAdmin) return false;
+    if (field.type === "artist-select") {
+      return canAssignArtwork && !initialData;
+    }
+    if (field.adminOnly && !canManageArtworkAdminFields) return false;
     if (field.createOnly && !!initialData) return false;
     return true;
   });
@@ -136,17 +141,19 @@ export default function ArtworkFormFields({
             {fieldConfig.required && <span className="text-red-500">*</span>}
           </FormLabel>
           {/* AI usage hint — shows based on context */}
-          {isSuperAdmin && initialData && editArtistUsageStats ? (
+          {canAssignArtwork && initialData && editArtistUsageStats ? (
             <span className="text-xs text-gray-500">
               AI usage: {editArtistUsageStats.aiDescriptionUsed ?? 0}/
               {editArtistUsageStats.aiDescriptionDailyLimit ?? backendLimits?.aiDescriptionDaily ?? 5} today
             </span>
-          ) : isSuperAdmin && !initialData && selectedArtistUploadData ? (
+          ) : canAssignArtwork && !initialData && selectedArtistUploadData ? (
             <span className="text-xs text-gray-500">
               {selectedArtistName}'s AI usage: {selectedArtistUploadData.aiDescriptionUsed ?? 0}/
               {selectedArtistUploadData.aiDescriptionDailyLimit ?? backendLimits?.aiDescriptionDaily ?? 5} today
             </span>
-          ) : isArtist && typeof aiRemaining === "number" && typeof aiLimit === "number" ? (
+          ) : showOwnAiUsage &&
+            typeof aiRemaining === "number" &&
+            typeof aiLimit === "number" ? (
             <span className="text-xs text-gray-500">
               AI usage: {aiLimit - aiRemaining}/{aiLimit} today
             </span>
@@ -277,7 +284,7 @@ export default function ArtworkFormFields({
         type="button"
         size="sm"
         onClick={handleAIDescription}
-        disabled={aiLoading || images?.length === 0 || (isArtist && aiRemaining <= 0)}
+        disabled={aiLoading || images?.length === 0 || (showOwnAiUsage && aiRemaining <= 0)}
         title={images?.length === 0 ? "Please upload at least one image first to generate AI description" : undefined}
         className="min-w-[130px] whitespace-nowrap"
       >
@@ -293,7 +300,7 @@ export default function ArtworkFormFields({
           </>
         )}
       </Button>
-      {isArtist && aiRemaining <= 0 && !aiLoading && (
+      {showOwnAiUsage && aiRemaining <= 0 && !aiLoading && (
         <span className="text-xs text-red-600 font-sans">Daily AI limit reached</span>
       )}
       {images?.length === 0 && !aiLoading && (

@@ -46,7 +46,7 @@ export default function ArtistQuotaLimits() {
     isFetching,
     isError,
     error: fetchError,
-  } = trpc.user.listUsers.useQuery(
+  } = trpc.user.listArtistsAdmin.useQuery(
     { page, limit, search },
     {
       ...ADMIN_LIST_QUERY_OPTIONS,
@@ -96,7 +96,7 @@ export default function ArtistQuotaLimits() {
       setLimitsDialogOpen(false);
       setLimitsDialogUser(null);
       refetch();
-      utils.user.listUsers.invalidate();
+      utils.user.listArtistsAdmin.invalidate();
     },
     onError: (err) => {
       const msg = getFriendlyErrorMessage(err);
@@ -191,10 +191,7 @@ export default function ArtistQuotaLimits() {
     }
   }, [error]);
 
-  const artistUsers = useMemo(
-    () => allUsers.filter((u) => u.role === "ARTIST"),
-    [allUsers]
-  );
+  const artistUsers = useMemo(() => allUsers, [allUsers]);
   const artistTotalCount = userPage?.artistTotalCount || 0;
 
   return (

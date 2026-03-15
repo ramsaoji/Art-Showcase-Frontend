@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useArtistsSearch } from "@/lib/trpc";
+import { useAssignableArtistsSearch } from "@/lib/trpc";
 import InfiniteScroll from "react-infinite-scroll-component";
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
@@ -28,7 +28,7 @@ export default function ArtistSelect({
     data: artistData,
     isLoading,
     isFetching,
-  } = useArtistsSearch(
+  } = useAssignableArtistsSearch(
     { search: debouncedSearchTerm, limit: 20, page },
     { enabled: isOpen }
   );

@@ -7,6 +7,7 @@ import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PERMISSIONS, getRoleLabel } from "@/lib/rbac";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -31,8 +32,27 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isSuperAdmin, isArtist, user, logout, loading } = useAuth();
+  const { can, role, user, logout, loading } = useAuth();
   const mobileMenuRef = useRef(null);
+  const canOpenAdmin = useMemo(
+    () =>
+      can(PERMISSIONS.ARTIST_APPROVE) ||
+      can(PERMISSIONS.ARTIST_QUOTA_MANAGE) ||
+      can(PERMISSIONS.USER_STATE_MANAGE) ||
+      can(PERMISSIONS.USER_DELETE_ANY) ||
+      can(PERMISSIONS.ARTWORK_FEATURE_MANAGE) ||
+      can(PERMISSIONS.CAROUSEL_MANAGE) ||
+      can(PERMISSIONS.AUDIT_READ_ANY),
+    [can]
+  );
+
+  const canAddArtwork = useMemo(
+    () =>
+      can(PERMISSIONS.ARTWORK_CREATE_ANY) ||
+      can(PERMISSIONS.ARTWORK_CREATE_OWN),
+    [can]
+  );
+  const userRoleLabel = getRoleLabel(role);
 
   useEffect(() => {
     const container = document.getElementById("main-scroll-container");
@@ -154,12 +174,12 @@ export default function Navbar() {
   const navLinks = useMemo(
     () => [
       ...navigation,
-      ...(isSuperAdmin && user ? [{ name: "Admin", href: "/admin" }] : []),
-      ...((isSuperAdmin || isArtist) && user
+      ...(canOpenAdmin && user ? [{ name: "Admin", href: "/admin" }] : []),
+      ...(canAddArtwork && user
         ? [{ name: "Add Artwork", href: "/add-artwork" }]
         : []),
     ],
-    [isSuperAdmin, isArtist, user]
+    [canOpenAdmin, canAddArtwork, user]
   );
 
   return (
@@ -292,7 +312,7 @@ export default function Navbar() {
                   <>
                     {/* Desktop: Add Artwork button and User Menu in same flex row with gap */}
                     <div className="hidden lg:flex items-center space-x-4">
-                      {(isSuperAdmin || isArtist) && (
+                      {canAddArtwork && (
                         <motion.div
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -333,9 +353,9 @@ export default function Navbar() {
                               <p className="text-sm lg:text-base font-medium text-gray-700 truncate max-w-24 lg:max-w-32 font-sans">
                                 {getUserDisplayName()}
                               </p>
-                              {(isSuperAdmin || isArtist) && (
+                              {userRoleLabel && (canOpenAdmin || canAddArtwork) && (
                                 <p className="text-xs text-indigo-600 font-medium font-sans">
-                                  {isSuperAdmin ? "Admin" : "Artist"}
+                                  {userRoleLabel}
                                 </p>
                               )}
                             </div>

@@ -16,6 +16,7 @@ import Cog6ToothIcon from "@heroicons/react/24/outline/Cog6ToothIcon";
 import CpuChipIcon from "@heroicons/react/24/outline/CpuChipIcon";
 import ClipboardDocumentListIcon from "@heroicons/react/24/outline/ClipboardDocumentListIcon";
 import { useAuth } from "@/contexts/AuthContext";
+import { PERMISSIONS } from "@/lib/rbac";
 
 const CATEGORY_ICONS = {
   AUTH: ShieldCheckIcon,
@@ -176,7 +177,8 @@ function ArtistsMapDisplay({ value }) {
  *   showIp      - (admin only) show IP address
  */
 export default function ActivityLogEntry({ log, showActor = false, showIp = false }) {
-  const { isSuperAdmin } = useAuth();
+  const { can } = useAuth();
+  const canReadAuditLogs = can(PERMISSIONS.AUDIT_READ_ANY);
   const [expanded, setExpanded] = useState(false);
   const [showRaw, setShowRaw]   = useState(false);
   const categoryStyle = getCategoryStyle(log.action);
@@ -329,7 +331,7 @@ export default function ActivityLogEntry({ log, showActor = false, showIp = fals
                         {topLevelEntries.length === 1 ? "field" : "fields"}
                       </p>
                     </div>
-                    {(isSuperAdmin || showActor) && (
+                    {(canReadAuditLogs || showActor) && (
                       <button
                         type="button"
                         onClick={(e) => {

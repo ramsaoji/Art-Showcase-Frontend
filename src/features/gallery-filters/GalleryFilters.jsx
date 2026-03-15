@@ -3,6 +3,7 @@ import FunnelIcon from "@heroicons/react/24/outline/FunnelIcon";
 import { LayoutGrid, AppWindow } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import useScrollLock from "@/hooks/useScrollLock";
+import { PERMISSIONS } from "@/lib/rbac";
 import {
   Dialog,
   DialogContent,
@@ -87,8 +88,12 @@ export default function GalleryFilters({
   setLayoutType,
   disabled = false,
 }) {
-  const { isSuperAdmin, isArtist, user } = useAuth();
+  const { can, user } = useAuth();
   useScrollLock(isMobileFiltersOpen);
+  const canAccessStatusFilters =
+    can(PERMISSIONS.ARTWORK_READ_ANY) || can(PERMISSIONS.ARTWORK_READ_OWN);
+  const canViewArtistEmails =
+    can(PERMISSIONS.ARTIST_READ_ANY) || can(PERMISSIONS.USER_READ_ANY);
 
   // Desktop dropdown open states
   const [openDropdown, setOpenDropdown] = useState(null); // "filters" | "artist" | "material" | "style" | "sort"
@@ -150,10 +155,10 @@ export default function GalleryFilters({
 
   // Returns true if an artist option's full email should be shown
   const shouldShowFullEmail = useCallback((artistId) => {
-    if (isSuperAdmin) return true;
-    if (isArtist && user && artistId && user.id === artistId) return true;
+    if (canViewArtistEmails) return true;
+    if (user && artistId && user.id === artistId) return true;
     return false;
-  }, [isSuperAdmin, isArtist, user]);
+  }, [canViewArtistEmails, user]);
 
   const toggleFilterValue = (currentValues, value) => {
     if (value === "all") return [];
@@ -285,7 +290,7 @@ export default function GalleryFilters({
             </div>
 
             {/* Active Status Filter */}
-            {(isSuperAdmin || isArtist) && (
+            {canAccessStatusFilters ? (
               <div className="mb-8">
                 <h3 className="text-sm font-sans font-semibold text-gray-900 mb-4">Active Status</h3>
                 <div className="space-y-3">
@@ -306,7 +311,7 @@ export default function GalleryFilters({
                   })}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Artist Filter */}
             <div className="mb-8">
@@ -486,7 +491,7 @@ export default function GalleryFilters({
                 </div>
               </div>
               {/* Active Status Filter Section */}
-              {(isSuperAdmin || isArtist) && (
+              {canAccessStatusFilters ? (
                 <div className="mb-4">
                   <h3 className="text-sm font-sans font-semibold text-gray-900 my-2">Active Status</h3>
                   <div className="space-y-1">
@@ -507,7 +512,7 @@ export default function GalleryFilters({
                     })}
                   </div>
                 </div>
-              )}
+              ) : null}
               {/* Availability Filter Section */}
               <div className="mb-4">
                 <h3 className="text-sm font-sans font-semibold text-gray-900 my-2">Availability</h3>
@@ -757,7 +762,7 @@ export default function GalleryFilters({
           styles={styles}
           handleFilterChange={handleFilterChange}
           handleResetAllFilters={handleResetAllFilters}
-          isSuperAdmin={isSuperAdmin}
+          canViewArtistEmails={canViewArtistEmails}
           currentUser={user}
         />
       )}
@@ -777,7 +782,7 @@ export default function GalleryFilters({
  * @param {Function} props.handleFilterChange - Clears a single filter group.
  * @param {Function} props.handleResetAllFilters - Clears all filters.
  */
-function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterChange, handleResetAllFilters, isSuperAdmin, currentUser }) {
+function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterChange, handleResetAllFilters, canViewArtistEmails, currentUser }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mt-4">
       {filters.featured && filters.featured.length > 0 && (() => {
@@ -825,7 +830,7 @@ function ActiveFilterBadges({ filters, artists, materials, styles, handleFilterC
         const getLabel = (id) => {
           const match = artists.find((a) => a.id === id || a === id);
           const label = match ? (match.label || match) : id;
-          const showFull = isSuperAdmin || (currentUser && currentUser.id === id);
+          const showFull = canViewArtistEmails || (currentUser && currentUser.id === id);
           return typeof label === "string" && /\(.+@.+\)/.test(label) && !showFull
             ? maskEmailInLabel(label)
             : label;

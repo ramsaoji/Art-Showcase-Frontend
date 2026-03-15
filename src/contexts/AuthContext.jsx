@@ -6,8 +6,9 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { trpc, trpcClient, setMemoryToken } from "@/lib/trpc";
+import { trpc, trpcClient } from "@/lib/trpc";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { ACCOUNT_STATES, PERMISSIONS, hasPermission } from "@/lib/rbac";
 
 const AuthContext = createContext();
 
@@ -68,7 +69,6 @@ export function AuthProvider({ children }) {
       } catch (err) {
         setUser(null);
         clearLocalToken();
-        setMemoryToken(null);
         // Clear all artwork-related localStorage data on session expiration
         clearArtworkLocalStorage();
       } finally {
@@ -86,14 +86,8 @@ export function AuthProvider({ children }) {
       setError(null);
       try {
         const res = await trpcClient.user.login.mutate({ email, password });
-        // Instead of saving token to localStorage, we rely on the HttpOnly cookie the backend sets
+        // Session is stored in the HttpOnly cookie the backend sets.
         clearLocalToken();
-
-        // Enterprise solution: store token in memory to gracefully handle browser cookie propagation delays
-        // This bypasses 401 race conditions instantly globally.
-        if (res.token) {
-          setMemoryToken(res.token);
-        }
 
         setUser(res.user);
 
@@ -123,7 +117,6 @@ export function AuthProvider({ children }) {
     // Clear user state
     setUser(null);
     clearLocalToken();
-    setMemoryToken(null);
 
     // Clear all artwork-related localStorage data
     clearArtworkLocalStorage();
@@ -135,23 +128,39 @@ export function AuthProvider({ children }) {
   // Clear error function for external use
   const clearError = useCallback(() => setError(null), []);
 
-  // Role helpers
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const isArtist = user?.role === "ARTIST";
+  const permissions = user?.permissions ?? [];
+  const accountState = user?.accountState ?? null;
+  const can = useCallback(
+    (permission) => hasPermission(user, permission),
+    [user]
+  );
 
   const value = useMemo(
     () => ({
       user,
       role: user?.role,
-      isSuperAdmin,
-      isArtist,
+      permissions,
+      accountState,
+      can,
       login,
       logout,
       loading,
       error,
       clearError,
+      ACCOUNT_STATES,
+      PERMISSIONS,
     }),
-    [user, isSuperAdmin, isArtist, login, logout, loading, error, clearError]
+    [
+      user,
+      permissions,
+      accountState,
+      can,
+      login,
+      logout,
+      loading,
+      error,
+      clearError,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

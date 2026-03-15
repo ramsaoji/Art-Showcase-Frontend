@@ -88,7 +88,9 @@ export function getStatusStyle(status) {
 // ─── Role badge colours ─────────────────────────────────────────────────────
 export const ROLE_STYLES = {
   SUPER_ADMIN: { bg: "bg-violet-100", text: "text-violet-700" },
+  ADMIN:       { bg: "bg-amber-100",  text: "text-amber-700"  },
   ARTIST:      { bg: "bg-blue-100",   text: "text-blue-700"   },
+  USER:        { bg: "bg-emerald-100", text: "text-emerald-700" },
   SYSTEM:      { bg: "bg-gray-100",   text: "text-gray-600"   },
   ANONYMOUS:   { bg: "bg-slate-100",  text: "text-slate-600"  },
 };
@@ -472,7 +474,7 @@ export const ARTIST_ACTION_OPTIONS = ALL_ACTION_OPTIONS.filter((opt) =>
 );
 
 export function getActionOptionsForRole(role) {
-  if (role === "SUPER_ADMIN") return ALL_ACTION_OPTIONS;
+  if (role === "SUPER_ADMIN" || role === "ADMIN") return ALL_ACTION_OPTIONS;
   if (role === "ARTIST") return ARTIST_ACTION_OPTIONS;
   return ARTIST_ACTION_OPTIONS;
 }

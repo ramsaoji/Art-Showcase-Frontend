@@ -9,6 +9,7 @@ import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { motion } from "framer-motion";
 import Alert from "@/components/common/Alert";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { PERMISSIONS } from "@/lib/rbac";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ const buttonVariants = {
  * @param {Object} artwork - Full artwork object from the API.
  */
 export default function ArtworkActions({ artworkId, onDelete, onUpdate, artwork, className = "", buttonClassName = "" }) {
-  const { isSuperAdmin, user } = useAuth();
+  const { can, user } = useAuth();
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -38,12 +39,16 @@ export default function ArtworkActions({ artworkId, onDelete, onUpdate, artwork,
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [error, setError] = useState(null);
 
+  const canManageAnyArtwork = can(PERMISSIONS.ARTWORK_UPDATE_ANY);
+  const canManageStatus = can(PERMISSIONS.ARTWORK_STATUS_MANAGE);
+  const canDeleteArtwork = can(PERMISSIONS.ARTWORK_DELETE_ANY);
+
   // tRPC utils for cache invalidation
   const utils = trpc.useContext();
 
   // Only show edit for artists if they own the artwork
   const isOwner = user && artwork && artwork?.userId === user.id;
-  if (!isSuperAdmin && !isOwner) return null;
+  if (!canManageAnyArtwork && !isOwner) return null;
 
   // Sync local status state with prop
   useEffect(() => {
@@ -142,7 +147,7 @@ export default function ArtworkActions({ artworkId, onDelete, onUpdate, artwork,
     <>
       <div className={`flex items-center justify-end sm:justify-start flex-wrap gap-2 ${className}`}>
         {/* Edit button: super admin or artist owner */}
-        {(isSuperAdmin || isOwner) && (
+        {(canManageAnyArtwork || isOwner) && (
           <motion.button
             onClick={handleEdit}
             {...buttonVariants}
@@ -154,7 +159,7 @@ export default function ArtworkActions({ artworkId, onDelete, onUpdate, artwork,
           </motion.button>
         )}
         {/* Status dropdown: super admin only */}
-        {isSuperAdmin && (
+        {canManageStatus && (
           <Select
             value={status}
             onValueChange={handleStatusChange}
@@ -174,7 +179,7 @@ export default function ArtworkActions({ artworkId, onDelete, onUpdate, artwork,
           </Select>
         )}
         {/* Delete button: super admin only */}
-        {isSuperAdmin && (
+        {canDeleteArtwork && (
           <motion.button
             onClick={handleDeleteClick}
             {...buttonVariants}

@@ -12,6 +12,7 @@ import ProgressBar from "@/components/common/ProgressBar";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { trpc, baseUrl } from "@/lib/trpc";
+import { PERMISSIONS, isArtistRole } from "@/lib/rbac";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 
 // shadcn artwork-form feature modules
@@ -42,16 +43,34 @@ export default function ArtworkForm({
   setArtistId = () => {},
   selectedArtist = null,
 }) {
-  const { isSuperAdmin, isArtist, user } = useAuth();
+  const { can, user } = useAuth();
+  const canAssignArtwork =
+    can(PERMISSIONS.ARTWORK_CREATE_ANY) ||
+    can(PERMISSIONS.ARTWORK_UPDATE_ANY);
+  const canManageArtworkFeatures = can(PERMISSIONS.ARTWORK_FEATURE_MANAGE);
+  const canManageArtworkStatus = can(PERMISSIONS.ARTWORK_STATUS_MANAGE);
+  const canManageCarousel = can(PERMISSIONS.CAROUSEL_MANAGE);
+  const canManageArtworkAdminFields =
+    canAssignArtwork ||
+    canManageArtworkFeatures ||
+    canManageArtworkStatus ||
+    canManageCarousel;
+  const isQuotaBoundArtist =
+    isArtistRole(user?.role) && can(PERMISSIONS.ARTWORK_CREATE_OWN);
   const utils = trpc.useContext();
 
   // ─── Hooks ────────────────────────────────────────────────────────────────
 
-  const quota = useArtworkQuota({ isArtist, isSuperAdmin, initialData, artistId });
+  const quota = useArtworkQuota({
+    isQuotaBoundArtist,
+    canAssignArtwork,
+    initialData,
+    artistId,
+  });
 
   const persist = useArtworkPersist({
     userId: user?.id || "anonymous",
-    isSuperAdmin,
+    canAssignArtwork,
     initialData,
   });
 
@@ -60,8 +79,13 @@ export default function ArtworkForm({
   const [imageRemoved, setImageRemoved] = useState(false);
 
   const validationSchema = useMemo(
-    () => createValidationSchema(isSuperAdmin, initialData),
-    [isSuperAdmin, initialData]
+    () =>
+      createValidationSchema(
+        canAssignArtwork,
+        canManageArtworkStatus,
+        initialData
+      ),
+    [canAssignArtwork, canManageArtworkStatus, initialData]
   );
 
   const form = useForm({
@@ -115,7 +139,7 @@ export default function ArtworkForm({
   const [editArtistUsageStats, setEditArtistUsageStats] = useState(null);
 
   useEffect(() => {
-    if (!isSuperAdmin || !initialData) return;
+    if (!canAssignArtwork || !initialData) return;
     const targetArtistId = initialData.userId || initialData.artistId;
     if (!targetArtistId) return;
 
@@ -128,7 +152,7 @@ export default function ArtworkForm({
       .then((r) => r.json())
       .then((json) => setEditArtistUsageStats(json?.result?.data ?? null))
       .catch(() => {}); // Silently handled — UI shows stale data
-  }, [isSuperAdmin, initialData]);
+  }, [canAssignArtwork, initialData]);
 
   // ─── Persistence effects ──────────────────────────────────────────────────
 
@@ -137,7 +161,7 @@ export default function ArtworkForm({
 
   // Restore persisted artist ID on mount (admin create mode)
   useEffect(() => {
-    if (!initialData && isSuperAdmin) {
+    if (!initialData && canAssignArtwork) {
       const savedId = persist.getPersistedArtistId();
       if (savedId) {
         setArtistId(savedId);
@@ -188,7 +212,7 @@ export default function ArtworkForm({
 
   // ─── Image handlers ───────────────────────────────────────────────────────
 
-  const imageUploadMax = isSuperAdmin ? 1000 : quota.imageUploadLimit;
+  const imageUploadMax = canAssignArtwork ? 1000 : quota.imageUploadLimit;
 
   const handleImageFiles = useCallback((files) => {
     let next = [...images];
@@ -223,7 +247,7 @@ export default function ArtworkForm({
   const handleRemoveImage = useCallback((idx) => {
     const removed = images[idx];
 
-    if (removed?.showInCarousel && !isSuperAdmin) {
+    if (removed?.showInCarousel && !canManageCarousel) {
       setImageErrors(["Cannot remove carousel image. Contact an administrator."]);
       setIsAutoDismissible(false);
       return;
@@ -243,7 +267,7 @@ export default function ArtworkForm({
 
     setImages(next);
     if (next.length === 0) { persist.clearImageFlag(); setImageRemoved(true); }
-  }, [images, isSuperAdmin, persist]);
+  }, [images, canManageCarousel, persist]);
 
   const handleCropImage = useCallback(async (idx) => {
     const img = images[idx];
@@ -330,8 +354,9 @@ export default function ArtworkForm({
   // ─── Submit hook ──────────────────────────────────────────────────────────
 
   const submitHook = useArtworkSubmit({
-    isSuperAdmin,
-    isArtist,
+    canAssignArtwork,
+    canManageArtworkFeatures,
+    canManageArtworkStatus,
     initialData,
     onSubmit,
     clearPersisted: persist.clearPersisted,
@@ -346,12 +371,12 @@ export default function ArtworkForm({
   // ─── Reset handler ────────────────────────────────────────────────────────
 
   const handleReset = () => {
-    const defaultExpiresAt = isSuperAdmin ? persist.getDefaultExpiresAt() : "";
+    const defaultExpiresAt = canManageArtworkStatus ? persist.getDefaultExpiresAt() : "";
     reset({
       title: "", material: "", style: "", description: "", price: "",
       year: new Date().getFullYear(), featured: false, sold: false,
       instagramReelLink: "", youtubeVideoLink: "", artistId: "",
-      status: "ACTIVE", ...(isSuperAdmin && { expiresAt: defaultExpiresAt }),
+      status: "ACTIVE", ...(canManageArtworkStatus && { expiresAt: defaultExpiresAt }),
       width: "", height: "", dimensions: "", images: [],
       discountPercent: "", discountStartAt: "", discountEndAt: "",
     });
@@ -364,7 +389,7 @@ export default function ArtworkForm({
     setImageErrors([]);
     setValidationErrors([]);
     setIsAutoDismissible(false);
-    if (isSuperAdmin && setArtistId) setArtistId("");
+    if (canAssignArtwork && setArtistId) setArtistId("");
     persist.clearPersisted();
     skipNextPersist.current = true;
     const container = document.getElementById("main-scroll-container");
@@ -374,7 +399,9 @@ export default function ArtworkForm({
   // ─── Derived flags ────────────────────────────────────────────────────────
 
   const hasFormDataButNoImage = persist.checkHasFormDataButNoImage() && !imageRemoved;
-  const isArtistAtMonthlyLimit = isArtist && !isSuperAdmin && quota.monthlyUploadCount >= quota.monthlyUploadLimit;
+  const isArtistAtMonthlyLimit =
+    quota.showArtistMonthlyBanner &&
+    quota.monthlyUploadCount >= quota.monthlyUploadLimit;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -387,7 +414,7 @@ export default function ArtworkForm({
         noValidate
       >
         {/* Artist name label in edit mode (admin only) */}
-        {isSuperAdmin && initialData?.artistName && (
+        {canAssignArtwork && initialData?.artistName && (
           <div className="flex justify-center mb-2">
             <span className="text-lg font-semibold text-gray-700 font-artistic text-center">
               Artwork by: {initialData.artistName}
@@ -428,7 +455,8 @@ export default function ArtworkForm({
           images={images}
           setImages={setImages}
           imageUploadLimit={quota.imageUploadLimit}
-          isSuperAdmin={isSuperAdmin}
+          canAssignArtwork={canAssignArtwork}
+          canManageCarousel={canManageCarousel}
           imageErrors={imageErrors}
           setImageErrors={setImageErrors}
           validationErrors={validationErrors}
@@ -448,8 +476,9 @@ export default function ArtworkForm({
 
         {/* Config-driven form fields */}
         <ArtworkFormFields
-          isSuperAdmin={isSuperAdmin}
-          isArtist={isArtist}
+          canAssignArtwork={canAssignArtwork}
+          canManageArtworkAdminFields={canManageArtworkAdminFields}
+          showOwnAiUsage={isQuotaBoundArtist}
           initialData={initialData}
           editArtistUsageStats={editArtistUsageStats}
           selectedArtistUploadData={quota.selectedArtistData}

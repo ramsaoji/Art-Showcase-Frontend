@@ -11,8 +11,9 @@ import { getFriendlyErrorMessage } from "@/utils/formatters";
  * 4. Calls the provided `onSubmit` callback.
  *
  * @param {object} params
- * @param {boolean} params.isSuperAdmin - Whether the current user is a super admin.
- * @param {boolean} params.isArtist - Whether the current user is an artist.
+ * @param {boolean} params.canAssignArtwork - Whether the current user can create artwork for another artist.
+ * @param {boolean} params.canManageArtworkFeatures - Whether the current user can set featured/sold fields.
+ * @param {boolean} params.canManageArtworkStatus - Whether the current user can set status/expiry fields.
  * @param {object|null} params.initialData - Existing artwork in edit mode, or null.
  * @param {Function} params.onSubmit - Async callback passed from the consuming page.
  * @param {Function} params.clearPersisted - From useArtworkPersist — clears localStorage on success.
@@ -22,8 +23,9 @@ import { getFriendlyErrorMessage } from "@/utils/formatters";
  * @returns {object} Submit handler and related state.
  */
 export function useArtworkSubmit({
-  isSuperAdmin,
-  isArtist,
+  canAssignArtwork,
+  canManageArtworkFeatures,
+  canManageArtworkStatus,
   initialData,
   onSubmit,
   clearPersisted,
@@ -152,14 +154,19 @@ export function useArtworkSubmit({
 
       const payload = { ...formData, images: uploadedImages };
 
-      if (isSuperAdmin) {
+      if (!canAssignArtwork) {
+        delete payload.artistId;
+      }
+
+      if (canManageArtworkFeatures) {
         payload.featured = Boolean(formData.featured);
         payload.sold = Boolean(formData.sold);
-        // status is already in formData
       } else {
-        // Artists cannot control these fields — remove to prevent backend override
         delete payload.featured;
         delete payload.sold;
+      }
+
+      if (!canManageArtworkStatus) {
         delete payload.status;
         delete payload.expiresAt;
       }
@@ -194,7 +201,17 @@ export function useArtworkSubmit({
         setSavingProgress(0);
       }
     },
-    [isSubmitting, isSuperAdmin, onSubmit, clearPersisted, setValue, trigger, clearErrors]
+    [
+      isSubmitting,
+      canAssignArtwork,
+      canManageArtworkFeatures,
+      canManageArtworkStatus,
+      onSubmit,
+      clearPersisted,
+      setValue,
+      trigger,
+      clearErrors,
+    ]
   );
 
   return {

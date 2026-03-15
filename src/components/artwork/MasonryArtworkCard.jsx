@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { resolveArtworkPricing } from "@/utils/formatters";
 import DiscountPriceBadge from "@/components/artwork/DiscountPriceBadge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { canViewArtworkInternals } from "@/lib/rbac";
 
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
@@ -24,7 +25,7 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
   const [isVisible, setIsVisible] = useState(priority);
   const cardRef = useRef(null);
 
-  const { isSuperAdmin, isArtist, user } = useAuth();
+  const { user } = useAuth();
 
   const images = Array.isArray(artwork?.images) && artwork?.images.length > 0 ? artwork.images : [];
   const currentImage = images[0] || {};
@@ -77,11 +78,14 @@ const MasonryArtworkCard = memo(function MasonryArtworkCard({
     if (imageState.isError) setImageError(true);
   }, [imageState.isError]);
 
-  const isOwner = user && artwork?.userId && user.id === artwork.userId;
+  const isOwner = !!user && !!artwork?.userId && user.id === artwork.userId;
+  const canViewInternalArtworkDetails = canViewArtworkInternals(
+    user,
+    artwork?.userId
+  );
 
   const canSeeStatusBadge =
-    isSuperAdmin ||
-    (isArtist && isOwner) ||
+    canViewInternalArtworkDetails ||
     (artwork?.status && artwork.status !== "ACTIVE");
 
   return (

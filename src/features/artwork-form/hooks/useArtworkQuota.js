@@ -10,13 +10,20 @@ import { trpc, useBackendLimits, useRemainingQuota } from "@/lib/trpc";
  *   (because TRPC query requires the artistId at hook call time; edit mode derives it from initialData).
  *
  * @param {object} params
- * @param {boolean} params.isArtist - True if current user is an artist (not admin).
- * @param {boolean} params.isSuperAdmin - True if current user is a super admin.
+ * @param {boolean} params.isQuotaBoundArtist - True when the current session is an artist
+ * using their own upload and AI quotas.
+ * @param {boolean} params.canAssignArtwork - True when the current session can create artwork
+ * on behalf of another artist.
  * @param {object|null} params.initialData - Existing artwork (edit mode) or null (create mode).
  * @param {string} params.artistId - Selected artist ID (admin create mode only).
  * @returns {object} Normalized quota data for UI consumption.
  */
-export function useArtworkQuota({ isArtist, isSuperAdmin, initialData, artistId }) {
+export function useArtworkQuota({
+  isQuotaBoundArtist,
+  canAssignArtwork,
+  initialData,
+  artistId,
+}) {
   // ─── Backend configuration limits ────────────────────────────────────────
   const { data: backendLimits, isLoading: loadingBackendLimits } = useBackendLimits();
 
@@ -26,11 +33,11 @@ export function useArtworkQuota({ isArtist, isSuperAdmin, initialData, artistId 
     isLoading: loadingArtistQuota,
     error: artistQuotaError,
     refetch: refetchArtistQuota,
-  } = useRemainingQuota({ enabled: isArtist });
+  } = useRemainingQuota({ enabled: isQuotaBoundArtist });
 
   // ─── Admin: selected artist's stats (add mode only) ───────────────────────
   const shouldFetchSelectedArtist = Boolean(
-    isSuperAdmin && !initialData && artistId && artistId.trim() !== ""
+    canAssignArtwork && !initialData && artistId && artistId.trim() !== ""
   );
 
   const {
@@ -59,14 +66,14 @@ export function useArtworkQuota({ isArtist, isSuperAdmin, initialData, artistId 
     10;
 
   // Only show artist monthly count for non-admin artists in create mode
-  const showArtistMonthlyBanner = isArtist && !isSuperAdmin && !initialData;
+  const showArtistMonthlyBanner = isQuotaBoundArtist && !initialData;
 
   // Admin selected artist data (add mode)
   const selectedArtistUploadCount = selectedArtistData?.monthlyUploadCount ?? 0;
   const selectedArtistUploadLimit = selectedArtistData?.monthlyUploadLimit ?? 10;
   const selectedArtistName = selectedArtistData?.artistName ?? "Selected Artist";
   const selectedArtistAiLimit = selectedArtistData?.aiDescriptionDailyLimit ?? 5;
-  const imageUploadLimit = isArtist
+  const imageUploadLimit = isQuotaBoundArtist
     ? (artistQuotaData?.imageUploadLimit ?? backendLimits?.imageUpload ?? 1)
     : (selectedArtistData?.imageUploadLimit ?? backendLimits?.imageUpload ?? 1);
 

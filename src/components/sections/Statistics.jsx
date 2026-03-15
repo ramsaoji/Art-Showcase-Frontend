@@ -4,6 +4,7 @@ import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import StarIcon from "@heroicons/react/24/outline/StarIcon";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
+import { PERMISSIONS } from "@/lib/rbac";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
 import StatisticsSkeleton from "@/components/skeletons/StatisticsSkeleton";
 import { trackError } from "@/services/analytics";
@@ -82,7 +83,9 @@ export default function Statistics() {
       hasLoggedError.current = false;
     }
   }, [error]);
-  const { isSuperAdmin, isArtist } = useAuth();
+  const { can } = useAuth();
+  const canSeeInternalArtworkStats =
+    can(PERMISSIONS.ARTWORK_READ_ANY) || can(PERMISSIONS.ARTWORK_READ_OWN);
   const {
     totalArtworksCount = 0,
     activeCount = 0,
@@ -103,17 +106,19 @@ export default function Statistics() {
       {
         icon: PhotoIcon,
         label:
-          isSuperAdmin || isArtist ? "Total Artworks" : "Artworks on Display",
-        value: isSuperAdmin || isArtist ? totalArtworksCount : activeCount,
+          canSeeInternalArtworkStats
+            ? "Total Artworks"
+            : "Artworks on Display",
+        value: canSeeInternalArtworkStats ? totalArtworksCount : activeCount,
         subtext:
-          isSuperAdmin || isArtist
+          canSeeInternalArtworkStats
             ? "All artworks in the system"
             : "Explore art from our community",
         delay: 0.1,
       },
     ];
 
-    if (isSuperAdmin || isArtist) {
+    if (canSeeInternalArtworkStats) {
       list.push(
         {
           icon: PhotoIcon,
@@ -157,8 +162,7 @@ export default function Statistics() {
     );
     return list;
   }, [
-    isSuperAdmin,
-    isArtist,
+    canSeeInternalArtworkStats,
     totalArtworksCount,
     activeCount,
     inactiveCount,

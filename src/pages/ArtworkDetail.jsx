@@ -30,6 +30,7 @@ import useOptimizedImage from "@/hooks/useOptimizedImage";
 import ImageModal from "@/components/artwork/ImageModal";
 import SocialMediaModal from "@/components/sections/SocialMediaModal";
 import useScrollLock from "@/hooks/useScrollLock";
+import { canManageAnyArtwork, canViewArtworkInternals } from "@/lib/rbac";
 
 // Hoisted static motion configurations (rendering-hoist-jsx)
 const containerMotion = {
@@ -76,7 +77,7 @@ export default function ArtworkDetail() {
   const [imageRetryKey, setImageRetryKey] = useState(0);
   const hasLoggedError = useRef(false);
   const hasLoggedImageError = useRef(false);
-  const { isSuperAdmin, isArtist, user } = useAuth();
+  const { user } = useAuth();
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [fullScreenImageOpen, setFullScreenImageOpen] = useState(false);
@@ -164,15 +165,19 @@ export default function ArtworkDetail() {
   }, [artwork?.id, artwork?.title, artwork?.artist]);
 
   // Determine if the current user is the owner (artist) of this artwork
-  const isOwner = user && artwork?.userId && user.id === artwork.userId;
+  const isOwner = !!user && !!artwork?.userId && user.id === artwork.userId;
+  const canManageArtwork = canManageAnyArtwork(user);
+  const canViewInternalArtworkDetails = canViewArtworkInternals(
+    user,
+    artwork?.userId
+  );
 
   // Determine if purchase buttons should be shown
   const showPurchaseButtons = !user && !isOwner;
 
   // Status badge visibility logic
   const canSeeStatusBadge =
-    isSuperAdmin ||
-    (isArtist && isOwner) ||
+    canViewInternalArtworkDetails ||
     (artwork?.status && artwork.status !== "ACTIVE");
 
   // Multi-image support
@@ -701,8 +706,7 @@ export default function ArtworkDetail() {
                     )}
 
                     {/* Enhanced Expiry date for super admin or owner */}
-                    {artwork?.expiresAt &&
-                      (isSuperAdmin || (isArtist && isOwner)) && (
+                    {artwork?.expiresAt && canViewInternalArtworkDetails && (
                         <div className="bg-red-50/80 rounded-xl p-3 sm:p-4 border border-red-200/50">
                           <h3 className="text-xs font-sans font-semibold text-red-700 mb-2 uppercase tracking-wider">
                             Expires
@@ -714,7 +718,7 @@ export default function ArtworkDetail() {
                       )}
 
                     {/* Discount Start/End — visible to super admin or owner when discount is set */}
-                    {(isSuperAdmin || (isArtist && isOwner)) && artwork?.discountPercent > 0 && (
+                    {canViewInternalArtworkDetails && artwork?.discountPercent > 0 && (
                       <>
                         {artwork?.discountStartAt && (
                           <div className="bg-emerald-50/80 rounded-xl p-3 sm:p-4 border border-emerald-200/50">
@@ -898,7 +902,7 @@ export default function ArtworkDetail() {
                     const isActive = index === currentIndex;
                     return (
                       <button
-                        key={img.id}
+                        key={img.id || img.cloudinary_public_id || img.url || index}
                         onClick={() => handleDotClick(index)}
                         className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-300 focus:outline-none  ${
                           isActive

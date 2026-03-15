@@ -10,53 +10,15 @@ export const baseUrl = (
   import.meta.env.VITE_API_URL || "http://localhost:3001/"
 ).replace(/\/+$/, "");
 
-/**
- * In-memory fallback token to completely bypass browser cookie IPC race conditions
- * immediately after login. This ensures the first concurrent requests never fail.
- */
-let memoryToken = null;
-let memoryTokenTimer = null;
-
-export const setMemoryToken = (token) => {
-  memoryToken = token;
-  
-  if (memoryTokenTimer) {
-    clearTimeout(memoryTokenTimer);
-    memoryTokenTimer = null;
-  }
-  
-  // Enterprise Security: Auto-destroy the raw token from JavaScript memory after 3 seconds.
-  // This completely eliminates any theoretical XSS memory-scraping/exfiltration vectors,
-  // falling back silently to the ultra-secure HttpOnly cookie for the remainder of the session.
-  if (token) {
-    memoryTokenTimer = setTimeout(() => {
-      memoryToken = null;
-    }, 3000);
-  }
-};
-
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
       url: baseUrl + "/trpc",
       fetch(url, options = {}) {
-        // Automatically inject cookies
-        const fetchOptions = {
+        return fetch(url, {
           ...options,
           credentials: "include", // Enables sending 'HttpOnly' cookies
-        };
-        
-        // Elegantly construct Web API Headers to preserve existing headers natively
-        const headers = new Headers(options.headers || {});
-        
-        // Use memory token as Bearer if available to bypass IPC cookie delays
-        if (memoryToken) {
-          headers.set("Authorization", `Bearer ${memoryToken}`);
-        }
-        
-        fetchOptions.headers = headers;
-
-        return fetch(url, fetchOptions);
+        });
       },
     }),
   ],
@@ -101,6 +63,13 @@ export function useArtistsSearch(params, options = {}) {
   });
 }
 
+export function useAssignableArtistsSearch(params, options = {}) {
+  return trpc.user.listAssignableArtists.useQuery(params, {
+    ...NO_REFETCH_ON_FOCUS,
+    ...options,
+  });
+}
+
 /**
  * Queries available artwork materials.
  * @param {Object} params - Query parameters.
@@ -139,6 +108,7 @@ export async function uploadToCloudinary(file) {
   formData.append("timestamp", timestamp);
   formData.append("signature", signature);
   formData.append("folder", folder);
+  formData.append("overwrite", "false");
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,

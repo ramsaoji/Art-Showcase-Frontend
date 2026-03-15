@@ -4,11 +4,16 @@ import * as z from "zod";
  * Creates the Zod validation schema for the artwork form.
  * Conditionally extends based on admin privileges and edit vs. create mode.
  *
- * @param {boolean} isSuperAdmin - Whether the current user is a super admin.
+ * @param {boolean} canAssignArtwork - Whether the current user can create artwork for another artist.
+ * @param {boolean} canManageArtworkStatus - Whether the current user can set expiry values.
  * @param {object|null} initialData - Existing artwork data (null = create mode).
  * @returns {z.ZodObject} The resolved Zod schema.
  */
-export function createValidationSchema(isSuperAdmin, initialData) {
+export function createValidationSchema(
+  canAssignArtwork,
+  canManageArtworkStatus,
+  initialData
+) {
   let schema = z.object({
     title: z.string().trim().min(1, "Title is required"),
     material: z.string().trim().min(1, "Material is required"),
@@ -58,14 +63,14 @@ export function createValidationSchema(isSuperAdmin, initialData) {
   // Zod schema.extend() is not available on ZodEffects (returned by superRefine).
 
   // In create mode, require artistId when admin is adding on behalf of an artist
-  if (isSuperAdmin && !initialData) {
+  if (canAssignArtwork && !initialData) {
     schema = schema.extend({
       artistId: z.string().min(1, "Artist is required"),
     });
   }
 
   // Admins can set an expiry date
-  if (isSuperAdmin) {
+  if (canManageArtworkStatus) {
     schema = schema.extend({
       expiresAt: z.coerce.date().nullable().optional(),
     });

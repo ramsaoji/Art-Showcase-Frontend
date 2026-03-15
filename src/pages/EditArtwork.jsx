@@ -13,6 +13,7 @@ import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import FormCard from "@/components/common/FormCard";
 import { trackError } from "@/services/analytics";
+import { PERMISSIONS } from "@/lib/rbac";
 
 /**
  * EditArtwork page — loads an existing artwork by ID and allows the owner or
@@ -21,7 +22,10 @@ import { trackError } from "@/services/analytics";
 export default function EditArtwork() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { isSuperAdmin, user } = useAuth();
+  const { can } = useAuth();
+  const canManageAnyArtwork = can(PERMISSIONS.ARTWORK_UPDATE_ANY);
+  const canManageArtworkFeatures = can(PERMISSIONS.ARTWORK_FEATURE_MANAGE);
+  const canManageArtworkStatus = can(PERMISSIONS.ARTWORK_STATUS_MANAGE);
   const [loadError, setLoadError] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const [isNotFound, setIsNotFound] = useState(false);
@@ -55,16 +59,16 @@ export default function EditArtwork() {
     }
   );
 
-  // Fetch all artists for admin (for super admin to edit monthly limit)
+  // Fetch assignable artists for staff artwork reassignment/edit context
   const { data: artistsRaw = [], isLoading: loadingArtists } =
-    trpc.user.listUsers.useQuery(undefined, {
-      enabled: isSuperAdmin,
-      select: (users) => users.filter((u) => u.role === "ARTIST"),
+    trpc.user.listAssignableArtists.useQuery(undefined, {
+      enabled: canManageAnyArtwork,
+      select: (result) => result?.artists ?? [],
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: 2 * 60 * 1000,
     });
-  const artists = artistsRaw.filter((a) => a.approved && a.active);
+  const artists = artistsRaw;
 
   // Handle case where artwork is not found
   useEffect(() => {
@@ -115,7 +119,7 @@ export default function EditArtwork() {
         showInCarousel: img.showInCarousel,
       }));
       // Artist-level limits are managed in Admin → Artist Management; do not send from artwork form.
-      // Always send featured/sold as booleans (fallback to existing artwork when form value is missing)
+      // Admin-only artwork fields are added below only when the current user can manage them.
       const updateData = {
         id: artworkData.id,
         title: formData.title,
@@ -125,20 +129,30 @@ export default function EditArtwork() {
         material: formData.material,
         style: formData.style,
         year: Number(formData.year),
-        featured: typeof formData.featured === "boolean" ? formData.featured : !!artworkData.featured,
-        sold: typeof formData.sold === "boolean" ? formData.sold : !!artworkData.sold,
         instagramReelLink: formData.instagramReelLink,
         youtubeVideoLink: formData.youtubeVideoLink,
-        status: formData.status || "ACTIVE",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         images,
-        expiresAt: formData.expiresAt
-          ? new Date(formData.expiresAt)
-          : undefined,
         discountPercent: formData.discountPercent ? Number(formData.discountPercent) : null,
         discountStartAt: formData.discountStartAt ? new Date(formData.discountStartAt) : null,
         discountEndAt: formData.discountEndAt ? new Date(formData.discountEndAt) : null,
       };
+      if (canManageArtworkFeatures) {
+        updateData.featured =
+          typeof formData.featured === "boolean"
+            ? formData.featured
+            : !!artworkData.featured;
+        updateData.sold =
+          typeof formData.sold === "boolean"
+            ? formData.sold
+            : !!artworkData.sold;
+      }
+      if (canManageArtworkStatus) {
+        updateData.status = formData.status || artworkData.status || "ACTIVE";
+        updateData.expiresAt = formData.expiresAt
+          ? new Date(formData.expiresAt)
+          : null;
+      }
       await updateArtworkMutation.mutateAsync(updateData);
     } catch (err) {
       setSubmitError(getFriendlyErrorMessage(err));
@@ -221,7 +235,7 @@ export default function EditArtwork() {
 
   // Find the artist for this artwork (for super admin)
   const selectedArtist =
-    isSuperAdmin && artworkData.userId
+    canManageAnyArtwork && artworkData.userId
       ? artists.find((a) => a.id === artworkData.userId)
       : null;
 

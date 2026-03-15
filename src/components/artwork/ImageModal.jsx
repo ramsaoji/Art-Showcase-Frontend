@@ -26,6 +26,7 @@ import { trackArtworkInteraction, trackShare } from "@/services/analytics";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import useScrollLock from "@/hooks/useScrollLock";
 import useSocialMediaModal from "@/hooks/useSocialMediaModal";
+import { canManageAnyArtwork, canViewArtworkInternals } from "@/lib/rbac";
 
 const modalVariants = {
   initial: { opacity: 0, y: 20, scale: 0.95 },
@@ -70,7 +71,7 @@ export default function ImageModal({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const { isSuperAdmin, isArtist, user } = useAuth();
+  const { user } = useAuth();
   const [highQualityLoaded, setHighQualityLoaded] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [fullScreenImageOpen, setFullScreenImageOpen] = useState(false);
@@ -229,12 +230,16 @@ export default function ImageModal({
   }, [image?.id, image?.title, image?.artistName]);
 
   // Determine if the current user is the owner (artist) of this artwork
-  const isOwner = user && image?.userId && user.id === image.userId;
+  const isOwner = !!user && !!image?.userId && user.id === image.userId;
+  const canManageArtwork = canManageAnyArtwork(user);
+  const canViewInternalArtworkDetails = canViewArtworkInternals(
+    user,
+    image?.userId
+  );
 
   // Status badge visibility logic
   const canSeeStatusBadge =
-    isSuperAdmin ||
-    (isArtist && isOwner) ||
+    canViewInternalArtworkDetails ||
     (image?.status && image.status !== "ACTIVE");
 
   return (
@@ -522,14 +527,14 @@ export default function ImageModal({
                             <p className="text-sm font-sans text-gray-800 font-medium">{formatLocalDateTime(image.createdAt)}</p>
                           </div>
                         )}
-                        {image?.expiresAt && (isSuperAdmin || (isArtist && isOwner)) && (
+                        {image?.expiresAt && canViewInternalArtworkDetails && (
                           <div className="bg-red-50/80 rounded-xl p-3 sm:p-4 border border-red-200/50">
                             <h3 className="text-xs font-sans font-semibold text-red-700 mb-2 uppercase tracking-wider">Expires</h3>
                             <p className="text-sm font-sans text-red-700 font-medium">{formatLocalDateTime(image.expiresAt)}</p>
                           </div>
                         )}
 
-                        {(isSuperAdmin || (isArtist && isOwner)) && image?.discountPercent > 0 && (
+                        {canViewInternalArtworkDetails && image?.discountPercent > 0 && (
                           <>
                             {image?.discountStartAt && (
                               <div className="bg-emerald-50/80 rounded-xl p-3 sm:p-4 border border-emerald-200/50">
@@ -558,7 +563,7 @@ export default function ImageModal({
                   )}
 
                   {/* ArtworkActions — admin / artist owner */}
-                  {(isSuperAdmin || (isArtist && isOwner)) && (
+                  {canViewInternalArtworkDetails && (
                     <div className="px-4 pb-4 sm:px-6 sm:pb-5 border-t border-gray-100/80 pt-3 flex-shrink-0 bg-gradient-to-r from-white/90 to-gray-50/90">
                       <ArtworkActions
                         artworkId={image?.id}

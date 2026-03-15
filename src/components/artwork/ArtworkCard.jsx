@@ -21,6 +21,7 @@ import PurchaseRequestModal from "@/features/purchase-request";
 import PurchaseFooter from "@/components/artwork/PurchaseFooter";
 import SocialMediaModal from "@/components/sections/SocialMediaModal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { canManageAnyArtwork, canViewArtworkInternals } from "@/lib/rbac";
 
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
@@ -55,7 +56,7 @@ const ArtworkCard = memo(function ArtworkCard({
   const imageRef = useRef(null);
   const descriptionRef = useRef(null);
 
-  const { isSuperAdmin, isArtist, user } = useAuth();
+  const { user } = useAuth();
 
   // Shared carousel hook (replaces manual state + auto-advance + nav handlers)
   const images =
@@ -157,12 +158,16 @@ const ArtworkCard = memo(function ArtworkCard({
   }, [safeArtwork.youtubeVideoLink, safeArtwork.title, openYouTubeModal]);
 
   // Determine if the current user is the owner (artist) of this artwork
-  const isOwner = user && artwork?.userId && user.id === artwork.userId;
+  const isOwner = !!user && !!artwork?.userId && user.id === artwork.userId;
+  const canManageArtwork = canManageAnyArtwork(user);
+  const canViewInternalArtworkDetails = canViewArtworkInternals(
+    user,
+    artwork?.userId
+  );
 
   // Status badge visibility logic
   const canSeeStatusBadge =
-    isSuperAdmin ||
-    (isArtist && isOwner) ||
+    canViewInternalArtworkDetails ||
     (artwork?.status && artwork.status !== "ACTIVE");
 
   // Debounced hover prefetching
@@ -306,7 +311,7 @@ const ArtworkCard = memo(function ArtworkCard({
       {/* Content */}
       <div
         className={`relative p-6 md:p-4 lg:p-6 flex-grow bg-gradient-to-br from-white via-white to-gray-50/80 backdrop-blur-xl overflow-auto md:h-[185px] md:flex-grow-0 lg:h-auto lg:flex-grow ${
-          !isSuperAdmin && "rounded-b-3xl"
+          !canManageArtwork && "rounded-b-3xl"
         }`}
       >
         <div className="relative h-full flex flex-col">
@@ -426,13 +431,13 @@ const ArtworkCard = memo(function ArtworkCard({
                 Added: {formatLocalDateTime(safeArtwork.createdAt)}
               </ArtworkMetaTag>
             )}
-            {safeArtwork.expiresAt && (isSuperAdmin || (isArtist && isOwner)) && (
+            {safeArtwork.expiresAt && canViewInternalArtworkDetails && (
               <ArtworkMetaTag className={`${tabletMetaTagClassName} bg-red-50/80 text-red-700 border-red-200/50`}>
                 Expires: {formatLocalDateTime(safeArtwork.expiresAt)}
               </ArtworkMetaTag>
             )}
             
-            {(isSuperAdmin || (isArtist && isOwner)) && safeArtwork.discountPercent > 0 && (
+            {canViewInternalArtworkDetails && safeArtwork.discountPercent > 0 && (
               <>
                 {safeArtwork.discountStartAt && (
                   <ArtworkMetaTag className={`${tabletMetaTagClassName} bg-emerald-50/80 text-emerald-700 border-emerald-200/50`}>
@@ -460,9 +465,9 @@ const ArtworkCard = memo(function ArtworkCard({
       )}
 
       {/* Action Buttons — admin / artist owner */}
-      {(isSuperAdmin || (isArtist && isOwner)) && (
+      {canViewInternalArtworkDetails && (
         <div className="p-4 md:p-3 lg:p-6 border-t border-gray-200/50 flex-shrink-0 bg-gradient-to-r from-white/90 to-gray-50/90 backdrop-blur-xl rounded-b-3xl">
-          <div className={`flex ${isSuperAdmin ? "justify-center" : "justify-end"}`}>
+          <div className={`flex ${canManageArtwork ? "justify-center" : "justify-end"}`}>
             <ArtworkActions
               artworkId={safeArtwork.id}
               onDelete={onDelete}

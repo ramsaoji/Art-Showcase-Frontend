@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import PhotoIcon from "@heroicons/react/24/outline/PhotoIcon";
 import InfiniteScroll from "react-infinite-scroll-component";
 import ArtworkCard from "@/components/artwork/ArtworkCard";
@@ -8,13 +7,11 @@ import Loader from "@/components/common/Loader";
 import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/AuthContext";
 import GalleryGridSkeleton from "@/components/skeletons/GalleryGridSkeleton";
 
 /**
  * GalleryGrid — renders the artwork grid with infinite scroll.
- * Applies role-based visibility filtering (super admin sees all, artists see own + active,
- * guests see active only).
+ * Relies on the backend to scope visibility and permissions.
  *
  * @param {boolean} props.isCardsLoading - True while the initial artworks fetch is in flight.
  * @param {Array} props.allArtworks - Full flat list of loaded artworks.
@@ -40,36 +37,7 @@ export default function GalleryGrid({
   filters,
   layoutType = 'masonry',
 }) {
-  const { isSuperAdmin, isArtist, user } = useAuth();
-  // Filter artworks based on user role and filters
-  const filteredArtworks = useMemo(() => {
-    // Helper to check if status is selected (handle array or string)
-    const isStatusMatch = (artStatus) => {
-      if (!filters.status || filters.status === "all" || filters.status.length === 0) return true;
-      if (Array.isArray(filters.status)) {
-        return filters.status.includes(artStatus);
-      }
-      return filters.status === artStatus;
-    };
-
-    let result = isSuperAdmin
-      ? allArtworks
-      : isArtist && user
-      ? allArtworks.filter(
-          (art) =>
-            // For own artworks, apply status filter if set
-            (art.userId === user.id && isStatusMatch(art.status)) ||
-            // For others' artworks, only show ACTIVE
-            (art.userId !== user.id && art.status === "ACTIVE")
-        )
-      : allArtworks.filter((art) => art.status === "ACTIVE");
-
-    // For super admin, apply status filter if set
-    if (isSuperAdmin && filters.status && filters.status !== "all" && filters.status.length > 0) {
-      result = result.filter((art) => isStatusMatch(art.status));
-    }
-    return result;
-  }, [allArtworks, isSuperAdmin, isArtist, user, filters.status]);
+  const filteredArtworks = allArtworks;
 
   // Helper: check if any filter or search is active
   const filtersActive =

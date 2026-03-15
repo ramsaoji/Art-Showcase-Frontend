@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-function SortableImage({ img, idx, onRemove, onCrop, isSuperAdmin = false }) {
+function SortableImage({ img, idx, onRemove, onCrop, canManageCarousel = false }) {
   const {
     attributes,
     listeners,
@@ -106,16 +106,16 @@ function SortableImage({ img, idx, onRemove, onCrop, isSuperAdmin = false }) {
             onRemove(idx);
           }}
           className={`rounded-full p-2 shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-150 border-2 border-white z-20 touch-manipulation ${
-            img.showInCarousel && !isSuperAdmin
+            img.showInCarousel && !canManageCarousel
               ? "bg-gray-400 text-gray-600 cursor-not-allowed hover:bg-gray-400 hover:scale-100"
               : "bg-red-500 text-white hover:bg-red-600"
           }`}
           title={
-            img.showInCarousel && !isSuperAdmin
+            img.showInCarousel && !canManageCarousel
               ? "Cannot remove carousel image - contact admin"
               : "Remove image"
           }
-          disabled={img.showInCarousel && !isSuperAdmin}
+          disabled={img.showInCarousel && !canManageCarousel}
         >
           <XMarkIcon className="h-3 w-3 stroke-2" />
         </button>
@@ -145,7 +145,8 @@ export default function ArtworkImageGrid({
   fileSizeMB = 5,
   onDismissErrors,
   isAutoDismissible = false,
-  isSuperAdmin = false,
+  canAssignArtwork = false,
+  canManageCarousel = false,
   validationError = null,
   setImageErrors = () => {},
   setIsAutoDismissible = () => {},
@@ -170,7 +171,7 @@ export default function ArtworkImageGrid({
     const removed = images[idx];
 
     // Prevent artists from removing carousel images
-    if (removed?.showInCarousel && !isSuperAdmin) {
+    if (removed?.showInCarousel && !canManageCarousel) {
       const errorMessage =
         "Cannot remove carousel image. This image is used in the homepage carousel. Please contact an administrator if you need to remove it.";
       setImageErrors([errorMessage]);
@@ -213,7 +214,7 @@ export default function ArtworkImageGrid({
     }
 
     setImages(newImages);
-  }, [images, isSuperAdmin, setImages, setImageErrors, setIsAutoDismissible]);
+  }, [images, canManageCarousel, setImages, setImageErrors, setIsAutoDismissible]);
 
   // Drag end handler
   const onDragEnd = React.useCallback(({ active, over }) => {
@@ -259,7 +260,7 @@ export default function ArtworkImageGrid({
     [onFilesSelected]
   );
 
-  const isAtLimit = isSuperAdmin
+  const isAtLimit = canAssignArtwork
     ? images.length >= 1000
     : images.length >= imageUploadLimit;
 
@@ -274,7 +275,7 @@ export default function ArtworkImageGrid({
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
               {images.length}{" "}
-              {isSuperAdmin
+              {canAssignArtwork
                 ? `/ 1000`
                 : `/ ${imageUploadLimit === Infinity ? "∞" : imageUploadLimit}`}
             </span>
@@ -535,9 +536,9 @@ export default function ArtworkImageGrid({
                         idx={idx}
                         onRemove={handleRemoveImage}
                         onCrop={onCrop}
-                        isSuperAdmin={isSuperAdmin}
+                        canManageCarousel={canManageCarousel}
                       />
-                      {isSuperAdmin && (
+                      {canManageCarousel && (
                         <label className="flex items-center space-x-1.5 mt-2 w-full min-w-0 cursor-pointer">
                           <Checkbox
                             checked={!!img.showInCarousel}

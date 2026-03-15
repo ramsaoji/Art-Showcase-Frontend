@@ -9,6 +9,7 @@ import PageBackground from "@/components/common/PageBackground";
 import PageHeader from "@/components/common/PageHeader";
 import Alert from "@/components/common/Alert";
 import FormCard from "@/components/common/FormCard";
+import { PERMISSIONS } from "@/lib/rbac";
 
 /**
  * AddArtwork page — allows artists (and super admins on behalf of an artist)
@@ -16,9 +17,10 @@ import FormCard from "@/components/common/FormCard";
  */
 export default function AddArtwork() {
   const navigate = useNavigate();
-  const { isSuperAdmin, user } = useAuth();
+  const { can, user } = useAuth();
   const [error, setError] = useState(null);
   const [artistId, setArtistId] = useState("");
+  const canCreateForAnyArtist = can(PERMISSIONS.ARTWORK_CREATE_ANY);
 
   // Create user-specific localStorage key
   const ARTIST_ID_KEY = `artwork_artist_id_${user?.id || "anonymous"}`;
@@ -39,7 +41,8 @@ export default function AddArtwork() {
         utils.artwork.getAllArtworks.invalidate();
         utils.artwork.getFeaturedArtworks.invalidate();
         utils.artwork.getArtworksForHeroCarousel.invalidate();
-        utils.user.listUsers.invalidate();
+        utils.user.listArtistsAdmin.invalidate();
+        utils.user.listAssignableArtists.invalidate();
         if (artistId) {
           utils.artwork.getArtistUsageStats.invalidate({ artistId });
         }
@@ -57,7 +60,7 @@ export default function AddArtwork() {
   const handleSubmit = async (formData) => {
     try {
       setError(null);
-      if (isSuperAdmin && !artistId) {
+      if (canCreateForAnyArtist && !artistId) {
         setError("Artist is required when adding on behalf of an artist.");
         return;
       }
@@ -74,7 +77,7 @@ export default function AddArtwork() {
       // Artist-level limits are managed in Admin → Artist Management; do not send from artwork form.
       const artworkData = {
         ...formData,
-        artistId: isSuperAdmin ? artistId : undefined,
+        artistId: canCreateForAnyArtist ? artistId : undefined,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
       await createArtworkMutation.mutateAsync(artworkData);
@@ -87,13 +90,13 @@ export default function AddArtwork() {
 
   // Restore artistId from localStorage on mount
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (canCreateForAnyArtist) {
       const saved = localStorage.getItem(ARTIST_ID_KEY);
       if (saved) {
         setArtistId(saved);
       }
     }
-  }, [isSuperAdmin, ARTIST_ID_KEY]);
+  }, [canCreateForAnyArtist, ARTIST_ID_KEY]);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] sm:min-h-[calc(100vh-5rem)] py-12 bg-white/50">

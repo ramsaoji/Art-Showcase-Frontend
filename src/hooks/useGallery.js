@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import { trpc, useArtistsSearch, useMaterialsSearch, useStylesSearch } from "@/lib/trpc";
@@ -9,6 +9,7 @@ import {
 } from "@/services/analytics";
 import { useAuth } from "@/contexts/AuthContext";
 import { getFriendlyErrorMessage } from "@/utils/formatters";
+import { isArtistRole } from "@/lib/rbac";
 
 /**
  * Custom hook that manages all gallery state: search, filters, sort, infinite
@@ -20,7 +21,8 @@ export default function useGallery() {
   const navigate = useNavigate();
   const initialized = useRef(false);
   const hasLoggedError = useRef(false);
-  const { isArtist, user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const isArtistSession = isArtistRole(user?.role);
   const utils = trpc.useUtils();
   const prevUserRef = useRef(user?.id);
 
@@ -170,7 +172,7 @@ export default function useGallery() {
     retryDelay: 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    staleTime: 5 * 60 * 1000, // 5 min � no refetch on minimize/restore
+    staleTime: 5 * 60 * 1000, // 5 min — no refetch on minimize/restore
     gcTime: 10 * 60 * 1000, // 10 min cache (React Query v5; was cacheTime)
     keepPreviousData: true,
     enabled: !authLoading,
@@ -403,7 +405,7 @@ export default function useGallery() {
   const didAutoApplyArtistFilter = useRef(false);
   useEffect(() => {
     if (
-      isArtist &&
+      isArtistSession &&
       user &&
       filters.artist.length === 0 &&
       !didAutoApplyArtistFilter.current
@@ -419,7 +421,8 @@ export default function useGallery() {
           ...prev,
           {
             id: user.id,
-            label: `${user.artistName || "Artist"} (${user.email})`,
+            // Keep the optimistic label aligned with the public artist filter display.
+            label: user.artistName || "Artist",
           },
         ];
       });
@@ -427,10 +430,10 @@ export default function useGallery() {
       didAutoApplyArtistFilter.current = true;
     }
     // Reset the flag if user logs out or changes
-    if ((!isArtist || !user) && didAutoApplyArtistFilter.current) {
+    if ((!isArtistSession || !user) && didAutoApplyArtistFilter.current) {
       didAutoApplyArtistFilter.current = false;
     }
-  }, [isArtist, user, filters.artist]);
+  }, [isArtistSession, user, filters.artist]);
 
   // --- Artists Filter State ---
   const [artistSearch, setArtistSearch] = useState("");
@@ -451,18 +454,12 @@ export default function useGallery() {
   // Check if we need to load artist data for the active filter
   useEffect(() => {
     if (filters.artist.length > 0 && !shouldLoadArtistForFilter) {
-      // Check if all selected artists are already in our results
-      const allExist = filters.artist.every(id => 
-         artistResults.some(artist => artist.id === id)
+      const allExist = filters.artist.every((id) =>
+        artistResults.some((artist) => artist.id === id)
       );
-      
+
       if (!allExist) {
         setShouldLoadArtistForFilter(true);
-        // Mark artist dropdown as opened to enable the query
-        setOpenedDropdowns((prev) => ({ ...prev, artist: true }));
-        // Set a search query to find this specific artist
-        // We'll need to get the artist name from the backend or use a different approach
-        // For now, let's try to load all artists and find the one we need
       }
     }
   }, [filters.artist, artistResults, shouldLoadArtistForFilter]);
@@ -471,35 +468,36 @@ export default function useGallery() {
   const { data: artistFilterData, isLoading: isArtistFilterLoading } =
     useArtistsSearch(
       {
-        search: "", // Empty search to get all artists
-        limit: 50, // Higher limit to find the specific artist
+        ids: filters.artist,
+        limit: Math.max(filters.artist.length, 1),
         page: 1,
       },
       {
-        enabled: shouldLoadArtistForFilter && openedDropdowns.artist,
+        enabled: shouldLoadArtistForFilter && filters.artist.length > 0,
       }
     );
 
   // Handle artist filter data
   useEffect(() => {
     if (artistFilterData && shouldLoadArtistForFilter) {
-        filters.artist.forEach(id => {
-            const foundArtist = artistFilterData.artists.find(a => a.id === id);
-             if (foundArtist) {
-                const artistWithLabel = {
-                  id: foundArtist.id,
-                  label: `${foundArtist.artistName} (${foundArtist.email})`,
-                };
-                // Add to artist results if not already present
-                setArtistResults((prev) => {
-                  const exists = prev.some((a) => a.id === artistWithLabel.id);
-                  if (!exists) {
-                    return [...prev, artistWithLabel];
-                  }
-                  return prev;
-                });
-             }
-        })
+      filters.artist.forEach((id) => {
+        const foundArtist = artistFilterData.artists.find((a) => a.id === id);
+        if (foundArtist) {
+          const artistWithLabel = {
+            id: foundArtist.id,
+            label: foundArtist.email
+              ? `${foundArtist.artistName} (${foundArtist.email})`
+              : foundArtist.artistName,
+          };
+          setArtistResults((prev) => {
+            const exists = prev.some((a) => a.id === artistWithLabel.id);
+            if (!exists) {
+              return [...prev, artistWithLabel];
+            }
+            return prev;
+          });
+        }
+      });
       setShouldLoadArtistForFilter(false);
     }
   }, [artistFilterData, shouldLoadArtistForFilter, filters.artist]);
@@ -524,7 +522,7 @@ export default function useGallery() {
     if (artistData) {
       const newArtists = artistData.artists.map((a) => ({
         id: a.id,
-        label: `${a.artistName} (${a.email})`,
+        label: a.email ? `${a.artistName} (${a.email})` : a.artistName,
       }));
       setArtistResults((prev) => {
         if (artistPage === 1) return newArtists;
@@ -877,6 +875,7 @@ export default function useGallery() {
     markDropdownOpened,
   };
 }
+
 
 
 

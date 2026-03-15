@@ -80,7 +80,6 @@ export default function Signup() {
         email: data.email,
         password: data.password,
         artistName: data.artistName,
-        role: "ARTIST",
       });
     } catch (error) {
       // Handled entirely by mapping within TRPC's onError method

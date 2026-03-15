@@ -23,12 +23,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trackError } from "@/services/analytics";
+import { useAuth } from "@/contexts/AuthContext";
+import { PERMISSIONS } from "@/lib/rbac";
 /**
  * ArtistApprovals Page
  * Admin view for reviewing, approving, activating, and removing artist accounts.
  * Uses sonner toast for all user-triggered feedback (S4).
  */
 export default function ArtistApprovals() {
+  const { can } = useAuth();
+  const canApproveArtists = can(PERMISSIONS.ARTIST_APPROVE);
+  const canSetArtistState = can(PERMISSIONS.USER_STATE_MANAGE);
+  const canDeleteArtists = can(PERMISSIONS.USER_DELETE_ANY);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
 
@@ -46,7 +52,7 @@ export default function ArtistApprovals() {
     isFetching,
     isError,
     error,
-  } = trpc.user.listUsers.useQuery(
+  } = trpc.user.listArtistsAdmin.useQuery(
     { page, limit, search },
     {
       ...ADMIN_LIST_QUERY_OPTIONS,
@@ -87,7 +93,8 @@ export default function ArtistApprovals() {
     onSuccess: () => {
       toast.success("Artist approved!");
       refetch();
-      utils.user.listUsers.invalidate();
+      utils.user.listArtistsAdmin.invalidate();
+      utils.user.listPendingArtists.invalidate();
       utils.user.listArtistsPublic.invalidate();
     },
     onError: (err) => toast.error(getFriendlyErrorMessage(err)),
@@ -98,7 +105,7 @@ export default function ArtistApprovals() {
     onSuccess: () => {
       toast.success("Status updated!");
       refetch();
-      utils.user.listUsers.invalidate();
+      utils.user.listArtistsAdmin.invalidate();
       utils.artwork.getAllArtworks.invalidate();
     },
     onError: (err) => toast.error(getFriendlyErrorMessage(err)),
@@ -109,7 +116,7 @@ export default function ArtistApprovals() {
     onSuccess: () => {
       toast.success("User deleted successfully!");
       refetch();
-      utils.user.listUsers.invalidate();
+      utils.user.listArtistsAdmin.invalidate();
       utils.user.listArtistsPublic.invalidate();
     },
     onError: (err) => toast.error(getFriendlyErrorMessage(err)),
@@ -195,10 +202,7 @@ export default function ArtistApprovals() {
   }, [activeDialogUser, activeDialogAction, setActiveMutation]);
 
   // Memoize filtered artists to avoid recalculating on every render (js-cache-function-results)
-  const artistUsers = useMemo(
-    () => allUsers.filter((u) => u.role === "ARTIST"),
-    [allUsers]
-  );
+  const artistUsers = useMemo(() => allUsers, [allUsers]);
   const artistTotalCount = userPage?.artistTotalCount || 0;
 
   return (
@@ -316,7 +320,7 @@ export default function ArtistApprovals() {
                           </TableCell>
                           <TableCell className="px-5 py-4 font-sans align-middle whitespace-normal min-w-[120px] text-left">
                             <div className="flex items-center gap-2 justify-start">
-                              {artist.emailVerified && !artist.approved && (
+                              {canApproveArtists && artist.emailVerified && !artist.approved && (
                                 <button
                                   className="min-w-[100px] px-3 py-1.5 sm:px-3 sm:py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                   onClick={() => handleApprove(artist.id)}
@@ -325,7 +329,7 @@ export default function ArtistApprovals() {
                                   Approve
                                 </button>
                               )}
-                              {artist.emailVerified && (
+                              {canSetArtistState && artist.emailVerified && (
                                 <button
                                   className={`min-w-[100px] px-3 py-1.5 sm:px-3 sm:py-1.5 rounded-md font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed ${
                                     artist.active
@@ -338,7 +342,7 @@ export default function ArtistApprovals() {
                                   {artist.active ? "Deactivate" : "Activate"}
                                 </button>
                               )}
-                              {canDelete && (
+                              {canDeleteArtists && canDelete && (
                                 <button
                                   className="min-w-[100px] px-3 py-1.5 sm:px-3 sm:py-1.5 bg-rose-100 text-rose-700 rounded-md hover:bg-rose-200 font-sans font-medium transition-all duration-200 border-none outline-none shadow-sm text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                   onClick={() => handleDeleteUserClick(artist)}
